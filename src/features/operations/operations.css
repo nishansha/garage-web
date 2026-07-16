@@ -1,0 +1,647 @@
+.dashboard {
+  --dashboard-sales: var(--primary);
+  --dashboard-purchases: #a78bfa;
+  --dashboard-expenses: #ff8a92;
+  --dashboard-profit: var(--info);
+}
+
+.dashboard-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.operations-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.dashboard-kpi {
+  --kpi-accent: var(--dashboard-sales);
+  position: relative;
+  padding: 1.1rem;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--kpi-accent) 22%, var(--border));
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--kpi-accent) 7%, transparent),
+      transparent 58%
+    ),
+    var(--surface);
+}
+
+.dashboard-kpi::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: var(--kpi-accent);
+  opacity: 0.8;
+}
+
+.dashboard-kpi--purchases {
+  --kpi-accent: var(--dashboard-purchases);
+}
+
+.dashboard-kpi--expenses {
+  --kpi-accent: var(--dashboard-expenses);
+}
+
+.dashboard-kpi--profit {
+  --kpi-accent: var(--dashboard-profit);
+}
+
+.dashboard-kpi__top {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.dashboard-kpi__icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  color: var(--kpi-accent);
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--kpi-accent) 12%, transparent);
+}
+
+.dashboard-kpi__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.dashboard-kpi__delta.is-positive {
+  color: var(--primary);
+}
+
+.dashboard-kpi__delta.is-negative {
+  color: var(--danger);
+}
+
+.dashboard-kpi__label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dashboard-kpi__value {
+  margin-top: 0.35rem;
+  display: block;
+  color: var(--text);
+  font-size: clamp(1.3rem, 2.1vw, 1.8rem);
+  line-height: 1.2;
+}
+
+.dashboard-kpi > small {
+  margin-top: 0.45rem;
+  display: block;
+  color: var(--text-subtle);
+  font-size: 0.78rem;
+}
+
+.operations-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2.15fr) minmax(17rem, 0.85fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.operations-chart {
+  min-width: 0;
+  padding: 1.1rem;
+}
+
+.operations-chart > header,
+.dashboard-health > header,
+.operations-activities > header,
+.operations-section > header,
+.operations-subsection-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.operations-chart h2,
+.dashboard-health h2,
+.operations-section h2,
+.operations-activities h2,
+.operations-subsection-header h3 {
+  margin: 0;
+}
+
+.operations-chart header p,
+.dashboard-health header p,
+.operations-activities header p {
+  margin: 0.25rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.operations-chart header .control {
+  width: auto;
+  min-width: 7.5rem;
+}
+
+.dashboard-chart-legend {
+  margin: -0.15rem 0 0.65rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.dashboard-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.dashboard-chart-legend span::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.dashboard-chart-legend .is-sales {
+  color: var(--dashboard-sales);
+}
+
+.dashboard-chart-legend .is-purchases {
+  color: var(--dashboard-purchases);
+}
+
+.dashboard-chart-legend .is-expenses {
+  color: var(--dashboard-expenses);
+}
+
+.dashboard-chart-legend .is-profit {
+  color: var(--dashboard-profit);
+}
+
+.dashboard-health {
+  min-width: 0;
+  padding: 1.1rem;
+}
+
+.dashboard-health__profit {
+  margin-bottom: 0.5rem;
+  padding: 1rem;
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+
+.dashboard-health__profit span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.dashboard-health__profit strong {
+  font-size: 1.5rem;
+}
+
+.dashboard-metric-row {
+  padding: 0.8rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard-metric-row div {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.dashboard-metric-row span {
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.dashboard-metric-row small {
+  color: var(--text-subtle);
+  font-size: 0.7rem;
+}
+
+.dashboard-metric-row strong {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.dashboard-report-link {
+  margin-top: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.dashboard-lower-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: 1rem;
+}
+
+.operations-activities {
+  min-width: 0;
+  padding: 1.1rem;
+}
+
+.operations-activities ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.operations-activities li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.operations-table-subtitle {
+  display: block;
+}
+
+.operations-activities small,
+.operations-table-subtitle {
+  color: var(--text-muted);
+}
+
+.dashboard-activity-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  display: grid;
+  place-items: center;
+  color: var(--dashboard-sales);
+  border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, currentColor 9%, transparent);
+}
+
+.dashboard-activity-icon--purchase {
+  color: var(--dashboard-purchases);
+}
+
+.dashboard-activity-icon--expense {
+  color: var(--dashboard-expenses);
+}
+
+.dashboard-activity-content {
+  min-width: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.dashboard-activity-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.dashboard-activity-title > strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 0.84rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-activity-title .badge {
+  flex: 0 0 auto;
+  padding-block: 2px;
+  font-size: 0.7rem;
+}
+
+.dashboard-activity-amount {
+  display: grid;
+  gap: 0.15rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.dashboard-activity-amount strong {
+  font-size: 0.85rem;
+}
+
+.dashboard-activity-amount small {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.dashboard-empty {
+  padding: 2rem 0;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.operations-section {
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+}
+
+.operations-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.operations-form-grid,
+.operations-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.operations-form-grid {
+  align-items: start;
+}
+
+.operations-vehicle-card {
+  margin-bottom: 1rem;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+
+.operations-vehicle-card strong {
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.operations-vehicle-card span {
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.operations-section-error {
+  margin: -0.25rem 0 1rem;
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+
+.operations-warning {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  color: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+
+.operations-choice-cards {
+  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.operations-choice-card {
+  padding: 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  cursor: pointer;
+}
+
+.operations-choice-card.is-selected {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.operations-choice-card input {
+  margin-top: 0.2rem;
+  accent-color: var(--primary);
+}
+
+.operations-choice-card span,
+.operations-choice-card small {
+  display: block;
+}
+
+.operations-choice-card small {
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.operations-refund-summary {
+  margin: 0;
+  max-width: 36rem;
+}
+
+.operations-refund-summary > div {
+  padding: 0.625rem 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.operations-refund-summary dt {
+  color: var(--text-muted);
+}
+
+.operations-refund-summary dd {
+  margin: 0;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.operations-refund-summary .operations-refund-total {
+  margin-top: 0.375rem;
+  border-bottom: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.operations-detail-grid {
+  margin: 0;
+}
+
+.operations-detail-grid > div {
+  min-width: 0;
+  padding: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+
+.operations-detail-grid dt {
+  margin-bottom: 0.375rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.operations-detail-grid dd {
+  margin: 0;
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.operations-repeat-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(8rem, 1fr)) auto;
+  align-items: end;
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 0.5rem;
+}
+
+.operations-repeat-row legend {
+  padding: 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.operations-form-actions,
+.operations-inline-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.operations-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.operations-radio-group {
+  margin: 0 0 1.25rem;
+  padding: 0.75rem 1rem 1rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.operations-radio-group legend {
+  padding: 0 0.375rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.operations-radio-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  cursor: pointer;
+}
+
+.operations-radio-group input {
+  accent-color: var(--primary);
+}
+
+.operations-radio-group label.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1000px) {
+  .operations-kpis,
+  .operations-form-grid,
+  .operations-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .operations-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-lower-grid {
+    grid-template-columns: 1fr;
+  }
+  .operations-repeat-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .operations-kpis,
+  .operations-form-grid,
+  .operations-detail-grid,
+  .operations-repeat-row,
+  .operations-choice-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-quick-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .dashboard-quick-actions .button {
+    flex: 1;
+  }
+
+  .operations-chart > header,
+  .dashboard-health > header,
+  .operations-activities > header {
+    align-items: flex-start;
+  }
+
+  .operations-chart header .control {
+    min-width: 6.5rem;
+  }
+
+  .operations-activities li {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .dashboard-activity-amount {
+    grid-column: 2;
+    text-align: left;
+  }
+}

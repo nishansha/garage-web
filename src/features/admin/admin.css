@@ -1,0 +1,144 @@
+.admin-form {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+}
+
+.admin-hub-card {
+  min-height: 118px;
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  text-align: left;
+  background: var(--surface);
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.admin-hub-card:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+  transform: translateY(-1px);
+}
+
+.admin-hub-card > svg {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  padding: 9px;
+  border-radius: 10px;
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.admin-hub-card > span {
+  display: grid;
+  gap: 7px;
+}
+
+.admin-hub-card strong {
+  font-size: 0.98rem;
+}
+
+.admin-hub-card small {
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.admin-master-filters {
+  margin-bottom: 18px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.admin-selection-prompt {
+  min-height: 220px;
+  padding: 28px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.admin-selection-prompt > svg {
+  width: 40px;
+  height: 40px;
+  color: var(--text-subtle);
+}
+
+.admin-selection-prompt p {
+  margin: 0;
+}
+
+.admin-danger-card {
+  max-width: 720px;
+  padding: clamp(22px, 4vw, 34px);
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  border-color: rgba(255, 107, 117, 0.35);
+}
+
+.admin-danger-card > svg {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  padding: 10px;
+  border-radius: 11px;
+  color: var(--danger);
+  background: rgba(255, 107, 117, 0.1);
+}
+
+.admin-danger-card > div {
+  width: 100%;
+}
+
+.admin-danger-card h2 {
+  margin-bottom: 8px;
+}
+
+.admin-danger-card p {
+  color: var(--text-muted);
+}
+
+.admin-danger-card .form-field {
+  max-width: 430px;
+  margin: 24px 0 12px;
+}
+
+.admin-danger-card__warning {
+  max-width: 560px;
+  font-size: 0.84rem;
+}
+
+.admin-reset-result {
+  margin-top: 18px;
+  color: var(--primary);
+  font-size: 0.88rem;
+}
+
+@media (max-width: 620px) {
+  .admin-danger-card {
+    display: block;
+  }
+
+  .admin-danger-card > svg {
+    margin-bottom: 16px;
+  }
+}
