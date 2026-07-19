@@ -78,6 +78,7 @@ export interface Purchase {
   variantId: number;
   colorId?: number | null;
   fuelTypeId?: number | null;
+  transmissionTypeId?: number | null;
   segmentId?: number | null;
   warehouseId?: number | null;
   brandName: string;
@@ -85,6 +86,7 @@ export interface Purchase {
   variantName: string;
   colorName?: string | null;
   fuelType?: string | null;
+  transmissionType?: string | null;
   segmentName?: string | null;
   warehouseName?: string | null;
   makeYear: number | null;
@@ -100,6 +102,7 @@ export interface Purchase {
   expenses: PurchaseExpenseInput[] | null;
   sold: boolean;
   returned?: boolean;
+  exchange?: boolean;
   editable?: boolean;
   paymentStatus?: PaymentStatus | null;
   paidAmount?: number | null;
@@ -116,6 +119,7 @@ export interface PurchaseInput {
   variantId: number;
   colorId: number;
   fuelTypeId: number;
+  transmissionTypeId: number;
   segmentId: number;
   warehouseId: number;
   makeYear: string;
@@ -137,17 +141,23 @@ export interface AmountSplit {
 }
 export interface ExchangeExpense {
   id?: number | null;
+  version?: number;
   date: string;
   typeId: number;
   description: string;
-  amount?: number;
+  amount: number;
+  paymentAccountId: number;
 }
 export interface ExchangeVehicleInput {
+  id?: number;
+  version?: number;
   vehicleNo: string;
   modelId: number;
   brandId: number;
   variantId: number;
   colorId: number;
+  fuelTypeId: number;
+  transmissionTypeId: number;
   segmentId: number;
   warehouseId: number;
   makeYear: string;
@@ -155,6 +165,29 @@ export interface ExchangeVehicleInput {
   purchaseRate: number;
   ownerShipSerialNo: string;
   expenses: ExchangeExpense[];
+}
+export interface SaleExchangeVehicleDetails {
+  id: number;
+  version: number;
+  date: string;
+  deliveredDate?: string | null;
+  code?: string | null;
+  vehicleNo: string;
+  inventoryId?: number | null;
+  warehouseId?: number | null;
+  segmentId?: number | null;
+  brandId: number;
+  modelId: number;
+  variantId: number;
+  colorId?: number | null;
+  fuelTypeId?: number | null;
+  transmissionTypeId?: number | null;
+  transmissionType?: string | null;
+  makeYear?: string | null;
+  odometer?: string | null;
+  purchaseRate: number;
+  ownerShipSerialNo?: string | null;
+  expenses?: ExchangeExpense[] | null;
 }
 export interface Sale {
   id: number;
@@ -173,6 +206,7 @@ export interface Sale {
   profit: number;
   exchange: boolean;
   exchangeAmount?: number | null;
+  exchangeVehicleDetails?: SaleExchangeVehicleDetails | null;
   financed: boolean;
   paymentStatus?: SalePaymentStatus | null;
   paidAmount?: number | null;

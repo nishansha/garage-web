@@ -31,6 +31,7 @@ export const validationMessageConfig: Record<string, string> = {
   "purchase.variantId.REQUIRED": "Variant is required",
   "purchase.colorId.REQUIRED": "Color is required",
   "purchase.fuelTypeId.REQUIRED": "Fuel type is required",
+  "purchase.transmissionTypeId.REQUIRED": "Transmission type is required",
   "purchase.segmentId.REQUIRED": "Segment is required",
   "purchase.warehouseId.REQUIRED": "Warehouse is required",
   "purchase.makeYear.REQUIRED": "Make year is required",
@@ -86,6 +87,10 @@ export const validationMessageConfig: Record<string, string> = {
   "sale.exchange.modelId.REQUIRED": "Exchange vehicle model is required",
   "sale.exchange.variantId.REQUIRED": "Exchange vehicle variant is required",
   "sale.exchange.colorId.REQUIRED": "Exchange vehicle color is required",
+  "sale.exchange.fuelTypeId.REQUIRED":
+    "Exchange vehicle fuel type is required",
+  "sale.exchange.transmissionTypeId.REQUIRED":
+    "Exchange vehicle transmission type is required",
   "sale.exchange.segmentId.REQUIRED": "Exchange vehicle segment is required",
   "sale.exchange.warehouseId.REQUIRED":
     "Exchange vehicle warehouse is required",
@@ -122,6 +127,8 @@ export const validationMessageConfig: Record<string, string> = {
     "Expense amount cannot be negative",
   "sale.exchangeExpenses.amount.MUST_BE_POSITIVE":
     "Expense amount must be greater than zero",
+  "sale.exchangeExpenses.paymentAccountId.REQUIRED":
+    "Payment account is required",
 
   "saleReturn.returnDate.REQUIRED": "Return date is required",
   "saleReturn.reason.REQUIRED": "Reason is required",
@@ -144,6 +151,7 @@ export const validationMessageConfig: Record<string, string> = {
   "expense.description.REQUIRED": "Description is required",
   "expense.amount.REQUIRED": "Amount is required",
   "expense.amount.MUST_BE_POSITIVE": "Amount must be greater than zero",
+  "expense.amount.MAXIMUM": "Amount exceeds the available balance",
 
   "paymentAccount.name.REQUIRED": "Account name is required",
   "paymentAccount.openingBalance.REQUIRED": "Opening balance is required",

@@ -33,6 +33,7 @@ import {
   type ExchangeExpense,
   type ExchangeHandling,
   type Lookup,
+  type PaymentAccount,
   type PaymentInput,
   type PayerType,
   type Sale,
@@ -81,6 +82,20 @@ const nonNegativeInteger = requiredText.refine(
   (value) => Number.isInteger(Number(value)) && Number(value) >= 0,
   "NON_NEGATIVE",
 );
+
+const paymentAccountBalance = (
+  accounts: PaymentAccount[] | undefined,
+  accountId: number,
+): number | null => {
+  const account = accounts?.find((item) => item.id === accountId);
+  if (!account) return null;
+  return account.currentBalance ?? account.openingBalance ?? null;
+};
+
+const paymentAccountLabel = (account: PaymentAccount) =>
+  account.accountType === "BANK" && account.bankName
+    ? `${account.name} (${account.bankName})`
+    : account.name;
 const makeYear = requiredText.refine((value) => {
   const year = Number(value);
   return Number.isInteger(year) && year >= 1900 && year <= CURRENT_YEAR;
@@ -278,23 +293,36 @@ export const SalesListRoute = () => {
 const SaleEditor = ({ sale }: { sale?: Sale }) => {
   const navigate = useNavigate();
   const client = useQueryClient();
+  const exchangeVehicle = sale?.exchangeVehicleDetails;
   const [errors, setErrors] = useState<FieldErrors>({});
   const [exchanged, setExchanged] = useState(sale?.exchange ?? false);
   const [financed, setFinanced] = useState(sale?.financed ?? false);
   const [exchangeAmount, setExchangeAmount] = useState(
     sale?.exchangeAmount == null ? "" : String(sale.exchangeAmount),
   );
-  const [exchangeBrandId, setExchangeBrandId] = useState(0);
-  const [exchangeModelId, setExchangeModelId] = useState(0);
+  const [exchangeBrandId, setExchangeBrandId] = useState(
+    exchangeVehicle?.brandId ?? 0,
+  );
+  const [exchangeModelId, setExchangeModelId] = useState(
+    exchangeVehicle?.modelId ?? 0,
+  );
   const [splits, setSplits] = useState<AmountSplit[]>(sale?.amountSplits ?? []);
   const [exchangeExpenses, setExchangeExpenses] = useState<ExchangeExpense[]>(
-    [],
+    exchangeVehicle?.expenses?.map((expense) => ({
+      ...expense,
+      paymentAccountId: expense.paymentAccountId ?? 0,
+    })) ?? [],
   );
   const products = useQuery({
     queryKey: ["operations", "stock-products"],
     queryFn: operationsApi.stock.products,
   });
-  const lookupTypes = ["COLOR", "SALE_SPLIT_TYPE"];
+  const lookupTypes = [
+    "COLOR",
+    "FUEL_TYPE",
+    "TRANSMISSION_TYPE",
+    "SALE_SPLIT_TYPE",
+  ];
   const lookups = useQuery({
     queryKey: ["operations", "lookups", "sale-form"],
     queryFn: async () => ({
@@ -320,6 +348,10 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
     queryFn: () =>
       operationsApi.catalog.variants(exchangeBrandId, exchangeModelId),
     enabled: exchangeBrandId > 0 && exchangeModelId > 0,
+  });
+  const accounts = useQuery({
+    queryKey: ["operations", "payment-accounts"],
+    queryFn: operationsApi.paymentAccounts,
   });
   const mutation = useMutation<unknown, Error, SaleInput>({
     mutationFn: async (value: SaleInput) => {
@@ -413,6 +445,8 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
         "modelId",
         "variantId",
         "colorId",
+        "fuelTypeId",
+        "transmissionTypeId",
         "segmentId",
         "warehouseId",
       ].forEach((field) =>
@@ -464,10 +498,51 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
         validateSaleField(
           `exchangeExpenses.${index}.amount`,
           data.get(`exchangeExpenses.${index}.amount`),
-          nonNegativeAmount,
+          positiveAmount,
           "exchangeExpenses.amount",
         );
+        validateSaleField(
+          `exchangeExpenses.${index}.paymentAccountId`,
+          data.get(`exchangeExpenses.${index}.paymentAccountId`),
+          requiredSelection,
+          "exchangeExpenses.paymentAccountId",
+        );
       });
+
+      const totalsByAccount: Record<number, number> = {};
+      exchangeExpenses.forEach((_, index) => {
+        const accountId = numberValue(
+          data.get(`exchangeExpenses.${index}.paymentAccountId`),
+        );
+        const amount = numberValue(
+          data.get(`exchangeExpenses.${index}.amount`),
+        );
+        if (accountId < 1 || amount <= 0) return;
+
+        const balance = paymentAccountBalance(accounts.data, accountId);
+        if (balance != null && amount > balance) {
+          nextErrors[`exchangeExpenses.${index}.amount`] =
+            `Payment amount cannot exceed account balance (${formatCurrency(balance)})`;
+        }
+        totalsByAccount[accountId] = (totalsByAccount[accountId] ?? 0) + amount;
+      });
+
+      for (const [accountIdValue, total] of Object.entries(totalsByAccount)) {
+        const accountId = Number(accountIdValue);
+        const balance = paymentAccountBalance(accounts.data, accountId);
+        if (balance == null || total <= balance) continue;
+
+        exchangeExpenses.forEach((_, index) => {
+          if (
+            numberValue(
+              data.get(`exchangeExpenses.${index}.paymentAccountId`),
+            ) === accountId
+          ) {
+            nextErrors[`exchangeExpenses.${index}.amount`] =
+              `Total expenses for this account (${formatCurrency(total)}) cannot exceed account balance (${formatCurrency(balance)})`;
+          }
+        });
+      }
     }
     if (financed) {
       validateSaleField(
@@ -491,10 +566,14 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
     }));
     const expenses = exchangeExpenses.map((expense, index) => ({
       id: expense.id,
+      ...(expense.version != null && { version: expense.version }),
       date: String(data.get(`exchangeExpenses.${index}.date`)),
       typeId: numberValue(data.get(`exchangeExpenses.${index}.typeId`)),
       description: String(data.get(`exchangeExpenses.${index}.description`)),
       amount: numberValue(data.get(`exchangeExpenses.${index}.amount`)),
+      paymentAccountId: numberValue(
+        data.get(`exchangeExpenses.${index}.paymentAccountId`),
+      ),
     }));
     const value: SaleInput = {
       date: String(data.get("date")),
@@ -510,11 +589,19 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
         : null,
       exchangeVehicleDetails: exchanged
         ? {
+            ...(exchangeVehicle?.id != null && { id: exchangeVehicle.id }),
+            ...(exchangeVehicle?.version != null && {
+              version: exchangeVehicle.version,
+            }),
             vehicleNo: String(data.get("exchange.vehicleNo")),
             brandId: numberValue(data.get("exchange.brandId")),
             modelId: numberValue(data.get("exchange.modelId")),
             variantId: numberValue(data.get("exchange.variantId")),
             colorId: numberValue(data.get("exchange.colorId")),
+            fuelTypeId: numberValue(data.get("exchange.fuelTypeId")),
+            transmissionTypeId: numberValue(
+              data.get("exchange.transmissionTypeId"),
+            ),
             segmentId: numberValue(data.get("exchange.segmentId")),
             warehouseId: numberValue(data.get("exchange.warehouseId")),
             makeYear: String(data.get("exchange.makeYear")),
@@ -536,9 +623,19 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
   };
   const lookup = (type: string): Lookup[] =>
     (lookups.data as Record<string, Lookup[]> | undefined)?.[type] ?? [];
-  const exchangeSelect = (field: string, type: string, label: string) => (
+  const exchangeSelect = (
+    field: string,
+    type: string,
+    label: string,
+    defaultValue?: number | null,
+  ) => (
     <FormField label={label} required error={errors[`exchange.${field}`]}>
-      <Select name={`exchange.${field}`} required>
+      <Select
+        key={`${field}-${lookups.isSuccess ? "ready" : "loading"}`}
+        name={`exchange.${field}`}
+        required
+        defaultValue={defaultValue ? String(defaultValue) : ""}
+      >
         <option value="">Select {label.toLowerCase()}</option>
         {lookup(type).map((item) => (
           <option key={item.id} value={item.id}>
@@ -736,7 +833,11 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
                 required
                 error={errors["exchange.vehicleNo"]}
               >
-                <Input name="exchange.vehicleNo" required />
+                <Input
+                  name="exchange.vehicleNo"
+                  required
+                  defaultValue={exchangeVehicle?.vehicleNo ?? ""}
+                />
               </FormField>
               <FormField
                 label="Brand"
@@ -786,7 +887,16 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
                 required
                 error={errors["exchange.variantId"]}
               >
-                <Select name="exchange.variantId" required>
+                <Select
+                  key={`exchange-variant-${exchangeVariants.isSuccess ? "ready" : "loading"}`}
+                  name="exchange.variantId"
+                  required
+                  defaultValue={
+                    exchangeVehicle?.variantId
+                      ? String(exchangeVehicle.variantId)
+                      : ""
+                  }
+                >
                   <option value="">Select variant</option>
                   {exchangeVariants.data?.map((item) => (
                     <option key={item.id} value={item.id}>
@@ -795,14 +905,40 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
                   ))}
                 </Select>
               </FormField>
-              {exchangeSelect("colorId", "COLOR", "Color")}
-              {exchangeSelect("segmentId", "SEGMENT", "Segment")}
+              {exchangeSelect(
+                "colorId",
+                "COLOR",
+                "Color",
+                exchangeVehicle?.colorId,
+              )}
+              {exchangeSelect(
+                "fuelTypeId",
+                "FUEL_TYPE",
+                "Fuel type",
+                exchangeVehicle?.fuelTypeId,
+              )}
+              {exchangeSelect(
+                "transmissionTypeId",
+                "TRANSMISSION_TYPE",
+                "Transmission type",
+                exchangeVehicle?.transmissionTypeId,
+              )}
+              {exchangeSelect(
+                "segmentId",
+                "SEGMENT",
+                "Segment",
+                exchangeVehicle?.segmentId,
+              )}
               <FormField
                 label="Warehouse"
                 required
                 error={errors["exchange.warehouseId"]}
               >
-                <Select name="exchange.warehouseId" required defaultValue="1">
+                <Select
+                  name="exchange.warehouseId"
+                  required
+                  defaultValue={String(exchangeVehicle?.warehouseId ?? 1)}
+                >
                   <option value="1">Future Cars</option>
                 </Select>
               </FormField>
@@ -811,7 +947,12 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
                 required
                 error={errors["exchange.makeYear"]}
               >
-                <Input name="exchange.makeYear" type="number" required />
+                <Input
+                  name="exchange.makeYear"
+                  type="number"
+                  required
+                  defaultValue={exchangeVehicle?.makeYear ?? ""}
+                />
               </FormField>
               <FormField
                 label="Odometer"
@@ -823,6 +964,7 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
                   type="number"
                   min="0"
                   required
+                  defaultValue={exchangeVehicle?.odometer ?? ""}
                 />
               </FormField>
               <FormField
@@ -845,7 +987,11 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
                 required
                 error={errors["exchange.ownerShipSerialNo"]}
               >
-                <Input name="exchange.ownerShipSerialNo" required />
+                <Input
+                  name="exchange.ownerShipSerialNo"
+                  required
+                  defaultValue={exchangeVehicle?.ownerShipSerialNo ?? ""}
+                />
               </FormField>
             </div>
             <div className="operations-subsection-header">
@@ -856,77 +1002,135 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
                 onClick={() =>
                   setExchangeExpenses((items) => [
                     ...items,
-                    { date: today(), typeId: 0, description: "", amount: 0 },
+                    {
+                      date: today(),
+                      typeId: 0,
+                      description: "",
+                      amount: 0,
+                      paymentAccountId: 0,
+                    },
                   ])
                 }
               >
                 <Plus /> Add
               </Button>
             </div>
-            {exchangeExpenses.map((expense, index) => (
-              <fieldset className="operations-repeat-row" key={index}>
-                <legend>Expense {index + 1}</legend>
-                <FormField
-                  label="Date"
-                  required
-                  error={errors[`exchangeExpenses.${index}.date`]}
-                >
-                  <DateInput
-                    name={`exchangeExpenses.${index}.date`}
+            {exchangeExpenses.map((expense, index) => {
+              const selectedBalance = paymentAccountBalance(
+                accounts.data,
+                expense.paymentAccountId,
+              );
+              return (
+                <fieldset className="operations-repeat-row" key={index}>
+                  <legend>Expense {index + 1}</legend>
+                  <FormField
+                    label="Date"
                     required
-                    defaultValue={expense.date}
-                  />
-                </FormField>
-                <FormField
-                  label="Type"
-                  required
-                  error={errors[`exchangeExpenses.${index}.typeId`]}
-                >
-                  <Select name={`exchangeExpenses.${index}.typeId`} required>
-                    <option value="">Select type</option>
-                    {lookup("EXPENSE_TYPE").map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-                <FormField
-                  label="Description"
-                  required
-                  error={errors[`exchangeExpenses.${index}.description`]}
-                >
-                  <Input
-                    name={`exchangeExpenses.${index}.description`}
+                    error={errors[`exchangeExpenses.${index}.date`]}
+                  >
+                    <DateInput
+                      name={`exchangeExpenses.${index}.date`}
+                      required
+                      defaultValue={expense.date}
+                    />
+                  </FormField>
+                  <FormField
+                    label="Type"
                     required
-                  />
-                </FormField>
-                <FormField
-                  label="Amount"
-                  required
-                  error={errors[`exchangeExpenses.${index}.amount`]}
-                >
-                  <Input
-                    name={`exchangeExpenses.${index}.amount`}
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    error={errors[`exchangeExpenses.${index}.typeId`]}
+                  >
+                    <Select
+                      name={`exchangeExpenses.${index}.typeId`}
+                      required
+                      defaultValue={expense.typeId ? String(expense.typeId) : ""}
+                    >
+                      <option value="">Select type</option>
+                      {lookup("EXPENSE_TYPE").map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                  <FormField
+                    label="Description"
                     required
-                  />
-                </FormField>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() =>
-                    setExchangeExpenses((items) =>
-                      items.filter((_, row) => row !== index),
-                    )
-                  }
-                >
-                  <Trash2 />
-                </Button>
-              </fieldset>
-            ))}
+                    error={errors[`exchangeExpenses.${index}.description`]}
+                  >
+                    <Input
+                      name={`exchangeExpenses.${index}.description`}
+                      required
+                      defaultValue={expense.description}
+                    />
+                  </FormField>
+                  <FormField
+                    label="Amount"
+                    required
+                    error={errors[`exchangeExpenses.${index}.amount`]}
+                  >
+                    <Input
+                      name={`exchangeExpenses.${index}.amount`}
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      required
+                      defaultValue={expense.amount || ""}
+                    />
+                  </FormField>
+                  <FormField
+                    label="Payment account"
+                    required
+                    error={
+                      errors[`exchangeExpenses.${index}.paymentAccountId`]
+                    }
+                    hint={
+                      expense.paymentAccountId > 0 && selectedBalance != null
+                        ? `Available balance: ${formatCurrency(selectedBalance)}`
+                        : undefined
+                    }
+                  >
+                    <Select
+                      key={`exchange-expense-account-${index}-${accounts.isSuccess ? "ready" : "loading"}`}
+                      name={`exchangeExpenses.${index}.paymentAccountId`}
+                      required
+                      value={
+                        expense.paymentAccountId
+                          ? String(expense.paymentAccountId)
+                          : ""
+                      }
+                      onChange={(event) => {
+                        const paymentAccountId = Number(event.target.value) || 0;
+                        setExchangeExpenses((items) =>
+                          items.map((item, row) =>
+                            row === index
+                              ? { ...item, paymentAccountId }
+                              : item,
+                          ),
+                        );
+                      }}
+                    >
+                      <option value="">Select account</option>
+                      {accounts.data?.map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {paymentAccountLabel(account)}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() =>
+                      setExchangeExpenses((items) =>
+                        items.filter((_, row) => row !== index),
+                      )
+                    }
+                  >
+                    <Trash2 />
+                  </Button>
+                </fieldset>
+              );
+            })}
           </>
         )}
       </Section>

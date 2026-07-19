@@ -29,6 +29,7 @@ import {
   operationsApi,
   type Expense,
   type ExpenseInput,
+  type PaymentAccount,
   type PurchaseExpenseSummary,
   type SearchInput,
 } from "../../services/operations";
@@ -87,6 +88,20 @@ const expenseSchema = z.object({
 });
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
+
+const paymentAccountBalance = (
+  accounts: PaymentAccount[] | undefined,
+  accountId: number,
+): number | null => {
+  const account = accounts?.find((item) => item.id === accountId);
+  if (!account) return null;
+  return account.currentBalance ?? account.openingBalance ?? null;
+};
+
+const paymentAccountLabel = (account: PaymentAccount) =>
+  account.accountType === "BANK" && account.bankName
+    ? `${account.name} (${account.bankName})`
+    : account.name;
 
 export const GeneralExpensesListRoute = () => {
   const [page, setPage] = useState(1);
@@ -310,7 +325,9 @@ const ExpenseEditor = ({
   const {
     register,
     handleSubmit,
+    clearErrors,
     setError,
+    watch,
     formState: { errors },
   } = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
@@ -322,6 +339,11 @@ const ExpenseEditor = ({
       description: expense?.description ?? "",
     },
   });
+  const paymentAccountId = Number(watch("paymentAccountId") || 0);
+  const selectedAccount = accounts.data?.find(
+    (account) => account.id === paymentAccountId,
+  );
+  const accountBalance = paymentAccountBalance(accounts.data, paymentAccountId);
   const mutation = useMutation({
     mutationFn: (value: ExpenseInput) =>
       expense
@@ -359,6 +381,17 @@ const ExpenseEditor = ({
     },
   });
   const submit = (data: ExpenseFormValues) => {
+    clearErrors("amount");
+    if (
+      accountBalance != null &&
+      Number(data.amount) > accountBalance
+    ) {
+      setError("amount", {
+        type: "validate",
+        message: `Payment amount cannot exceed account balance (${formatCurrency(accountBalance)})`,
+      });
+      return;
+    }
     const value: ExpenseInput = {
       date: data.date,
       amount: data.amount,
@@ -400,22 +433,33 @@ const ExpenseEditor = ({
               min="0.01"
               step="0.01"
               required
-              {...register("amount", { valueAsNumber: true })}
+              {...register("amount", {
+                valueAsNumber: true,
+                onChange: () => clearErrors("amount"),
+              })}
             />
           </FormField>
           <FormField
             label="Payment account"
             required
             error={errors.paymentAccountId?.message}
+            hint={
+              selectedAccount && accountBalance != null
+                ? `Available balance: ${formatCurrency(accountBalance)}`
+                : undefined
+            }
           >
             <Select
               required
-              {...register("paymentAccountId", { valueAsNumber: true })}
+              {...register("paymentAccountId", {
+                valueAsNumber: true,
+                onChange: () => clearErrors(["paymentAccountId", "amount"]),
+              })}
             >
               <option value="">Select account</option>
               {accounts.data?.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.name}
+                  {paymentAccountLabel(item)}
                 </option>
               ))}
             </Select>
