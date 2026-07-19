@@ -82,6 +82,7 @@ export type MasterDataType =
   | "SEGMENT"
   | "COLOR"
   | "FUEL_TYPE"
+  | "TRANSMISSION_TYPE"
   | "WAREHOUSE"
   | "EXPENSE_TYPE";
 
@@ -101,6 +102,13 @@ export interface SaveMasterDataResponse {
   id?: number;
   message?: string;
 }
+
+const LOOKUP_MASTER_TYPES: ReadonlySet<MasterDataType> = new Set([
+  "COLOR",
+  "FUEL_TYPE",
+  "TRANSMISSION_TYPE",
+  "WAREHOUSE",
+]);
 
 export interface ResetDataResponse {
   tablesCleared: number;
@@ -137,6 +145,7 @@ const listEndpoint = (
       return `v1/product/categories/${categoryId}/segments`;
     case "COLOR":
     case "FUEL_TYPE":
+    case "TRANSMISSION_TYPE":
     case "WAREHOUSE":
       return `v1/lookup?type=${encodeURIComponent(type)}`;
     case "EXPENSE_TYPE":
@@ -163,6 +172,7 @@ const extractItems = (
       return response.accounts ?? [];
     case "COLOR":
     case "FUEL_TYPE":
+    case "TRANSMISSION_TYPE":
     case "WAREHOUSE":
       return toItems(response.values);
   }
@@ -197,13 +207,23 @@ export const adminApi = {
   createMasterData(
     payload: SaveMasterDataPayload,
   ): Promise<SaveMasterDataResponse | string> {
-    return api.post("v1/product/manage-types", payload);
+    return api.post(
+      LOOKUP_MASTER_TYPES.has(payload.type)
+        ? "v1/lookup"
+        : "v1/product/manage-types",
+      payload,
+    );
   },
   updateMasterData(
     id: number,
     payload: SaveMasterDataPayload,
   ): Promise<SaveMasterDataResponse | string> {
-    return api.put(`v1/product/manage-types/${id}`, payload);
+    return api.put(
+      LOOKUP_MASTER_TYPES.has(payload.type)
+        ? `v1/lookup/${id}`
+        : `v1/product/manage-types/${id}`,
+      payload,
+    );
   },
   resetData(): Promise<ResetDataResponse> {
     return api.post("v1/admin/reset-data", {});

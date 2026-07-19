@@ -6,6 +6,7 @@ import {
   Layers3,
   Palette,
   ReceiptText,
+  Settings2,
   Shapes,
   Warehouse,
   type LucideIcon,
@@ -61,6 +62,12 @@ export const masterDataTypes: readonly MasterTypeConfig[] = [
     label: "Fuel types",
     description: "Supported vehicle fuel types",
     icon: Droplets,
+  },
+  {
+    type: "TRANSMISSION_TYPE",
+    label: "Transmission types",
+    description: "Supported vehicle transmission types",
+    icon: Settings2,
   },
   {
     type: "WAREHOUSE",

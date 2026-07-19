@@ -30,6 +30,7 @@ import {
   operationsApi,
   type Lookup,
   type Payment,
+  type PaymentAccount,
   type PaymentInput,
   type Purchase,
   type PurchaseExpenseInput,
@@ -170,14 +171,16 @@ export const PurchasesListRoute = () => {
       cell: (row) => (
         <Badge
           tone={
-            row.paymentStatus === "PAID"
+            row.exchange
+              ? "info"
+              : row.paymentStatus === "PAID"
               ? "success"
               : row.paymentStatus === "PARTIAL"
                 ? "warning"
                 : "danger"
           }
         >
-          {row.paymentStatus ?? "UNPAID"}
+          {row.exchange ? "Trade-in" : (row.paymentStatus ?? "UNPAID")}
         </Badge>
       ),
     },
@@ -242,6 +245,20 @@ const purchaseExpensePayload = (
   paymentAccountId: expense.paymentAccountId,
 });
 
+const paymentAccountBalance = (
+  accounts: PaymentAccount[] | undefined,
+  accountId: number,
+): number | null => {
+  const account = accounts?.find((item) => item.id === accountId);
+  if (!account) return null;
+  return account.currentBalance ?? account.openingBalance ?? null;
+};
+
+const paymentAccountLabel = (account: PaymentAccount) =>
+  account.accountType === "BANK" && account.bankName
+    ? `${account.name} (${account.bankName})`
+    : account.name;
+
 const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
   const navigate = useNavigate();
   const client = useQueryClient();
@@ -250,8 +267,10 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
     formState: { errors },
     handleSubmit,
     register,
+    clearErrors,
     setError,
     setValue,
+    watch,
   } = useForm<PurchaseInput>({
     defaultValues: {
       date: purchase?.date ?? today(),
@@ -263,6 +282,7 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
       variantId: purchase?.variantId ?? 0,
       colorId: purchase?.colorId ?? 0,
       fuelTypeId: purchase?.fuelTypeId ?? 0,
+      transmissionTypeId: purchase?.transmissionTypeId ?? 0,
       segmentId: purchase?.segmentId ?? 0,
       warehouseId: purchase?.warehouseId ?? 1,
       makeYear: String(purchase?.makeYear ?? ""),
@@ -287,7 +307,7 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
   });
   const [brandId, setBrandId] = useState(purchase?.brandId ?? 0);
   const [modelId, setModelId] = useState(purchase?.modelId ?? 0);
-  const lookupTypes = ["COLOR", "FUEL_TYPE"];
+  const lookupTypes = ["COLOR", "FUEL_TYPE", "TRANSMISSION_TYPE"];
   const lookups = useQuery({
     queryKey: ["operations", "lookups", "purchase-form"],
     queryFn: async () => ({
@@ -318,6 +338,7 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
     queryKey: ["operations", "payment-accounts"],
     queryFn: operationsApi.paymentAccounts,
   });
+  const watchedExpenses = watch("expenses");
   const mutation = useMutation<unknown, Error, PurchaseInput>({
     mutationFn: (value: PurchaseInput) =>
       purchase
@@ -348,7 +369,48 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
     },
   });
   const submit = handleSubmit(
-    (value: PurchaseInput) =>
+    (value: PurchaseInput) => {
+      clearErrors("expenses");
+      const totalsByAccount: Record<number, number> = {};
+      let hasBalanceError = false;
+
+      value.expenses.forEach((expense, index) => {
+        const accountId = Number(expense.paymentAccountId);
+        const amount = Number(expense.amount);
+        if (accountId < 1 || amount <= 0) return;
+
+        const balance = paymentAccountBalance(accounts.data, accountId);
+        if (balance != null && amount > balance) {
+          setError(`expenses.${index}.amount`, {
+            type: "validate",
+            message: `Payment amount cannot exceed account balance (${formatCurrency(balance)})`,
+          });
+          hasBalanceError = true;
+        }
+        totalsByAccount[accountId] = (totalsByAccount[accountId] ?? 0) + amount;
+      });
+
+      for (const [accountIdValue, total] of Object.entries(totalsByAccount)) {
+        const accountId = Number(accountIdValue);
+        const balance = paymentAccountBalance(accounts.data, accountId);
+        if (balance == null || total <= balance) continue;
+
+        value.expenses.forEach((expense, index) => {
+          if (Number(expense.paymentAccountId) === accountId) {
+            setError(`expenses.${index}.amount`, {
+              type: "validate",
+              message: `Total expenses for this account (${formatCurrency(total)}) cannot exceed account balance (${formatCurrency(balance)})`,
+            });
+          }
+        });
+        hasBalanceError = true;
+      }
+
+      if (hasBalanceError) {
+        toast.error("Purchase expenses exceed the available account balance.");
+        return;
+      }
+
       mutation.mutate({
         ...value,
         vehicleNo: value.vehicleNo.trim(),
@@ -356,7 +418,8 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
         notes: optionalText(value.notes ?? null),
         pickupStaffId: value.pickupStaffId || undefined,
         expenses: value.expenses.map(purchaseExpensePayload),
-      }),
+      });
+    },
     (invalidErrors) => {
       const firstError = collectFormErrors(invalidErrors)[0];
       toast.error(
@@ -369,7 +432,7 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
   const lookup = (name: string): Lookup[] =>
     (lookups.data as Record<string, Lookup[]> | undefined)?.[name] ?? [];
   const select = (
-    name: "colorId" | "fuelTypeId" | "segmentId",
+    name: "colorId" | "fuelTypeId" | "transmissionTypeId" | "segmentId",
     label: string,
     defaultValue?: number | null,
   ) => (
@@ -526,6 +589,11 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
           </FormField>
           {select("colorId", "Color", purchase?.colorId)}
           {select("fuelTypeId", "Fuel type", purchase?.fuelTypeId)}
+          {select(
+            "transmissionTypeId",
+            "Transmission type",
+            purchase?.transmissionTypeId,
+          )}
           {select("segmentId", "Segment", purchase?.segmentId)}
           <FormField
             label="Warehouse"
@@ -799,6 +867,15 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
               label="Payment account"
               required
               error={fieldError(errors.expenses?.[index]?.paymentAccountId)}
+              hint={(() => {
+                const accountId = Number(
+                  watchedExpenses?.[index]?.paymentAccountId,
+                );
+                const balance = paymentAccountBalance(accounts.data, accountId);
+                return accountId > 0 && balance != null
+                  ? `Available balance: ${formatCurrency(balance)}`
+                  : undefined;
+              })()}
             >
               <Select
                 key={`expense-account-${index}-${accounts.isSuccess ? "ready" : "loading"}`}
@@ -820,7 +897,7 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
                 <option value="">Select account</option>
                 {accounts.data?.map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.name}
+                    {paymentAccountLabel(account)}
                   </option>
                 ))}
               </Select>
@@ -971,6 +1048,10 @@ export const PurchaseDetailRoute = () => {
                 <Detail label="Code" value={purchase.code} />
                 <Detail label="Color" value={purchase.colorName} />
                 <Detail label="Fuel" value={purchase.fuelType} />
+                <Detail
+                  label="Transmission"
+                  value={purchase.transmissionType}
+                />
                 <Detail label="Segment" value={purchase.segmentName} />
                 <Detail label="Warehouse" value={purchase.warehouseName} />
                 <Detail label="Make year" value={purchase.makeYear} />

@@ -211,6 +211,34 @@ export const InventoryDetailRoute = () => {
         {item && (
           <>
             <Section title="Vehicle">
+              {(item.soldDate ||
+                item.saleRate != null ||
+                item.profit != null) && (
+                <div className="operations-inventory-metrics">
+                  <div>
+                    <span>Landed cost</span>
+                    <strong>
+                      <Money value={item.landedCost} />
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Sale rate</span>
+                    <strong>
+                      <Money value={item.saleRate} />
+                    </strong>
+                  </div>
+                  <div
+                    className={
+                      (item.profit ?? 0) >= 0 ? "is-positive" : "is-negative"
+                    }
+                  >
+                    <span>Profit</span>
+                    <strong>
+                      <Money value={item.profit} />
+                    </strong>
+                  </div>
+                </div>
+              )}
               <DetailGrid>
                 <Detail
                   label="Status"
@@ -233,16 +261,17 @@ export const InventoryDetailRoute = () => {
                   label="Purchase expenses"
                   value={<Money value={item.purchaseExpense} />}
                 />
-                <Detail
-                  label="Landed cost"
-                  value={<Money value={item.landedCost} />}
-                />
+                {!(
+                  item.soldDate ||
+                  item.saleRate != null ||
+                  item.profit != null
+                ) && (
+                  <Detail
+                    label="Landed cost"
+                    value={<Money value={item.landedCost} />}
+                  />
+                )}
                 <Detail label="Sold date" value={formatDate(item.soldDate)} />
-                <Detail
-                  label="Sale rate"
-                  value={<Money value={item.saleRate} />}
-                />
-                <Detail label="Profit" value={<Money value={item.profit} />} />
                 <Detail label="Customer" value={item.customerName} />
                 <Detail label="Customer mobile" value={item.customerMobileNo} />
               </DetailGrid>

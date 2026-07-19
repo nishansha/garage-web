@@ -408,7 +408,11 @@ export const DashboardRoute = () => {
                 />
                 <Tooltip
                   cursor={{ fill: "var(--surface-hover)" }}
-                  formatter={(value) => formatCurrency(Number(value))}
+                  formatter={(value) =>
+                    chartType === "SALE"
+                      ? Number(value).toLocaleString("en-IN")
+                      : formatCurrency(Number(value))
+                  }
                   contentStyle={tooltipStyle}
                 />
                 <Bar
