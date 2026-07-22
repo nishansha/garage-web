@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { FORBIDDEN_MESSAGE, isForbiddenError } from "../../lib/rbac";
 import { z } from "zod";
 import {
   Button,
@@ -47,7 +48,9 @@ export const notifyError = (error: unknown) => {
   for (const handler of [...fieldErrorHandlers].reverse()) {
     if (handler(error)) return;
   }
-  toast.error(errorMessage(error));
+  toast.error(
+    isForbiddenError(error) ? FORBIDDEN_MESSAGE : errorMessage(error),
+  );
 };
 export const useNumericParam = (name: string) => {
   const value = useParams()[name];

@@ -4,6 +4,7 @@ import {
   type PayloadAction,
 } from "@reduxjs/toolkit";
 import { useDispatch, useSelector } from "react-redux";
+import type { MyPermissions } from "../lib/rbac";
 
 export type UserRole = "ADMIN" | "STAFF" | string;
 
@@ -12,7 +13,9 @@ export interface AuthUser {
   username: string;
   email?: string;
   fullName?: string;
+  /** @deprecated use roles from permissions or login roles */
   role?: UserRole;
+  roles?: string[];
 }
 
 export interface AuthSession {
@@ -23,6 +26,7 @@ export interface AuthSession {
 
 interface AuthState {
   session: AuthSession | null;
+  permissions: MyPermissions | null;
   hydrated: boolean;
 }
 
@@ -50,11 +54,25 @@ export const sessionStorage = {
 
 const authSlice = createSlice({
   name: "auth",
-  initialState: { session: readSession(), hydrated: true } satisfies AuthState,
+  initialState: {
+    session: readSession(),
+    permissions: null as MyPermissions | null,
+    hydrated: true,
+  } satisfies AuthState,
   reducers: {
     setSession(state, action: PayloadAction<AuthSession>) {
       state.session = action.payload;
       sessionStorage.write(action.payload);
+    },
+    setPermissions(state, action: PayloadAction<MyPermissions>) {
+      state.permissions = action.payload;
+      if (state.session?.user) {
+        state.session.user.roles = action.payload.roles;
+        sessionStorage.write(state.session);
+      }
+    },
+    clearPermissions(state) {
+      state.permissions = null;
     },
     updateTokens(
       state,
@@ -68,12 +86,19 @@ const authSlice = createSlice({
     },
     clearSession(state) {
       state.session = null;
+      state.permissions = null;
       sessionStorage.clear();
     },
   },
 });
 
-export const { clearSession, setSession, updateTokens } = authSlice.actions;
+export const {
+  clearSession,
+  clearPermissions,
+  setSession,
+  setPermissions,
+  updateTokens,
+} = authSlice.actions;
 
 export const store = configureStore({
   reducer: { auth: authSlice.reducer },

@@ -1,10 +1,13 @@
 import { JSEncrypt } from "jsencrypt";
 import {
   clearSession,
+  setSession,
   store,
   updateTokens,
   type AuthSession,
 } from "../store/auth";
+import { FORBIDDEN_MESSAGE, isForbiddenError } from "./rbac";
+import { loadSessionPermissions } from "./authPermissions";
 
 const DEVELOPMENT_API_URL = "http://localhost:8080/api";
 export const API_URL = (
@@ -47,10 +50,9 @@ export class ApiError extends Error {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-export const friendlyHttpMessage = (status: number): string => {
+export const friendlyHttpMessage = (status: number, code?: string): string => {
+  if (code === "SEC_106" || status === 403) return FORBIDDEN_MESSAGE;
   if (status === 401) return "Your session has expired. Please sign in again.";
-  if (status === 403)
-    return "You do not have permission to perform this action.";
   if (status === 404) return "The requested resource was not found.";
   if (status >= 500)
     return "The server is temporarily unavailable. Please try again later.";
@@ -88,14 +90,15 @@ const parseResponse = async (response: Response): Promise<unknown> => {
 
 const toApiError = (data: unknown, status: number): ApiError => {
   if (isRecord(data)) {
+    const code = typeof data.code === "string" ? data.code : undefined;
     const message =
       typeof data.message === "string"
         ? sanitizeErrorMessage(data.message, status)
-        : friendlyHttpMessage(status);
+        : friendlyHttpMessage(status, code);
     return new ApiError(
-      message,
+      isForbiddenError({ status, code }) ? FORBIDDEN_MESSAGE : message,
       status,
-      typeof data.code === "string" ? data.code : undefined,
+      code,
       data,
     );
   }
@@ -133,6 +136,7 @@ const refreshAccessToken = (): Promise<string> => {
       response.status,
     );
     store.dispatch(updateTokens(payload));
+    await loadSessionPermissions();
     return payload.token;
   })()
     .catch((error: unknown) => {
@@ -246,6 +250,7 @@ interface LoginPayload {
   refreshToken?: string;
   fullName?: string;
   role?: string;
+  roles?: string[];
   user?: { id: string; username: string; email?: string };
 }
 
@@ -257,7 +262,12 @@ export const authApi = {
     });
     if (!result.token)
       throw new ApiError("The server returned an invalid login response.");
-    return {
+    const roles = result.roles?.length
+      ? result.roles
+      : result.role
+        ? [result.role]
+        : [];
+    const session: AuthSession = {
       token: result.token,
       refreshToken: result.refreshToken,
       user: {
@@ -265,9 +275,13 @@ export const authApi = {
         username: result.user?.username ?? username,
         email: result.user?.email,
         fullName: result.fullName,
-        role: result.role,
+        role: roles[0] ?? result.role,
+        roles,
       },
     };
+    store.dispatch(setSession(session));
+    await loadSessionPermissions();
+    return session;
   },
   async logout(): Promise<void> {
     const refreshToken = store.getState().auth.session?.refreshToken;

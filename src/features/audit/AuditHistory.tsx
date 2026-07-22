@@ -9,6 +9,7 @@ import {
   LoadingState,
   Modal,
 } from "../../components/ui";
+import { Can } from "../../components/Can";
 import { ApiError } from "../../lib/api";
 import { formatDate } from "../../lib/utils";
 import {
@@ -211,7 +212,7 @@ export const AuditHistoryButton = ({
 }) => {
   const [open, setOpen] = useState(false);
   return (
-    <>
+    <Can resource="AUDIT" privilege="VIEW">
       <Button type="button" variant={variant} onClick={() => setOpen(true)}>
         <HistoryIcon size={16} /> History
       </Button>
@@ -222,6 +223,6 @@ export const AuditHistoryButton = ({
         recordLabel={recordLabel}
         onClose={() => setOpen(false)}
       />
-    </>
+    </Can>
   );
 };

@@ -3,6 +3,23 @@
   gap: 18px;
 }
 
+.admin-role-checkboxes {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.admin-role-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.admin-role-option input {
+  accent-color: var(--primary);
+}
+
 .admin-hub-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
@@ -55,6 +72,45 @@
 .admin-hub-card small {
   color: var(--text-muted);
   line-height: 1.45;
+}
+
+.admin-permission-matrix {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-permission-module h2 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
+.admin-permission-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-permission-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.admin-permission-table th,
+.admin-permission-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+.admin-permission-table th:first-child,
+.admin-permission-table td:first-child {
+  text-align: left;
+  min-width: 200px;
+}
+
+.admin-permission-resource-code {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: ui-monospace, monospace;
 }
 
 .admin-master-filters {

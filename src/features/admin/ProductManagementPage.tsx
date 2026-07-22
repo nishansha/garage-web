@@ -30,7 +30,7 @@ import {
   type MasterDataType,
   type SaveMasterDataPayload,
 } from "../../services/admin";
-import { AdminGuard } from "./AdminGuard";
+import { Can } from "../../components/Can";
 import { masterDataTypes } from "./masterData";
 
 const isMasterDataType = (value: string | null): value is MasterDataType =>
@@ -235,16 +235,18 @@ export const ProductManagementPage = () => {
       header: <span className="sr-only">Actions</span>,
       align: "right",
       cell: (item) => (
-        <Button variant="ghost" onClick={() => openEdit(item)}>
-          <Pencil aria-hidden="true" /> Edit
-        </Button>
+        <Can resource="PRODUCT" privilege="UPDATE">
+          <Button variant="ghost" onClick={() => openEdit(item)}>
+            <Pencil aria-hidden="true" /> Edit
+          </Button>
+        </Can>
       ),
     },
   ];
 
   if (!selectedType || !config) {
     return (
-      <AdminGuard>
+      <>
         <PageHeader
           title="Product Management"
           description="Manage product and operational master data."
@@ -267,7 +269,7 @@ export const ProductManagementPage = () => {
             );
           })}
         </div>
-      </AdminGuard>
+      </>
     );
   }
 
@@ -281,7 +283,7 @@ export const ProductManagementPage = () => {
     (requiresModel ? modelsQuery.error : null);
 
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title={config.label}
         description={config.description}
@@ -290,9 +292,11 @@ export const ProductManagementPage = () => {
             <Button variant="secondary" onClick={() => setSearchParams({})}>
               <ArrowLeft aria-hidden="true" /> All types
             </Button>
-            <Button onClick={openCreate} disabled={dependencyLoading}>
-              <Plus aria-hidden="true" /> Add {config.label.toLowerCase()}
-            </Button>
+            <Can resource="PRODUCT" privilege="CREATE">
+              <Button onClick={openCreate} disabled={dependencyLoading}>
+                <Plus aria-hidden="true" /> Add {config.label.toLowerCase()}
+              </Button>
+            </Can>
           </>
         }
       />
@@ -477,6 +481,6 @@ export const ProductManagementPage = () => {
           </FormField>
         </form>
       </Modal>
-    </AdminGuard>
+    </>
   );
 };

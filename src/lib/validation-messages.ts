@@ -201,6 +201,7 @@ export const validationMessageConfig: Record<string, string> = {
   "staff.userName.REQUIRED": "User name is required",
   "staff.password.REQUIRED": "Password is required",
   "staff.role.REQUIRED": "Role is required",
+  "staff.roleIds.REQUIRED": "Select at least one role",
   "staff.designation.REQUIRED": "Designation is required",
 
   "masterData.code.REQUIRED": "Code is required",

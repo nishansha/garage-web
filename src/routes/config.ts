@@ -17,6 +17,7 @@ import {
   ReceiptText,
   RotateCcw,
   Scale,
+  Shield,
   ShoppingCart,
   Store,
   Trash2,
@@ -26,6 +27,11 @@ import {
   WalletCards,
   type LucideIcon,
 } from "lucide-react";
+import type { RouteAccess } from "./access";
+import { resolvePathAccess } from "./access";
+
+const access = (path: string): RouteAccess =>
+  resolvePathAccess(path) ?? { resource: "REPORT", privilege: "VIEW" };
 
 export interface AppRoute {
   path: string;
@@ -33,7 +39,7 @@ export interface AppRoute {
   description: string;
   group?: string;
   icon: LucideIcon;
-  adminOnly?: boolean;
+  access: RouteAccess;
 }
 
 export const appRoutes: readonly AppRoute[] = [
@@ -42,6 +48,7 @@ export const appRoutes: readonly AppRoute[] = [
     title: "Dashboard",
     description: "Business performance at a glance.",
     icon: LayoutDashboard,
+    access: access("/"),
   },
   {
     path: "/purchase/purchases",
@@ -49,6 +56,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Manage purchase transactions.",
     group: "Purchase",
     icon: ShoppingCart,
+    access: access("/purchase/purchases"),
   },
   {
     path: "/purchase/returns",
@@ -56,6 +64,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Track returned purchases.",
     group: "Purchase",
     icon: RotateCcw,
+    access: access("/purchase/returns"),
   },
   {
     path: "/purchase/vendors",
@@ -63,6 +72,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Manage vendor records.",
     group: "Purchase",
     icon: Building2,
+    access: access("/purchase/vendors"),
   },
   {
     path: "/purchase/outstandings/payables",
@@ -70,6 +80,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Amounts owed to vendors.",
     group: "Purchase",
     icon: CreditCard,
+    access: access("/purchase/outstandings/payables"),
   },
   {
     path: "/purchase/outstandings/return-receivables",
@@ -77,6 +88,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Amounts due from purchase returns.",
     group: "Purchase",
     icon: HandCoins,
+    access: access("/purchase/outstandings/return-receivables"),
   },
   {
     path: "/sales/sales",
@@ -84,6 +96,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Manage sales transactions.",
     group: "Sales",
     icon: BadgeDollarSign,
+    access: access("/sales/sales"),
   },
   {
     path: "/sales/returns",
@@ -91,6 +104,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Track returned sales.",
     group: "Sales",
     icon: RotateCcw,
+    access: access("/sales/returns"),
   },
   {
     path: "/sales/customers",
@@ -98,6 +112,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Manage customer records.",
     group: "Sales",
     icon: Contact,
+    access: access("/sales/customers"),
   },
   {
     path: "/sales/outstandings/receivables",
@@ -105,6 +120,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Amounts due from customers.",
     group: "Sales",
     icon: CircleDollarSign,
+    access: access("/sales/outstandings/receivables"),
   },
   {
     path: "/sales/outstandings/return-payables",
@@ -112,6 +128,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Amounts owed for sales returns.",
     group: "Sales",
     icon: WalletCards,
+    access: access("/sales/outstandings/return-payables"),
   },
   {
     path: "/inventory/stock",
@@ -119,6 +136,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Review current inventory.",
     group: "Inventory",
     icon: Boxes,
+    access: access("/inventory/stock"),
   },
   {
     path: "/inventory/sold",
@@ -126,6 +144,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Review sold inventory.",
     group: "Inventory",
     icon: PackageCheck,
+    access: access("/inventory/sold"),
   },
   {
     path: "/expenses/general",
@@ -133,6 +152,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Track operating expenses.",
     group: "Expenses",
     icon: ReceiptText,
+    access: access("/expenses/general"),
   },
   {
     path: "/expenses/purchase",
@@ -140,6 +160,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Track purchase-related expenses.",
     group: "Expenses",
     icon: ClipboardList,
+    access: access("/expenses/purchase"),
   },
   {
     path: "/accounting/accounts",
@@ -147,6 +168,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Manage the chart of accounts.",
     group: "Accounting",
     icon: Store,
+    access: access("/accounting/accounts"),
   },
   {
     path: "/accounting/direct-entry",
@@ -154,6 +176,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Record direct accounting entries.",
     group: "Accounting",
     icon: FileInput,
+    access: access("/accounting/direct-entry"),
   },
   {
     path: "/accounting/journals",
@@ -161,6 +184,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Review journal entries.",
     group: "Accounting",
     icon: FileClock,
+    access: access("/accounting/journals"),
   },
   {
     path: "/accounting/general-ledger",
@@ -168,6 +192,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Review posted ledger activity.",
     group: "Accounting",
     icon: DatabaseZap,
+    access: access("/accounting/general-ledger"),
   },
   {
     path: "/accounting/balance-sheet",
@@ -175,6 +200,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Review assets, liabilities and equity.",
     group: "Accounting",
     icon: Scale,
+    access: access("/accounting/balance-sheet"),
   },
   {
     path: "/accounting/trial-balance",
@@ -182,6 +208,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Review account balances.",
     group: "Accounting",
     icon: FileChartColumn,
+    access: access("/accounting/trial-balance"),
   },
   {
     path: "/accounting/profit-and-loss",
@@ -189,6 +216,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Review profit and loss.",
     group: "Accounting",
     icon: TrendingUp,
+    access: access("/accounting/profit-and-loss"),
   },
   {
     path: "/accounting/journal-profit-and-loss",
@@ -196,7 +224,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Review revenue and expenses from posted journals.",
     group: "Accounting",
     icon: FileChartColumn,
-    adminOnly: true,
+    access: access("/accounting/journal-profit-and-loss"),
   },
   {
     path: "/more/recycle-bin",
@@ -204,6 +232,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Review deleted records and audit history.",
     group: "More",
     icon: Trash2,
+    access: access("/more/recycle-bin"),
   },
   {
     path: "/more/staff",
@@ -211,7 +240,15 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Manage staff access and records.",
     group: "More",
     icon: UsersRound,
-    adminOnly: true,
+    access: access("/more/staff"),
+  },
+  {
+    path: "/more/roles",
+    title: "Roles & Permissions",
+    description: "Manage roles and privilege grants.",
+    group: "More",
+    icon: Shield,
+    access: access("/more/roles"),
   },
   {
     path: "/more/accounts",
@@ -219,7 +256,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Manage application accounts.",
     group: "More",
     icon: UserCog,
-    adminOnly: true,
+    access: access("/more/accounts"),
   },
   {
     path: "/more/products",
@@ -227,7 +264,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Manage products and catalog data.",
     group: "More",
     icon: PackageOpen,
-    adminOnly: true,
+    access: access("/more/products"),
   },
   {
     path: "/more/clear-data",
@@ -235,7 +272,7 @@ export const appRoutes: readonly AppRoute[] = [
     description: "Safely remove business data.",
     group: "More",
     icon: DatabaseZap,
-    adminOnly: true,
+    access: access("/more/clear-data"),
   },
 ] as const;
 

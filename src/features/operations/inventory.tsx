@@ -11,6 +11,7 @@ import {
   SearchFilters,
   Select,
 } from "../../components/ui";
+import { Can } from "../../components/Can";
 import { formatCurrency, formatDate } from "../../lib/utils";
 import {
   operationsApi,
@@ -198,12 +199,14 @@ export const InventoryDetailRoute = () => {
         }
         actions={
           returnable && (
-            <Link
-              className="button button--danger"
-              to={`/purchase/returns/new/${id}`}
-            >
-              Return to vendor
-            </Link>
+            <Can resource="PURCHASE_RETURN" privilege="CREATE">
+              <Link
+                className="button button--danger"
+                to={`/purchase/returns/new/${id}`}
+              >
+                Return to vendor
+              </Link>
+            </Can>
           )
         }
       />

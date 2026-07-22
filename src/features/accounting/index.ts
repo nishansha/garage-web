@@ -16,8 +16,3 @@ export {
   ProfitLossReportPage,
   TrialBalancePage,
 } from "./pages";
-
-export {
-  accountingRouteComponents,
-  type AccountingRouteComponent,
-} from "./routes";

@@ -19,6 +19,7 @@ import {
   Textarea,
   type DataColumn,
 } from "../../components/ui";
+import { Can } from "../../components/Can";
 import { AuditHistoryButton } from "../audit/AuditHistory";
 import { formatCurrency, formatDate } from "../../lib/utils";
 import {
@@ -191,9 +192,11 @@ export const PurchasesListRoute = () => {
         title="Purchases"
         description="Manage purchased vehicles, costs and vendor payments."
         actions={
-          <Link className="button button--primary" to={`${PURCHASES}/new`}>
-            <Plus aria-hidden="true" /> New purchase
-          </Link>
+          <Can resource="PURCHASE_ORDER" privilege="CREATE">
+            <Link className="button button--primary" to={`${PURCHASES}/new`}>
+              <Plus aria-hidden="true" /> New purchase
+            </Link>
+          </Can>
         }
       />
       <PurchaseFilters
@@ -993,36 +996,44 @@ export const PurchaseDetailRoute = () => {
               {!purchase.returned &&
                 (purchase.pendingAmount ?? 0) > 0 &&
                 purchase.paymentStatus !== "PAID" && (
-                  <Link
-                    className="button button--secondary"
-                    to={`${PURCHASES}/${id}/payment`}
-                  >
-                    Record payment
-                  </Link>
+                  <Can resource="PURCHASE_PAYMENT" privilege="CREATE">
+                    <Link
+                      className="button button--secondary"
+                      to={`${PURCHASES}/${id}/payment`}
+                    >
+                      Record payment
+                    </Link>
+                  </Can>
                 )}
               {purchase.paymentStatus !== "PENDING" &&
                 !purchase.sold &&
                 !purchase.returned &&
                 purchase.inventoryId && (
-                  <Link
-                    className="button button--secondary"
-                    to={`${RETURNS}/new/${purchase.inventoryId}`}
-                  >
-                    Return Purchase
-                  </Link>
+                  <Can resource="PURCHASE_RETURN" privilege="CREATE">
+                    <Link
+                      className="button button--secondary"
+                      to={`${RETURNS}/new/${purchase.inventoryId}`}
+                    >
+                      Return Purchase
+                    </Link>
+                  </Can>
                 )}
               {purchase.editable !== false && (
-                <Link
-                  className="button button--secondary"
-                  to={`${PURCHASES}/${id}/edit`}
-                >
-                  Edit
-                </Link>
+                <Can resource="PURCHASE_ORDER" privilege="UPDATE">
+                  <Link
+                    className="button button--secondary"
+                    to={`${PURCHASES}/${id}/edit`}
+                  >
+                    Edit
+                  </Link>
+                </Can>
               )}
               {purchase.paymentStatus === "PENDING" && (
-                <Button variant="danger" onClick={() => setConfirm(true)}>
-                  Delete
-                </Button>
+                <Can resource="PURCHASE_ORDER" privilege="DELETE">
+                  <Button variant="danger" onClick={() => setConfirm(true)}>
+                    Delete
+                  </Button>
+                </Can>
               )}
             </>
           )

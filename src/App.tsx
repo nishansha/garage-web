@@ -25,7 +25,9 @@ import {
   PlaceholderPage,
 } from "./pages";
 import { appRoutes } from "./routes/config";
-import { useAppSelector } from "./store/auth";
+import { usePermission } from "./hooks/usePermission";
+import { PermissionsBootstrap } from "./components/PermissionsBootstrap";
+import { resolvePathAccess } from "./routes/access";
 
 const lazyNamed = <TModule,>(
   loadModule: () => Promise<TModule>,
@@ -45,6 +47,7 @@ const loadExpenses = () => import("./features/operations/expenses");
 const loadAccounting = () => import("./features/accounting/pages");
 const loadAudit = () => import("./features/audit/RecycleBinPage");
 const loadAdminPages = () => import("./features/admin/AdminPages");
+const loadRolePages = () => import("./features/admin/RolePages");
 const loadProductManagement = () =>
   import("./features/admin/ProductManagementPage");
 
@@ -160,6 +163,8 @@ const RecycleBinPage = lazyNamed(loadAudit, "RecycleBinPage");
 const VendorsPage = lazyNamed(loadAdminPages, "VendorsPage");
 const CustomersPage = lazyNamed(loadAdminPages, "CustomersPage");
 const StaffManagementPage = lazyNamed(loadAdminPages, "StaffManagementPage");
+const RolesManagementPage = lazyNamed(loadRolePages, "RolesManagementPage");
+const RolePermissionsPage = lazyNamed(loadRolePages, "RolePermissionsPage");
 const ClearDataPage = lazyNamed(loadAdminPages, "ClearDataPage");
 const ProductManagementPage = lazyNamed(
   loadProductManagement,
@@ -169,7 +174,6 @@ const ProductManagementPage = lazyNamed(
 interface FeatureRoute {
   path: string;
   Page: ComponentType;
-  adminOnly?: boolean;
 }
 
 const operationsRoutes: readonly FeatureRoute[] = [
@@ -269,80 +273,65 @@ const accountingRoutes: readonly FeatureRoute[] = [
   {
     path: "/accounting/accounts",
     Page: PaymentAccountsPage,
-    adminOnly: true,
   },
   {
     path: "/accounting/accounts/new",
     Page: PaymentAccountFormPage,
-    adminOnly: true,
   },
   {
     path: "/accounting/accounts/:accountId/edit",
     Page: PaymentAccountFormPage,
-    adminOnly: true,
   },
   {
     path: "/accounting/accounts/:accountId/transactions",
     Page: PaymentAccountTransactionsPage,
-    adminOnly: true,
   },
   {
     path: "/accounting/direct-entry",
     Page: DirectEntriesPage,
-    adminOnly: true,
   },
   {
     path: "/accounting/direct-entry/new",
     Page: DirectEntryFormPage,
-    adminOnly: true,
   },
   {
     path: "/accounting/direct-entry/:entryId",
     Page: DirectEntryFormPage,
-    adminOnly: true,
   },
-  { path: "/accounting/journals", Page: JournalsPage, adminOnly: true },
+  { path: "/accounting/journals", Page: JournalsPage },
   {
     path: "/accounting/journals/new",
     Page: JournalFormPage,
-    adminOnly: true,
   },
   {
     path: "/accounting/journals/:journalId",
     Page: JournalDetailPage,
-    adminOnly: true,
   },
   {
     path: "/accounting/general-ledger",
     Page: GeneralLedgerPage,
-    adminOnly: true,
   },
   {
     path: "/accounting/trial-balance",
     Page: TrialBalancePage,
-    adminOnly: true,
   },
   {
     path: "/accounting/balance-sheet",
     Page: JournalBalanceSheetPage,
-    adminOnly: true,
   },
   {
     path: "/accounting/journal-profit-and-loss",
     Page: JournalProfitLossPage,
-    adminOnly: true,
   },
   { path: "/accounting/profit-and-loss", Page: ProfitLossReportPage },
   { path: "/accounting/monthly-overview", Page: MonthlyOverviewPage },
   {
     path: "/accounting/chart-of-accounts",
     Page: ChartOfAccountsPage,
-    adminOnly: true,
   },
   {
     path: "/more/account-management",
     Page: AccountManagementPage,
-    adminOnly: true,
   },
 ];
 
@@ -350,18 +339,18 @@ const adminRoutes: readonly FeatureRoute[] = [
   { path: "/purchase/vendors", Page: VendorsPage },
   { path: "/sales/customers", Page: CustomersPage },
   { path: "/more/recycle-bin", Page: RecycleBinPage },
-  { path: "/more/staff", Page: StaffManagementPage, adminOnly: true },
+  { path: "/more/staff", Page: StaffManagementPage },
+  { path: "/more/roles", Page: RolesManagementPage },
+  { path: "/more/roles/:roleId/permissions", Page: RolePermissionsPage },
   {
     path: "/more/accounts",
     Page: AccountManagementPage,
-    adminOnly: true,
   },
   {
     path: "/more/products",
     Page: ProductManagementPage,
-    adminOnly: true,
   },
-  { path: "/more/clear-data", Page: ClearDataPage, adminOnly: true },
+  { path: "/more/clear-data", Page: ClearDataPage },
 ];
 
 const featureRoutes = [
@@ -371,23 +360,16 @@ const featureRoutes = [
 ];
 const featurePaths = new Set(featureRoutes.map((route) => route.path));
 
-const FeatureAccess = ({
-  adminOnly,
-  children,
-}: {
-  adminOnly?: boolean;
-  children: ReactNode;
-}) => {
+const FeatureAccess = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
-  const isAdmin = useAppSelector(
-    (state) => state.auth.session?.user.role?.toUpperCase() === "ADMIN",
-  );
+  const { can, ready } = usePermission();
+  const access = resolvePathAccess(location.pathname);
 
-  if (adminOnly && !isAdmin) {
+  if (ready && access && !can(access.resource, access.privilege)) {
     return (
       <ErrorState
         title="Access restricted"
-        message="This area is available to administrators only."
+        message="You do not have permission to view this page."
       />
     );
   }
@@ -405,12 +387,12 @@ const LazyPage = ({ Page }: { Page: ComponentType }) => (
   </Suspense>
 );
 
-const renderFeatureRoute = ({ path, Page, adminOnly }: FeatureRoute) => (
+const renderFeatureRoute = ({ path, Page }: FeatureRoute) => (
   <Route
     key={path}
     path={path}
     element={
-      <FeatureAccess adminOnly={adminOnly}>
+      <FeatureAccess>
         <LazyPage Page={Page} />
       </FeatureAccess>
     }
@@ -460,17 +442,19 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route element={<AuthGate />}>
-            <Route element={<AppShell />}>
-              {featureRoutes.map(renderFeatureRoute)}
-              {appRoutes
-                .filter((route) => !featurePaths.has(route.path))
-                .map((route) => (
-                  <Route
-                    key={route.path}
-                    path={route.path}
-                    element={<PlaceholderPage route={route} />}
-                  />
-                ))}
+            <Route element={<PermissionsBootstrap />}>
+              <Route element={<AppShell />}>
+                {featureRoutes.map(renderFeatureRoute)}
+                {appRoutes
+                  .filter((route) => !featurePaths.has(route.path))
+                  .map((route) => (
+                    <Route
+                      key={route.path}
+                      path={route.path}
+                      element={<PlaceholderPage route={route} />}
+                    />
+                  ))}
+              </Route>
             </Route>
           </Route>
           <Route path="*" element={<NotFoundPage />} />
