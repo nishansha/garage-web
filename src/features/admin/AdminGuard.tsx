@@ -1,17 +1,26 @@
 import type { ReactNode } from "react";
 import { ErrorState } from "../../components/ui";
-import { useAppSelector } from "../../store/auth";
+import { usePermission } from "../../hooks/usePermission";
+import type { RbacPrivilege } from "../../lib/rbac";
 
-export const AdminGuard = ({ children }: { children: ReactNode }) => {
-  const isAdmin = useAppSelector(
-    (state) => state.auth.session?.user.role?.toUpperCase() === "ADMIN",
-  );
+type PermissionGuardProps = {
+  children: ReactNode;
+  resource: string;
+  privilege?: RbacPrivilege;
+};
 
-  if (!isAdmin) {
+export const PermissionGuard = ({
+  children,
+  resource,
+  privilege = "VIEW",
+}: PermissionGuardProps) => {
+  const { can, ready } = usePermission();
+
+  if (ready && !can(resource, privilege)) {
     return (
       <ErrorState
         title="Access restricted"
-        message="This area is available to administrators only."
+        message="You do not have permission to view this page."
       />
     );
   }

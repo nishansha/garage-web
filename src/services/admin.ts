@@ -1,4 +1,5 @@
 import { api } from "../lib/api";
+import type { RoleOption } from "../lib/rbac";
 
 export type StaffRole = "STAFF" | "ADMIN";
 
@@ -6,7 +7,8 @@ export interface StaffMember {
   id: number;
   name: string;
   userName: string;
-  role: StaffRole | string;
+  role?: StaffRole | string;
+  roles?: string[];
   designation: string;
 }
 
@@ -36,15 +38,15 @@ export interface CreateStaffPayload {
   name: string;
   userName: string;
   password: string;
-  role: StaffRole;
+  roleIds: number[];
   designation: string;
 }
 
 export interface UpdateStaffPayload {
   name: string;
-  role: StaffRole;
   designation: string;
   password?: string;
+  roleIds?: number[];
 }
 
 interface StaffResponse {
@@ -194,6 +196,17 @@ export const adminApi = {
   },
   updateStaff(id: number, payload: UpdateStaffPayload): Promise<unknown> {
     return api.put(`v1/user/${id}`, payload);
+  },
+  async getUserRoles(id: number): Promise<RoleOption[]> {
+    const response = await api.get<{ roles: RoleOption[] }>(
+      `v1/user/${id}/roles`,
+    );
+    return response.roles ?? [];
+  },
+  replaceUserRoles(id: number, roleIds: number[]): Promise<RoleOption[]> {
+    return api
+      .put<{ roles: RoleOption[] }>(`v1/user/${id}/roles`, { roleIds })
+      .then((response) => response.roles ?? []);
   },
   async getMasterData(
     type: MasterDataType,

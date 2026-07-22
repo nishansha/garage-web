@@ -3,7 +3,6 @@ import {
   useMemo,
   useState,
   type FormEvent,
-  type ReactNode,
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Plus, Trash2 } from "lucide-react";
@@ -35,6 +34,7 @@ import {
   Textarea,
   type DataColumn,
 } from "../../components/ui";
+import { Can } from "../../components/Can";
 import { AuditHistoryButton } from "../audit/AuditHistory";
 import { ApiError } from "../../lib/api";
 import {
@@ -49,7 +49,6 @@ import type {
   ValidationCode,
   ValidationModule,
 } from "../../lib/validation-messages";
-import { useAppSelector } from "../../store/auth";
 import {
   accountingApi,
   type BalanceSheet,
@@ -116,20 +115,6 @@ const validationMessage = (
 ) => getFieldValidationMessage(moduleName, field, code);
 
 const required = (value: string) => value.trim().length > 0;
-
-const AdminGuard = ({ children }: { children: ReactNode }) => {
-  const admin = useAppSelector(
-    (state) => state.auth.session?.user.role?.toUpperCase() === "ADMIN",
-  );
-  return admin ? (
-    children
-  ) : (
-    <ErrorState
-      title="Access restricted"
-      message="Accounting maintenance is available to administrators only."
-    />
-  );
-};
 
 const QueryError = ({
   error,
@@ -273,17 +258,19 @@ export const PaymentAccountsPage = () => {
     },
   ];
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title="Payment Accounts"
         description="Cash and bank balances."
         actions={
-          <Link
-            className="button button--primary"
-            to="/accounting/accounts/new"
-          >
-            <Plus size={16} /> New account
-          </Link>
+          <Can resource="PAYMENT_ACCOUNT" privilege="CREATE">
+            <Link
+              className="button button--primary"
+              to="/accounting/accounts/new"
+            >
+              <Plus size={16} /> New account
+            </Link>
+          </Can>
         }
       />
       {query.isLoading ? (
@@ -309,7 +296,7 @@ export const PaymentAccountsPage = () => {
           </Card>
         </>
       )}
-    </AdminGuard>
+    </>
   );
 };
 
@@ -437,7 +424,7 @@ export const PaymentAccountFormPage = () => {
       <QueryError error={detail.error} retry={() => void detail.refetch()} />
     );
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title={id ? "Edit Payment Account" : "New Payment Account"}
         description="Configure a cash or bank account."
@@ -585,7 +572,7 @@ export const PaymentAccountFormPage = () => {
           </div>
         </form>
       </Card>
-    </AdminGuard>
+    </>
   );
 };
 
@@ -878,7 +865,7 @@ export const PaymentAccountTransactionsPage = () => {
     },
   ];
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title={account.data?.name ?? "Account Transactions"}
         description={`Current balance ${money(account.data?.currentBalance)}`}
@@ -940,7 +927,7 @@ export const PaymentAccountTransactionsPage = () => {
           close={() => setAdjusting(false)}
         />
       )}
-    </AdminGuard>
+    </>
   );
 };
 
@@ -1016,17 +1003,19 @@ export const DirectEntriesPage = () => {
     },
   ];
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title="Direct Entries"
         description="Manual money-in and money-out entries."
         actions={
-          <Link
-            className="button button--primary"
-            to="/accounting/direct-entry/new"
-          >
-            <Plus size={16} /> New entry
-          </Link>
+          <Can resource="DIRECT_ENTRY" privilege="CREATE">
+            <Link
+              className="button button--primary"
+              to="/accounting/direct-entry/new"
+            >
+              <Plus size={16} /> New entry
+            </Link>
+          </Can>
         }
       />
       <SearchFilters
@@ -1067,7 +1056,7 @@ export const DirectEntriesPage = () => {
           />
         </Card>
       )}
-    </AdminGuard>
+    </>
   );
 };
 
@@ -1194,7 +1183,7 @@ export const DirectEntryFormPage = () => {
   if ((id && detail.isLoading) || paymentAccounts.isLoading)
     return <LoadingState />;
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title={id ? "Direct Entry Detail" : "New Direct Entry"}
         description={
@@ -1293,13 +1282,15 @@ export const DirectEntryFormPage = () => {
           )}
           <div className="form-actions">
             {id && (
-              <Button
-                type="button"
-                variant="danger"
-                onClick={() => setConfirm(true)}
-              >
-                <Trash2 size={16} /> Delete
-              </Button>
+              <Can resource="DIRECT_ENTRY" privilege="DELETE">
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => setConfirm(true)}
+                >
+                  <Trash2 size={16} /> Delete
+                </Button>
+              </Can>
             )}
             <Button type="submit" loading={save.isPending}>
               {id ? "Save changes" : "Create entry"}
@@ -1317,7 +1308,7 @@ export const DirectEntryFormPage = () => {
         onClose={() => setConfirm(false)}
         onConfirm={() => remove.mutate()}
       />
-    </AdminGuard>
+    </>
   );
 };
 
@@ -1395,14 +1386,16 @@ export const JournalsPage = () => {
     },
   ];
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title="Journals"
         description="Posted accounting journals."
         actions={
-          <Button onClick={() => setShowManualWarning(true)}>
-            <Plus size={16} /> Manual journal
-          </Button>
+          <Can resource="JOURNAL" privilege="CREATE">
+            <Button onClick={() => setShowManualWarning(true)}>
+              <Plus size={16} /> Manual journal
+            </Button>
+          </Can>
         }
       />
       <SearchFilters query="" collapsible onQueryChange={() => undefined}>
@@ -1472,7 +1465,7 @@ export const JournalsPage = () => {
         onClose={() => setShowManualWarning(false)}
         onConfirm={() => navigate("/accounting/journals/new")}
       />
-    </AdminGuard>
+    </>
   );
 };
 
@@ -1492,7 +1485,7 @@ export const JournalDetailPage = () => {
   const journal = query.data;
   if (!journal) return <EmptyState />;
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title={`Journal #${journal.id}`}
         description={`${journal.journalDate} · ${humanize(journal.referenceType)}`}
@@ -1542,7 +1535,7 @@ export const JournalDetailPage = () => {
           ]}
         />
       </Card>
-    </AdminGuard>
+    </>
   );
 };
 
@@ -1713,7 +1706,7 @@ export const JournalFormPage = () => {
     });
   };
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title="Create Manual Journal"
         description="Debits and credits must balance."
@@ -1860,7 +1853,7 @@ export const JournalFormPage = () => {
           </Button>
         </Card>
       </form>
-    </AdminGuard>
+    </>
   );
 };
 
@@ -1874,7 +1867,7 @@ export const GeneralLedgerPage = () => {
     enabled: Boolean(accountId),
   });
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title="General Ledger"
         description="Account movements and running balance."
@@ -1982,7 +1975,7 @@ export const GeneralLedgerPage = () => {
           </Card>
         </>
       ) : null}
-    </AdminGuard>
+    </>
   );
 };
 
@@ -1994,7 +1987,7 @@ export const TrialBalancePage = () => {
     queryFn: () => accountingApi.trialBalance(date, includeZero),
   });
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title="Trial Balance"
         description="Debit and credit balances by account."
@@ -2073,7 +2066,7 @@ export const TrialBalancePage = () => {
           </Card>
         </>
       )}
-    </AdminGuard>
+    </>
   );
 };
 
@@ -2114,7 +2107,7 @@ export const JournalBalanceSheetPage = () => {
     queryFn: () => accountingApi.balanceSheet(date),
   });
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title="Journal Balance Sheet"
         description="Assets, liabilities and equity from posted journals."
@@ -2148,7 +2141,7 @@ export const JournalBalanceSheetPage = () => {
       ) : query.data ? (
         <BalanceSheetView report={query.data} />
       ) : null}
-    </AdminGuard>
+    </>
   );
 };
 
@@ -2193,7 +2186,7 @@ export const JournalProfitLossPage = () => {
     queryFn: () => accountingApi.journalProfitLoss(fromDate, toDate),
   });
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title="P&L Report"
         description="Revenue and expenses from posted journals."
@@ -2238,7 +2231,7 @@ export const JournalProfitLossPage = () => {
       ) : query.data ? (
         <JournalProfitLossView report={query.data} />
       ) : null}
-    </AdminGuard>
+    </>
   );
 };
 
@@ -2899,7 +2892,7 @@ export const ChartOfAccountsPage = () => {
     if (!Object.keys(next).length) mutation.mutate();
   };
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title="Chart of Accounts"
         description="View and create general-ledger accounts. Existing accounts are read-only."
@@ -3000,7 +2993,7 @@ export const ChartOfAccountsPage = () => {
           </FormField>
         </div>
       </Modal>
-    </AdminGuard>
+    </>
   );
 };
 

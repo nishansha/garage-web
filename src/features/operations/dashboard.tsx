@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge, Card, PageHeader, Select } from "../../components/ui";
+import { Can } from "../../components/Can";
 import { formatCurrency, formatDate } from "../../lib/utils";
 import {
   operationsApi,
@@ -152,21 +153,27 @@ export const DashboardRoute = () => {
         )}`}
         actions={
           <div className="dashboard-quick-actions">
-            <Link
-              className="button button--secondary"
-              to="/purchase/purchases/new"
-            >
-              <Plus size={16} aria-hidden="true" /> Purchase
-            </Link>
-            <Link
-              className="button button--secondary"
-              to="/expenses/general/new"
-            >
-              <Plus size={16} aria-hidden="true" /> Expense
-            </Link>
-            <Link className="button button--secondary" to="/sales/sales/new">
-              <Plus size={16} aria-hidden="true" /> Sale
-            </Link>
+            <Can resource="PURCHASE_ORDER" privilege="CREATE">
+              <Link
+                className="button button--secondary"
+                to="/purchase/purchases/new"
+              >
+                <Plus size={16} aria-hidden="true" /> Purchase
+              </Link>
+            </Can>
+            <Can resource="EXPENSE_GENERAL" privilege="CREATE">
+              <Link
+                className="button button--secondary"
+                to="/expenses/general/new"
+              >
+                <Plus size={16} aria-hidden="true" /> Expense
+              </Link>
+            </Can>
+            <Can resource="SALE" privilege="CREATE">
+              <Link className="button button--secondary" to="/sales/sales/new">
+                <Plus size={16} aria-hidden="true" /> Sale
+              </Link>
+            </Can>
           </div>
         }
       />

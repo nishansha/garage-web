@@ -19,6 +19,7 @@ import {
   Select,
   Textarea,
 } from "../../components/ui";
+import { Can } from "../../components/Can";
 import { AuditHistoryButton } from "../audit/AuditHistory";
 import { formatCurrency, formatDate } from "../../lib/utils";
 import {
@@ -128,9 +129,11 @@ export const GeneralExpensesListRoute = () => {
         title="General expenses"
         description="Operating expenses paid by the business."
         actions={
-          <Link className="button button--primary" to={`${GENERAL}/new`}>
-            <Plus /> New expense
-          </Link>
+          <Can resource="EXPENSE_GENERAL" privilege="CREATE">
+            <Link className="button button--primary" to={`${GENERAL}/new`}>
+              <Plus /> New expense
+            </Link>
+          </Can>
         }
       />
       <SearchFilters
@@ -189,10 +192,14 @@ export const GeneralExpensesListRoute = () => {
               header: "",
               cell: (row) => (
                 <span className="operations-inline-actions">
-                  <Link to={`${GENERAL}/${row.id}/edit`}>Edit</Link>
-                  <Button variant="ghost" onClick={() => setDeleteId(row.id)}>
-                    Delete
-                  </Button>
+                  <Can resource="EXPENSE_GENERAL" privilege="UPDATE">
+                    <Link to={`${GENERAL}/${row.id}/edit`}>Edit</Link>
+                  </Can>
+                  <Can resource="EXPENSE_GENERAL" privilege="DELETE">
+                    <Button variant="ghost" onClick={() => setDeleteId(row.id)}>
+                      Delete
+                    </Button>
+                  </Can>
                 </span>
               ),
             },
@@ -548,15 +555,19 @@ export const GeneralExpenseDetailRoute = () => {
                 entityId={id}
                 recordLabel={query.data.title}
               />
-              <Link
-                className="button button--secondary"
-                to={`${GENERAL}/${id}/edit`}
-              >
-                Edit
-              </Link>
-              <Button variant="danger" onClick={() => setConfirm(true)}>
-                Delete
-              </Button>
+              <Can resource="EXPENSE_GENERAL" privilege="UPDATE">
+                <Link
+                  className="button button--secondary"
+                  to={`${GENERAL}/${id}/edit`}
+                >
+                  Edit
+                </Link>
+              </Can>
+              <Can resource="EXPENSE_GENERAL" privilege="DELETE">
+                <Button variant="danger" onClick={() => setConfirm(true)}>
+                  Delete
+                </Button>
+              </Can>
             </>
           )
         }
@@ -622,12 +633,14 @@ export const PurchaseExpenseDetailRoute = () => {
       <PageHeader
         title="Purchase expenses"
         actions={
-          <Link
-            className="button button--primary"
-            to={`${PURCHASE}/${purchaseId}/new`}
-          >
-            <Plus /> Add expense
-          </Link>
+          <Can resource="EXPENSE_PURCHASE" privilege="CREATE">
+            <Link
+              className="button button--primary"
+              to={`${PURCHASE}/${purchaseId}/new`}
+            >
+              <Plus /> Add expense
+            </Link>
+          </Can>
         }
       />
       <QueryBoundary pending={query.isPending} error={query.error}>
@@ -667,12 +680,16 @@ export const PurchaseExpenseDetailRoute = () => {
                     entityId={row.id}
                     variant="ghost"
                   />
-                  <Link to={`${PURCHASE}/${purchaseId}/${row.id}/edit`}>
-                    Edit
-                  </Link>
-                  <Button variant="ghost" onClick={() => setDeleteId(row.id)}>
-                    Delete
-                  </Button>
+                  <Can resource="EXPENSE_PURCHASE" privilege="UPDATE">
+                    <Link to={`${PURCHASE}/${purchaseId}/${row.id}/edit`}>
+                      Edit
+                    </Link>
+                  </Can>
+                  <Can resource="EXPENSE_PURCHASE" privilege="DELETE">
+                    <Button variant="ghost" onClick={() => setDeleteId(row.id)}>
+                      Delete
+                    </Button>
+                  </Can>
                 </span>
               ),
             },

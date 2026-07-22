@@ -16,7 +16,6 @@ import {
   Modal,
   PageHeader,
   Pagination,
-  Select,
   type DataColumn,
 } from "../../components/ui";
 import { ApiError } from "../../lib/api";
@@ -31,10 +30,12 @@ import {
   type CreateStaffPayload,
   type ResetDataResponse,
   type StaffMember,
-  type StaffRole,
+  type UpdateStaffPayload,
   type Vendor,
 } from "../../services/admin";
-import { AdminGuard } from "./AdminGuard";
+import { rbacApi } from "../../services/rbac";
+import { Can } from "../../components/Can";
+import { usePermission } from "../../hooks/usePermission";
 
 const money = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -148,7 +149,7 @@ interface StaffFormValues {
   name: string;
   userName: string;
   password: string;
-  role: StaffRole | "";
+  roleIds: number[];
   designation: string;
 }
 
@@ -156,7 +157,7 @@ const emptyStaffForm: StaffFormValues = {
   name: "",
   userName: "",
   password: "",
-  role: "",
+  roleIds: [],
   designation: "",
 };
 
@@ -167,29 +168,46 @@ const staffValidationMessage = (field: string, code: ValidationCode) =>
 
 export const StaffManagementPage = () => {
   const queryClient = useQueryClient();
+  const { can } = usePermission();
+  const canAssignRoles = can("USER", "UPDATE");
   const [editing, setEditing] = useState<StaffMember | null | undefined>();
+  const [assignmentRoleIds, setAssignmentRoleIds] = useState<number[]>([]);
+  const [assignmentRolesTouched, setAssignmentRolesTouched] = useState(false);
+  const [loadingAssignmentRoles, setLoadingAssignmentRoles] = useState(false);
   const form = useForm<StaffFormValues>({ defaultValues: emptyStaffForm });
   const staffQuery = useQuery({
     queryKey: ["admin", "staff"],
     queryFn: adminApi.getStaff,
   });
+  const rolesQuery = useQuery({
+    queryKey: ["rbac", "roles"],
+    queryFn: rbacApi.listRoles,
+  });
   const saveStaff = useMutation({
     mutationFn: async (values: StaffFormValues) => {
-      if (!values.role)
-        throw new Error(staffValidationMessage("role", "REQUIRED"));
       if (editing) {
-        return adminApi.updateStaff(editing.id, {
+        if (assignmentRolesTouched && !assignmentRoleIds.length) {
+          throw new Error(staffValidationMessage("roleIds", "REQUIRED"));
+        }
+        const payload: UpdateStaffPayload = {
           name: values.name.trim(),
-          role: values.role,
           designation: values.designation.trim(),
           ...(values.password ? { password: values.password } : {}),
-        });
+        };
+        await adminApi.updateStaff(editing.id, payload);
+        if (assignmentRolesTouched && canAssignRoles) {
+          await adminApi.replaceUserRoles(editing.id, assignmentRoleIds);
+        }
+        return;
+      }
+      if (!values.roleIds.length) {
+        throw new Error(staffValidationMessage("roleIds", "REQUIRED"));
       }
       const payload: CreateStaffPayload = {
         name: values.name.trim(),
         userName: values.userName.trim(),
         password: values.password,
-        role: values.role,
+        roleIds: values.roleIds,
         designation: values.designation.trim(),
       };
       return adminApi.createStaff(payload);
@@ -197,6 +215,8 @@ export const StaffManagementPage = () => {
     onSuccess: async () => {
       toast.success(editing ? "Team member updated" : "Team member added");
       setEditing(undefined);
+      setAssignmentRolesTouched(false);
+      setAssignmentRoleIds([]);
       form.reset(emptyStaffForm);
       await queryClient.invalidateQueries({ queryKey: ["admin", "staff"] });
     },
@@ -210,7 +230,8 @@ export const StaffManagementPage = () => {
           userName: "userName",
           username: "userName",
           password: "password",
-          role: "role",
+          roleIds: "roleIds",
+          role: "roleIds",
           designation: "designation",
         },
       );
@@ -222,18 +243,49 @@ export const StaffManagementPage = () => {
 
   const openCreate = () => {
     form.reset(emptyStaffForm);
+    setAssignmentRolesTouched(false);
+    setAssignmentRoleIds([]);
     setEditing(null);
   };
   const openEdit = (staff: StaffMember) => {
+    setEditing(staff);
+    setAssignmentRolesTouched(false);
     form.reset({
       name: staff.name,
       userName: staff.userName,
       password: "",
-      role:
-        staff.role === "ADMIN" || staff.role === "STAFF" ? staff.role : "STAFF",
+      roleIds: [],
       designation: staff.designation ?? "",
     });
-    setEditing(staff);
+    setAssignmentRoleIds([]);
+    setLoadingAssignmentRoles(true);
+    adminApi
+      .getUserRoles(staff.id)
+      .then((assigned) => setAssignmentRoleIds(assigned.map((role) => role.id)))
+      .catch((err) =>
+        toast.error(
+          err instanceof ApiError ? err.message : "Unable to load user roles.",
+        ),
+      )
+      .finally(() => setLoadingAssignmentRoles(false));
+  };
+
+  const toggleRole = (roleId: number) => {
+    const current = form.getValues("roleIds");
+    const next = current.includes(roleId)
+      ? current.filter((id) => id !== roleId)
+      : [...current, roleId];
+    form.setValue("roleIds", next, { shouldValidate: true });
+  };
+
+  const toggleAssignmentRole = (roleId: number) => {
+    if (!canAssignRoles) return;
+    setAssignmentRolesTouched(true);
+    setAssignmentRoleIds((current) =>
+      current.includes(roleId)
+        ? current.filter((id) => id !== roleId)
+        : [...current, roleId],
+    );
   };
 
   const columns: readonly DataColumn<StaffMember>[] = [
@@ -246,10 +298,12 @@ export const StaffManagementPage = () => {
     },
     {
       key: "role",
-      header: "Role",
+      header: "Roles",
       cell: (row) => (
-        <Badge tone={row.role === "ADMIN" ? "info" : "neutral"}>
-          {row.role === "ADMIN" ? "Admin" : "Staff"}
+        <Badge tone="neutral">
+          {(row.roles?.length ? row.roles : row.role ? [row.role] : [])
+            .map((code) => code.replaceAll("_", " "))
+            .join(", ") || "—"}
         </Badge>
       ),
     },
@@ -258,22 +312,26 @@ export const StaffManagementPage = () => {
       header: <span className="sr-only">Actions</span>,
       align: "right",
       cell: (row) => (
-        <Button variant="ghost" onClick={() => openEdit(row)}>
-          <Pencil aria-hidden="true" /> Edit
-        </Button>
+        <Can resource="USER" privilege="UPDATE">
+          <Button variant="ghost" onClick={() => openEdit(row)}>
+            <Pencil aria-hidden="true" /> Edit
+          </Button>
+        </Can>
       ),
     },
   ];
 
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title="Staff Management"
         description="Manage team members and administrator access."
         actions={
-          <Button onClick={openCreate}>
-            <Plus aria-hidden="true" /> Add team member
-          </Button>
+          <Can resource="USER" privilege="CREATE">
+            <Button onClick={openCreate}>
+              <Plus aria-hidden="true" /> Add team member
+            </Button>
+          </Can>
         }
       />
       {staffQuery.isPending ? (
@@ -376,20 +434,49 @@ export const StaffManagementPage = () => {
             />
           </FormField>
           <FormField
-            label="Role"
+            label={editing ? "Role assignments" : "Roles"}
             required
-            error={form.formState.errors.role?.message}
+            hint={
+              editing
+                ? "Updates use the dedicated user role assignment API."
+                : undefined
+            }
+            error={form.formState.errors.roleIds?.message}
           >
-            <Select
-              placeholder="Select role"
-              options={[
-                { value: "STAFF", label: "Staff" },
-                { value: "ADMIN", label: "Admin" },
-              ]}
-              {...form.register("role", {
-                required: staffValidationMessage("role", "REQUIRED"),
-              })}
-            />
+            <div className="admin-role-checkboxes">
+              {rolesQuery.isPending || (editing && loadingAssignmentRoles) ? (
+                <span>Loading roles…</span>
+              ) : editing ? (
+                (rolesQuery.data ?? []).map((role) => {
+                  const selected = assignmentRoleIds.includes(role.id);
+                  return (
+                    <label key={role.id} className="admin-role-option">
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        disabled={!canAssignRoles}
+                        onChange={() => toggleAssignmentRole(role.id)}
+                      />
+                      <span>{role.name}</span>
+                    </label>
+                  );
+                })
+              ) : (
+                (rolesQuery.data ?? []).map((role) => {
+                  const selected = form.watch("roleIds").includes(role.id);
+                  return (
+                    <label key={role.id} className="admin-role-option">
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => toggleRole(role.id)}
+                      />
+                      <span>{role.name}</span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
           </FormField>
           <FormField
             label="Designation"
@@ -407,14 +494,12 @@ export const StaffManagementPage = () => {
           </FormField>
         </form>
       </Modal>
-    </AdminGuard>
+    </>
   );
 };
 
 export const AccountManagementPage = () => (
-  <AdminGuard>
-    <Navigate to="/accounting/accounts" replace />
-  </AdminGuard>
+  <Navigate to="/accounting/accounts" replace />
 );
 
 const RESET_PHRASE = "CLEAR ALL DATA";
@@ -434,7 +519,7 @@ export const ClearDataPage = () => {
   });
 
   return (
-    <AdminGuard>
+    <>
       <PageHeader
         title="Clear Data"
         description="Permanently remove transactional application data."
@@ -458,14 +543,16 @@ export const ClearDataPage = () => {
             Business records will be removed. Authentication and required system
             records may be retained by the server.
           </p>
-          <Button
-            variant="danger"
-            disabled={phrase !== RESET_PHRASE}
-            loading={reset.isPending}
-            onClick={() => reset.mutate()}
-          >
-            Clear all data
-          </Button>
+          <Can resource="DATA_RESET" privilege="DELETE">
+            <Button
+              variant="danger"
+              disabled={phrase !== RESET_PHRASE}
+              loading={reset.isPending}
+              onClick={() => reset.mutate()}
+            >
+              Clear all data
+            </Button>
+          </Can>
           {result && (
             <div className="admin-reset-result" role="status">
               Cleared {result.totalRowsDeleted} rows from {result.tablesCleared}{" "}
@@ -474,6 +561,6 @@ export const ClearDataPage = () => {
           )}
         </div>
       </Card>
-    </AdminGuard>
+    </>
   );
 };

@@ -19,13 +19,15 @@ import {
 } from "react-router-dom";
 import { toast } from "sonner";
 import { ApiError, authApi } from "./lib/api";
+import { formatRoleLabels, hasAnyRolePrivilege } from "./lib/rbac";
+import { usePermission } from "./hooks/usePermission";
 import {
   appRoutes,
   getRouteByPath,
   routeGroups,
   type AppRoute,
 } from "./routes/config";
-import { setSession, useAppDispatch, useAppSelector } from "./store/auth";
+import { useAppSelector } from "./store/auth";
 import {
   Button,
   Card,
@@ -48,7 +50,6 @@ export const AuthGate = () => {
 
 export const LoginPage = () => {
   const session = useAppSelector((state) => state.auth.session);
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
   const [username, setUsername] = useState("");
@@ -63,8 +64,7 @@ export const LoginPage = () => {
 
   const login = useMutation({
     mutationFn: () => authApi.login(username.trim(), password),
-    onSuccess: (nextSession) => {
-      dispatch(setSession(nextSession));
+    onSuccess: () => {
       toast.success("Welcome back");
       navigate(from, { replace: true });
     },
@@ -169,10 +169,18 @@ export const AppShell = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const currentRoute = getRouteByPath(location.pathname);
-  const isAdmin = session?.user.role?.toUpperCase() === "ADMIN";
-  const visibleRoutes = appRoutes.filter(
-    (route) => !route.adminOnly || isAdmin,
+  const { can, ready, superAdmin } = usePermission();
+  const permissions = useAppSelector((state) => state.auth.permissions);
+  const roleLabel = formatRoleLabels(
+    permissions?.roles ?? session?.user?.roles ?? [],
   );
+  const visibleRoutes = appRoutes.filter((route) => {
+    if (!ready) return true;
+    if (route.path === "/more/roles") {
+      return superAdmin || hasAnyRolePrivilege(can);
+    }
+    return can(route.access.resource, route.access.privilege);
+  });
   const dashboard = visibleRoutes.find((route) => route.path === "/");
 
   const toggleSidebar = () => {
@@ -284,7 +292,7 @@ export const AppShell = () => {
                 <strong>
                   {session?.user.fullName ?? session?.user.username}
                 </strong>
-                <small>{session?.user.role ?? "User"}</small>
+                <small>{roleLabel}</small>
               </span>
               <ChevronsUpDown aria-hidden="true" />
             </summary>
@@ -294,9 +302,7 @@ export const AppShell = () => {
                   {session?.user.fullName ?? session?.user.username}
                 </strong>
                 <small>
-                  {session?.user.email ??
-                    session?.user.role ??
-                    "Garage user"}
+                  {session?.user.email ? session.user.email : roleLabel}
                 </small>
               </div>
               <Button variant="ghost" onClick={() => void logout()}>
@@ -314,14 +320,12 @@ export const AppShell = () => {
 };
 
 export const PlaceholderPage = ({ route }: { route: AppRoute }) => {
-  const isAdmin = useAppSelector(
-    (state) => state.auth.session?.user.role?.toUpperCase() === "ADMIN",
-  );
-  if (route.adminOnly && !isAdmin) {
+  const { can, ready } = usePermission();
+  if (ready && !can(route.access.resource, route.access.privilege)) {
     return (
       <ErrorState
         title="Access restricted"
-        message="This area is available to administrators only."
+        message="You do not have permission to view this page."
       />
     );
   }

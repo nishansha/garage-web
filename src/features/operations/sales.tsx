@@ -18,6 +18,7 @@ import {
   Select,
   Textarea,
 } from "../../components/ui";
+import { Can } from "../../components/Can";
 import { AuditHistoryButton } from "../audit/AuditHistory";
 import { formatCurrency, formatDate } from "../../lib/utils";
 import {
@@ -185,9 +186,11 @@ export const SalesListRoute = () => {
         title="Sales"
         description="Manage vehicle sales, exchanges, finance and receipts."
         actions={
-          <Link className="button button--primary" to={`${SALES}/new`}>
-            <Plus /> New sale
-          </Link>
+          <Can resource="SALE" privilege="CREATE">
+            <Link className="button button--primary" to={`${SALES}/new`}>
+              <Plus /> New sale
+            </Link>
+          </Can>
         }
       />
       <SearchFilters
@@ -1256,30 +1259,38 @@ export const SaleDetailRoute = () => {
                 recordLabel={sale.vehicleNo}
               />
               {(sale.pendingAmount ?? 0) > 0 && (
-                <Link
-                  className="button button--secondary"
-                  to={`${SALES}/${id}/payment`}
-                >
-                  Record payment
-                </Link>
+                <Can resource="SALE" privilege="CREATE">
+                  <Link
+                    className="button button--secondary"
+                    to={`${SALES}/${id}/payment`}
+                  >
+                    Record payment
+                  </Link>
+                </Can>
               )}
-              <Link
-                className="button button--secondary"
-                to={`${SALES}/${id}/edit`}
-              >
-                Edit
-              </Link>
-              {sale.paymentStatus === "PENDING" && !sale.exchange ? (
-                <Button variant="danger" onClick={() => setConfirm(true)}>
-                  Delete
-                </Button>
-              ) : (
+              <Can resource="SALE" privilege="UPDATE">
                 <Link
                   className="button button--secondary"
-                  to={`${SALES}/${id}/return`}
+                  to={`${SALES}/${id}/edit`}
                 >
-                  Create return
+                  Edit
                 </Link>
+              </Can>
+              {sale.paymentStatus === "PENDING" && !sale.exchange ? (
+                <Can resource="SALE" privilege="DELETE">
+                  <Button variant="danger" onClick={() => setConfirm(true)}>
+                    Delete
+                  </Button>
+                </Can>
+              ) : (
+                <Can resource="SALE_RETURN" privilege="CREATE">
+                  <Link
+                    className="button button--secondary"
+                    to={`${SALES}/${id}/return`}
+                  >
+                    Create return
+                  </Link>
+                </Can>
               )}
             </>
           )
@@ -1758,15 +1769,19 @@ export const SaleReturnDetailRoute = () => {
                           entityId={row.id}
                           variant="ghost"
                         />
-                        <Link to={`${RETURNS}/${id}/refunds/${row.id}/edit`}>
-                          Edit
-                        </Link>
-                        <Button
-                          variant="ghost"
-                          onClick={() => setDeleteId(row.id)}
-                        >
-                          Delete
-                        </Button>
+                        <Can resource="SALE_RETURN" privilege="UPDATE">
+                          <Link to={`${RETURNS}/${id}/refunds/${row.id}/edit`}>
+                            Edit
+                          </Link>
+                        </Can>
+                        <Can resource="SALE_RETURN" privilege="DELETE">
+                          <Button
+                            variant="ghost"
+                            onClick={() => setDeleteId(row.id)}
+                          >
+                            Delete
+                          </Button>
+                        </Can>
                       </span>
                     ),
                   },
