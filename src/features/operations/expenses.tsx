@@ -119,6 +119,9 @@ export const GeneralExpensesListRoute = () => {
     onSuccess: () => {
       setDeleteId(undefined);
       void client.invalidateQueries({ queryKey: ["operations", "expenses"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "payment-accounts"],
+      });
       toast.success("Expense deleted");
     },
     onError: notifyError,
@@ -362,11 +365,28 @@ const ExpenseEditor = ({
     onSuccess: async () => {
       const invalidations = [
         client.invalidateQueries({ queryKey: ["operations", "expenses"] }),
+        client.invalidateQueries({
+          queryKey: ["operations", "payment-accounts"],
+        }),
       ];
+      if (expense) {
+        invalidations.push(
+          client.invalidateQueries({
+            queryKey: ["operations", "expense", expense.id],
+          }),
+        );
+      }
       if (purchaseId) {
         invalidations.push(
           client.invalidateQueries({
             queryKey: ["operations", "purchase-expenses", purchaseId],
+          }),
+          client.invalidateQueries({
+            queryKey: ["operations", "purchase", purchaseId],
+          }),
+          client.invalidateQueries({ queryKey: ["operations", "stock"] }),
+          client.invalidateQueries({
+            queryKey: ["operations", "stock-detail"],
           }),
         );
       }
@@ -537,6 +557,9 @@ export const GeneralExpenseDetailRoute = () => {
     mutationFn: () => operationsApi.expenses.delete(id!),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["operations", "expenses"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "payment-accounts"],
+      });
       toast.success("Expense deleted");
       navigate(GENERAL);
     },
@@ -622,6 +645,17 @@ export const PurchaseExpenseDetailRoute = () => {
       setDeleteId(undefined);
       void client.invalidateQueries({
         queryKey: ["operations", "purchase-expenses", purchaseId],
+      });
+      void client.invalidateQueries({ queryKey: ["operations", "expenses"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "purchase", purchaseId],
+      });
+      void client.invalidateQueries({ queryKey: ["operations", "stock"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "stock-detail"],
+      });
+      void client.invalidateQueries({
+        queryKey: ["operations", "payment-accounts"],
       });
       toast.success("Expense deleted");
     },
