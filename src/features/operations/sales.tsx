@@ -369,6 +369,11 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
     },
     onSuccess: (response) => {
       void client.invalidateQueries({ queryKey: ["operations", "sales"] });
+      void client.invalidateQueries({ queryKey: ["operations", "stock"] });
+      void client.invalidateQueries({ queryKey: ["operations", "stock-detail"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "stock-products"],
+      });
       toast.success(sale ? "Sale updated" : "Sale created");
       const responseId =
         typeof response === "object" &&
@@ -1234,6 +1239,11 @@ export const SaleDetailRoute = () => {
     mutationFn: () => operationsApi.sales.delete(id!),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["operations", "sales"] });
+      void client.invalidateQueries({ queryKey: ["operations", "stock"] });
+      void client.invalidateQueries({ queryKey: ["operations", "stock-detail"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "stock-products"],
+      });
       toast.success("Sale deleted");
       navigate(SALES);
     },
@@ -1459,6 +1469,7 @@ export const SalePaymentRoute = () => {
         : operationsApi.sales.payment(id!, { ...value, payerType: payer }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["operations", "sale", id] });
+      void client.invalidateQueries({ queryKey: ["operations", "sales"] });
       toast.success(paymentId ? "Payment updated" : "Payment recorded");
       navigate(`${SALES}/${id}`);
     },
@@ -1901,6 +1912,14 @@ export const SaleReturnCreateRoute = () => {
     ) => operationsApi.saleReturns.create(saleId!, value),
     onSuccess: (response) => {
       void client.invalidateQueries({ queryKey: ["operations", "sales"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "sale-returns"],
+      });
+      void client.invalidateQueries({ queryKey: ["operations", "stock"] });
+      void client.invalidateQueries({ queryKey: ["operations", "stock-detail"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "stock-products"],
+      });
       toast.success("Sale return created");
       navigate(`${RETURNS}/${response.saleReturnId ?? response.id}`);
     },
@@ -2273,6 +2292,9 @@ export const SaleReturnRefundRoute = () => {
     onSuccess: () => {
       void client.invalidateQueries({
         queryKey: ["operations", "sale-return", id],
+      });
+      void client.invalidateQueries({
+        queryKey: ["operations", "sale-returns"],
       });
       toast.success(refundId ? "Refund updated" : "Refund recorded");
       navigate(`${RETURNS}/${id}`);

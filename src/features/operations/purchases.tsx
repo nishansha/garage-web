@@ -353,6 +353,11 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
     onSuccess: async () => {
       const invalidations = [
         client.invalidateQueries({ queryKey: ["operations", "purchases"] }),
+        client.invalidateQueries({ queryKey: ["operations", "stock"] }),
+        client.invalidateQueries({ queryKey: ["operations", "stock-detail"] }),
+        client.invalidateQueries({
+          queryKey: ["operations", "stock-products"],
+        }),
       ];
       if (purchase) {
         invalidations.push(
@@ -969,6 +974,11 @@ export const PurchaseDetailRoute = () => {
     mutationFn: () => operationsApi.purchases.delete(id!),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["operations", "purchases"] });
+      void client.invalidateQueries({ queryKey: ["operations", "stock"] });
+      void client.invalidateQueries({ queryKey: ["operations", "stock-detail"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "stock-products"],
+      });
       toast.success("Purchase deleted");
       navigate(PURCHASES);
     },
@@ -1230,6 +1240,7 @@ export const PurchasePaymentRoute = () => {
       void client.invalidateQueries({
         queryKey: ["operations", "purchase", id],
       });
+      void client.invalidateQueries({ queryKey: ["operations", "purchases"] });
       toast.success(paymentId ? "Payment updated" : "Payment recorded");
       navigate(`${PURCHASES}/${id}`);
     },
@@ -1525,6 +1536,14 @@ export const PurchaseReturnCreateRoute = () => {
     }) => operationsApi.purchaseReturns.create(inventoryId!, value),
     onSuccess: (response) => {
       void client.invalidateQueries({ queryKey: ["operations", "stock"] });
+      void client.invalidateQueries({ queryKey: ["operations", "stock-detail"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "stock-products"],
+      });
+      void client.invalidateQueries({ queryKey: ["operations", "purchases"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "purchase-returns"],
+      });
       toast.success("Purchase return created");
       navigate(`${RETURNS}/${response.id}`);
     },
@@ -1668,6 +1687,9 @@ export const PurchaseReturnReceiptRoute = () => {
     onSuccess: () => {
       void client.invalidateQueries({
         queryKey: ["operations", "purchase-return", id],
+      });
+      void client.invalidateQueries({
+        queryKey: ["operations", "purchase-returns"],
       });
       toast.success(receiptId ? "Receipt updated" : "Receipt recorded");
       navigate(`${RETURNS}/${id}`);
