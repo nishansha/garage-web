@@ -14,6 +14,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { Button, ErrorState, LoadingState } from "./components/ui";
+import { reportError } from "./lib/errorReporting";
 import "./features/accounting/accounting.css";
 import "./features/admin/admin.css";
 import "./features/operations/operations.css";
@@ -414,7 +415,7 @@ class AppErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    if (import.meta.env.DEV) console.error("Application error", error, info);
+    reportError(error, { componentStack: info.componentStack ?? undefined });
   }
 
   render() {
