@@ -6,6 +6,19 @@ import { Toaster } from "sonner";
 import "./index.css";
 import App from "./App.tsx";
 import { store } from "./store/auth";
+import { reportError } from "./lib/errorReporting";
+
+window.addEventListener("error", (event) => {
+  reportError(event.error instanceof Error ? event.error : new Error(event.message));
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  reportError(
+    event.reason instanceof Error
+      ? event.reason
+      : new Error(String(event.reason)),
+  );
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {

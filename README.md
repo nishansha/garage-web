@@ -55,7 +55,3 @@ Because routing uses browser history, configure the web server to serve
   financial reports.
 - `src/features/admin`: staff, product master data, customer/vendor tables and
   administrative data reset.
-
-Vendors and Customers currently use local table data. Their pages are isolated
-behind feature modules so dedicated API adapters can replace the dummy rows
-without changing the navigation or table UI.
