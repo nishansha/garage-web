@@ -171,6 +171,142 @@ const applyServerErrors = (
   }
 };
 
+const optionalFilterId = (raw: string): number | undefined => {
+  const id = Number(raw);
+  return Number.isInteger(id) && id > 0 ? id : undefined;
+};
+
+const SALE_FILTER_KEYS = [
+  "fromDate",
+  "toDate",
+  "vehicleNo",
+  "brandId",
+  "modelId",
+  "variantId",
+] as const satisfies ReadonlyArray<keyof SearchInput>;
+
+const isActiveFilterValue = (value: unknown) =>
+  value !== undefined && value !== null && value !== "";
+
+const countActiveSaleFilters = (value: SearchInput) =>
+  SALE_FILTER_KEYS.filter((key) => isActiveFilterValue(value[key])).length;
+
+const clearSaleFilters = (value: SearchInput): SearchInput => ({
+  ...(value.searchText ? { searchText: value.searchText } : {}),
+});
+
+const SaleFilters = ({
+  value,
+  onChange,
+}: {
+  value: SearchInput;
+  onChange: (value: SearchInput) => void;
+}) => {
+  const brandId = value.brandId ?? 0;
+  const modelId = value.modelId ?? 0;
+  const brands = useQuery({
+    queryKey: ["operations", "brands"],
+    queryFn: operationsApi.catalog.brands,
+  });
+  const models = useQuery({
+    queryKey: ["operations", "models", brandId],
+    queryFn: () => operationsApi.catalog.models(brandId),
+    enabled: brandId > 0,
+  });
+  const variants = useQuery({
+    queryKey: ["operations", "variants", brandId, modelId],
+    queryFn: () => operationsApi.catalog.variants(brandId, modelId),
+    enabled: brandId > 0 && modelId > 0,
+  });
+
+  return (
+    <SearchFilters
+      query={value.searchText ?? ""}
+      onQueryChange={(searchText) => onChange({ ...value, searchText })}
+      collapsible
+      activeFilterCount={countActiveSaleFilters(value)}
+      onClearFilters={() => onChange(clearSaleFilters(value))}
+    >
+      <DateInput
+        aria-label="From date"
+        value={value.fromDate ?? ""}
+        onChange={(event) =>
+          onChange({ ...value, fromDate: event.target.value })
+        }
+      />
+      <DateInput
+        aria-label="To date"
+        value={value.toDate ?? ""}
+        onChange={(event) => onChange({ ...value, toDate: event.target.value })}
+      />
+      <Input
+        aria-label="Vehicle number"
+        placeholder="Vehicle number"
+        value={value.vehicleNo ?? ""}
+        onChange={(event) =>
+          onChange({ ...value, vehicleNo: event.target.value })
+        }
+      />
+      <Select
+        aria-label="Brand"
+        value={brandId || ""}
+        onChange={(event) =>
+          onChange({
+            ...value,
+            brandId: optionalFilterId(event.target.value),
+            modelId: undefined,
+            variantId: undefined,
+          })
+        }
+      >
+        <option value="">All brands</option>
+        {brands.data?.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </Select>
+      <Select
+        aria-label="Model"
+        value={modelId || ""}
+        disabled={!brandId}
+        onChange={(event) =>
+          onChange({
+            ...value,
+            modelId: optionalFilterId(event.target.value),
+            variantId: undefined,
+          })
+        }
+      >
+        <option value="">All models</option>
+        {models.data?.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </Select>
+      <Select
+        aria-label="Variant"
+        value={value.variantId || ""}
+        disabled={!modelId}
+        onChange={(event) =>
+          onChange({
+            ...value,
+            variantId: optionalFilterId(event.target.value),
+          })
+        }
+      >
+        <option value="">All variants</option>
+        {variants.data?.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </Select>
+    </SearchFilters>
+  );
+};
+
 export const SalesListRoute = () => {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
@@ -193,37 +329,13 @@ export const SalesListRoute = () => {
           </Can>
         }
       />
-      <SearchFilters
-        query={filters.searchText ?? ""}
-        collapsible
-        onQueryChange={(searchText) => {
+      <SaleFilters
+        value={filters}
+        onChange={(value) => {
           setPage(1);
-          setFilters({ ...filters, searchText });
+          setFilters(value);
         }}
-      >
-        <DateInput
-          aria-label="From date"
-          value={filters.fromDate ?? ""}
-          onChange={(event) =>
-            setFilters({ ...filters, fromDate: event.target.value })
-          }
-        />
-        <DateInput
-          aria-label="To date"
-          value={filters.toDate ?? ""}
-          onChange={(event) =>
-            setFilters({ ...filters, toDate: event.target.value })
-          }
-        />
-        <Input
-          aria-label="Vehicle number"
-          placeholder="Vehicle number"
-          value={filters.vehicleNo ?? ""}
-          onChange={(event) =>
-            setFilters({ ...filters, vehicleNo: event.target.value })
-          }
-        />
-      </SearchFilters>
+      />
       <QueryBoundary
         pending={query.isPending}
         error={query.error}

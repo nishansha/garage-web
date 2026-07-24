@@ -313,15 +313,20 @@ export const SearchFilters = ({
   children,
   actions,
   collapsible = false,
+  activeFilterCount = 0,
+  onClearFilters,
 }: {
   query: string;
   onQueryChange: (value: string) => void;
   children?: ReactNode;
   actions?: ReactNode;
   collapsible?: boolean;
+  activeFilterCount?: number;
+  onClearFilters?: () => void;
 }) => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const filterFieldsId = useId();
+  const hasActiveFilters = activeFilterCount > 0;
 
   return (
     <div
@@ -340,6 +345,11 @@ export const SearchFilters = ({
       {!collapsible && children}
       <div className="search-filters__actions">
         {actions}
+        {onClearFilters && hasActiveFilters && (
+          <Button type="button" variant="ghost" onClick={onClearFilters}>
+            Clear filters
+          </Button>
+        )}
         {collapsible && children && (
           <Button
             type="button"
@@ -350,6 +360,14 @@ export const SearchFilters = ({
           >
             <Filter aria-hidden="true" />
             Filters
+            {hasActiveFilters && (
+              <span
+                className="search-filters__count"
+                aria-label={`${activeFilterCount} active`}
+              >
+                {activeFilterCount}
+              </span>
+            )}
           </Button>
         )}
       </div>

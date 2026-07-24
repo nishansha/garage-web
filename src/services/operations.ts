@@ -730,7 +730,7 @@ export const operationsApi = {
       )
         ? api.post<Page<Stock>>(`v1/stock/find?page=${page}&size=${size}`, {
             ...filters,
-            status,
+            status: status ?? filters.status,
           })
         : api.get<Page<Stock>>(`v1/stock${query({ page, size, status })}`),
     detail: (id: number) => api.get<Stock>(`v1/stock/${id}`),
