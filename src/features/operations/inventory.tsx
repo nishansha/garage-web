@@ -28,6 +28,184 @@ import {
   useNumericParam,
 } from "./common";
 
+const optionalFilterId = (raw: string): number | undefined => {
+  const id = Number(raw);
+  return Number.isInteger(id) && id > 0 ? id : undefined;
+};
+
+const STOCK_FILTER_KEYS = [
+  "fromDate",
+  "toDate",
+  "vehicleNo",
+  "status",
+  "brandId",
+  "modelId",
+  "variantId",
+  "fuelTypeId",
+] as const satisfies ReadonlyArray<keyof SearchInput>;
+
+const isActiveFilterValue = (value: unknown) =>
+  value !== undefined && value !== null && value !== "";
+
+const countActiveStockFilters = (value: SearchInput, includeStatus: boolean) =>
+  STOCK_FILTER_KEYS.filter(
+    (key) =>
+      (includeStatus || key !== "status") && isActiveFilterValue(value[key]),
+  ).length;
+
+const clearStockFilters = (value: SearchInput): SearchInput => ({
+  ...(value.searchText ? { searchText: value.searchText } : {}),
+});
+
+const StockFilters = ({
+  value,
+  onChange,
+  showStatus = true,
+}: {
+  value: SearchInput;
+  onChange: (value: SearchInput) => void;
+  showStatus?: boolean;
+}) => {
+  const brandId = value.brandId ?? 0;
+  const modelId = value.modelId ?? 0;
+  const brands = useQuery({
+    queryKey: ["operations", "brands"],
+    queryFn: operationsApi.catalog.brands,
+  });
+  const models = useQuery({
+    queryKey: ["operations", "models", brandId],
+    queryFn: () => operationsApi.catalog.models(brandId),
+    enabled: brandId > 0,
+  });
+  const variants = useQuery({
+    queryKey: ["operations", "variants", brandId, modelId],
+    queryFn: () => operationsApi.catalog.variants(brandId, modelId),
+    enabled: brandId > 0 && modelId > 0,
+  });
+  const fuelTypes = useQuery({
+    queryKey: ["operations", "lookups", "FUEL_TYPE"],
+    queryFn: () => operationsApi.lookups("FUEL_TYPE"),
+  });
+
+  return (
+    <SearchFilters
+      query={value.searchText ?? ""}
+      onQueryChange={(searchText) => onChange({ ...value, searchText })}
+      collapsible
+      activeFilterCount={countActiveStockFilters(value, showStatus)}
+      onClearFilters={() => onChange(clearStockFilters(value))}
+    >
+      <DateInput
+        aria-label="From date"
+        value={value.fromDate ?? ""}
+        onChange={(event) =>
+          onChange({ ...value, fromDate: event.target.value })
+        }
+      />
+      <DateInput
+        aria-label="To date"
+        value={value.toDate ?? ""}
+        onChange={(event) => onChange({ ...value, toDate: event.target.value })}
+      />
+      <Input
+        aria-label="Vehicle number"
+        placeholder="Vehicle number"
+        value={value.vehicleNo ?? ""}
+        onChange={(event) =>
+          onChange({ ...value, vehicleNo: event.target.value })
+        }
+      />
+      {showStatus && (
+        <Select
+          aria-label="Stock status"
+          value={value.status ?? ""}
+          onChange={(event) =>
+            onChange({ ...value, status: event.target.value || undefined })
+          }
+          options={[
+            { value: "", label: "All current stock" },
+            { value: "AVAILABLE", label: "Available" },
+            { value: "PENDING_DELIVERY", label: "Pending delivery" },
+          ]}
+        />
+      )}
+      <Select
+        aria-label="Brand"
+        value={brandId || ""}
+        onChange={(event) =>
+          onChange({
+            ...value,
+            brandId: optionalFilterId(event.target.value),
+            modelId: undefined,
+            variantId: undefined,
+          })
+        }
+      >
+        <option value="">All brands</option>
+        {brands.data?.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </Select>
+      <Select
+        aria-label="Model"
+        value={modelId || ""}
+        disabled={!brandId}
+        onChange={(event) =>
+          onChange({
+            ...value,
+            modelId: optionalFilterId(event.target.value),
+            variantId: undefined,
+          })
+        }
+      >
+        <option value="">All models</option>
+        {models.data?.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </Select>
+      <Select
+        aria-label="Variant"
+        value={value.variantId || ""}
+        disabled={!modelId}
+        onChange={(event) =>
+          onChange({
+            ...value,
+            variantId: optionalFilterId(event.target.value),
+          })
+        }
+      >
+        <option value="">All variants</option>
+        {variants.data?.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </Select>
+      <Select
+        aria-label="Fuel type"
+        value={value.fuelTypeId || ""}
+        onChange={(event) =>
+          onChange({
+            ...value,
+            fuelTypeId: optionalFilterId(event.target.value),
+          })
+        }
+      >
+        <option value="">All fuel types</option>
+        {fuelTypes.data?.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </Select>
+    </SearchFilters>
+  );
+};
+
 const InventoryList = ({ sold }: { sold: boolean }) => {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
@@ -50,51 +228,14 @@ const InventoryList = ({ sold }: { sold: boolean }) => {
             : "Review available and pending-delivery vehicles."
         }
       />
-      <SearchFilters
-        query={filters.searchText ?? ""}
-        collapsible
-        onQueryChange={(searchText) => {
+      <StockFilters
+        value={filters}
+        showStatus={!sold}
+        onChange={(value) => {
           setPage(1);
-          setFilters({ ...filters, searchText });
+          setFilters(value);
         }}
-      >
-        <DateInput
-          aria-label="From date"
-          value={filters.fromDate ?? ""}
-          onChange={(event) =>
-            setFilters({ ...filters, fromDate: event.target.value })
-          }
-        />
-        <DateInput
-          aria-label="To date"
-          value={filters.toDate ?? ""}
-          onChange={(event) =>
-            setFilters({ ...filters, toDate: event.target.value })
-          }
-        />
-        <Input
-          aria-label="Vehicle number"
-          placeholder="Vehicle number"
-          value={filters.vehicleNo ?? ""}
-          onChange={(event) =>
-            setFilters({ ...filters, vehicleNo: event.target.value })
-          }
-        />
-        {!sold && (
-          <Select
-            aria-label="Stock status"
-            value={filters.status ?? ""}
-            onChange={(event) =>
-              setFilters({ ...filters, status: event.target.value })
-            }
-            options={[
-              { value: "", label: "All current stock" },
-              { value: "AVAILABLE", label: "Available" },
-              { value: "PENDING_DELIVERY", label: "Pending delivery" },
-            ]}
-          />
-        )}
-      </SearchFilters>
+      />
       <QueryBoundary pending={query.isPending} error={query.error}>
         <DataTable<Stock>
           caption={sold ? "Sold inventory" : "Stock inventory"}
