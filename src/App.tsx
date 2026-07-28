@@ -139,6 +139,8 @@ const PaymentAccountTransactionsPage = lazyNamed(
 );
 const DirectEntriesPage = lazyNamed(loadAccounting, "DirectEntriesPage");
 const DirectEntryFormPage = lazyNamed(loadAccounting, "DirectEntryFormPage");
+const OtherIncomesPage = lazyNamed(loadAccounting, "OtherIncomesPage");
+const OtherIncomeFormPage = lazyNamed(loadAccounting, "OtherIncomeFormPage");
 const JournalsPage = lazyNamed(loadAccounting, "JournalsPage");
 const JournalDetailPage = lazyNamed(loadAccounting, "JournalDetailPage");
 const JournalFormPage = lazyNamed(loadAccounting, "JournalFormPage");
@@ -298,6 +300,18 @@ const accountingRoutes: readonly FeatureRoute[] = [
   {
     path: "/accounting/direct-entry/:entryId",
     Page: DirectEntryFormPage,
+  },
+  {
+    path: "/accounting/other-income",
+    Page: OtherIncomesPage,
+  },
+  {
+    path: "/accounting/other-income/new",
+    Page: OtherIncomeFormPage,
+  },
+  {
+    path: "/accounting/other-income/:entryId",
+    Page: OtherIncomeFormPage,
   },
   { path: "/accounting/journals", Page: JournalsPage },
   {

@@ -59,6 +59,8 @@ import {
   type JournalInput,
   type JournalProfitLoss,
   type JournalSummary,
+  type OtherIncome,
+  type OtherIncomeInput,
   type PaymentAccount,
   type PaymentAccountInput,
   type PaymentAccountType,
@@ -153,17 +155,19 @@ const AccountOptions = ({
   value,
   onChange,
   all = false,
+  type,
   ...accessibility
 }: {
   value: string;
   onChange: (value: string) => void;
   all?: boolean;
+  type?: CoaAccountType;
   "aria-describedby"?: string;
   "aria-invalid"?: boolean;
 }) => {
   const query = useQuery({
-    queryKey: ["accounting", "coa", all],
-    queryFn: () => accountingApi.accounts(all ? false : true),
+    queryKey: ["accounting", "coa", all, type ?? "all"],
+    queryFn: () => accountingApi.accounts(all ? false : true, type),
   });
   return (
     <Select
@@ -1301,6 +1305,386 @@ export const DirectEntryFormPage = () => {
       <ConfirmDialog
         open={confirm}
         title="Delete direct entry?"
+        message="This action cannot be undone."
+        confirmLabel="Delete"
+        danger
+        loading={remove.isPending}
+        onClose={() => setConfirm(false)}
+        onConfirm={() => remove.mutate()}
+      />
+    </>
+  );
+};
+
+export const OtherIncomesPage = () => {
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const page = Math.max(1, Number(params.get("page")) || 1);
+  const search = params.get("q") ?? "";
+  const fromDate = params.get("from") ?? "";
+  const toDate = params.get("to") ?? "";
+  const query = useQuery({
+    queryKey: ["accounting", "other-incomes", page, search, fromDate, toDate],
+    queryFn: () =>
+      accountingApi.otherIncomes({
+        page: page - 1,
+        size: 20,
+        searchText: search || undefined,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
+      }),
+  });
+  const update = (key: string, value: string) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    if (key !== "page") next.set("page", "1");
+    setParams(next);
+  };
+  const columns: DataColumn<OtherIncome>[] = [
+    { key: "date", header: "Date", cell: (entry) => entry.entryDate },
+    {
+      key: "account",
+      header: "COA",
+      cell: (entry) => entry.coaLabel || entry.coaName || "—",
+    },
+    {
+      key: "paymentAccount",
+      header: "Payment account",
+      cell: (entry) => (
+        <>
+          <strong>{entry.paymentAccountName}</strong>
+          <small className="cell-subtitle">
+            Account #{entry.paymentAccountId}
+          </small>
+        </>
+      ),
+    },
+    {
+      key: "description",
+      header: "Details",
+      cell: (entry) => (
+        <span>
+          <strong>{entry.description}</strong>
+          <small className="cell-subtitle">
+            {entry.partyName}
+            {entry.referenceNo ? ` · ${entry.referenceNo}` : ""}
+          </small>
+        </span>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      align: "right",
+      cell: (entry) => (
+        <strong
+          className={entry.direction === "IN" ? "amount-in" : "amount-out"}
+        >
+          {entry.direction === "IN" ? "+" : "−"}
+          {money(entry.amount)}
+        </strong>
+      ),
+    },
+  ];
+  return (
+    <>
+      <PageHeader
+        title="Other Income"
+        description="Record other income entries."
+        actions={
+          <Can resource="OTHER_INCOME" privilege="CREATE">
+            <Link
+              className="button button--primary"
+              to="/accounting/other-income/new"
+            >
+              <Plus size={16} /> New entry
+            </Link>
+          </Can>
+        }
+      />
+      <SearchFilters
+        query={search}
+        collapsible
+        onQueryChange={(value) => update("q", value)}
+      >
+        <DateInput
+          aria-label="From date"
+          value={fromDate}
+          onChange={(event) => update("from", event.target.value)}
+        />
+        <DateInput
+          aria-label="To date"
+          value={toDate}
+          onChange={(event) => update("to", event.target.value)}
+        />
+      </SearchFilters>
+      {query.isLoading ? (
+        <LoadingState />
+      ) : query.isError ? (
+        <QueryError error={query.error} retry={() => void query.refetch()} />
+      ) : (
+        <Card>
+          <DataTable
+            caption="Other income entries"
+            columns={columns}
+            rows={query.data?.items ?? []}
+            rowKey={(entry) => String(entry.id)}
+            onRowClick={(entry) =>
+              navigate(`/accounting/other-income/${entry.id}`)
+            }
+          />
+          <Pagination
+            page={page}
+            pageCount={query.data?.totalPages ?? 0}
+            onPageChange={(value) => update("page", String(value))}
+          />
+        </Card>
+      )}
+    </>
+  );
+};
+
+const otherIncomeInitial: OtherIncomeInput = {
+  entryDate: today(),
+  coaId: 0,
+  direction: "IN",
+  amount: 0,
+  paymentAccountId: 0,
+  partyName: "",
+  description: "",
+  notes: "",
+};
+
+export const OtherIncomeFormPage = () => {
+  const id = parseId(useParams().entryId);
+  const navigate = useNavigate();
+  const client = useQueryClient();
+  const [form, setForm] = useState<OtherIncomeInput>(otherIncomeInitial);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [confirm, setConfirm] = useState(false);
+  const detail = useQuery({
+    queryKey: ["accounting", "other-income", id],
+    queryFn: () => accountingApi.otherIncome(id as number),
+    enabled: id !== null,
+  });
+  const paymentAccounts = useQuery({
+    queryKey: ["accounting", "payment-accounts"],
+    queryFn: () => accountingApi.paymentAccounts(),
+  });
+  useEffect(() => {
+    if (detail.data) {
+      setForm({
+        entryDate: detail.data.entryDate,
+        coaId: detail.data.coaId,
+        direction: detail.data.direction,
+        amount: detail.data.amount,
+        paymentAccountId: detail.data.paymentAccountId,
+        partyName: detail.data.partyName,
+        description: detail.data.description,
+        notes: detail.data.notes ?? "",
+        version: detail.data.version,
+      });
+    }
+  }, [detail.data]);
+  const save = useMutation({
+    mutationFn: () =>
+      id
+        ? accountingApi.updateOtherIncome(id, form)
+        : accountingApi.createOtherIncome(form),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["accounting"] });
+      toast.success(`Other income ${id ? "updated" : "created"}.`);
+      navigate("/accounting/other-income");
+    },
+    onError: async (error) => {
+      const hasFieldErrors = applyServerFieldErrors(
+        error,
+        setErrors,
+        "otherIncome",
+        {
+          accountId: "coaId",
+          party: "partyName",
+          date: "entryDate",
+        },
+      );
+      if (error instanceof ApiError && error.status === 409 && id) {
+        toast.error("This entry was updated elsewhere. Latest version loaded.");
+        const latest = await accountingApi.otherIncome(id);
+        setForm((current) => ({ ...current, version: latest.version }));
+      } else if (!hasFieldErrors) toast.error(message(error));
+    },
+  });
+  const remove = useMutation({
+    mutationFn: () => accountingApi.deleteOtherIncome(id as number),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["accounting"] });
+      toast.success("Other income deleted.");
+      navigate("/accounting/other-income");
+    },
+    onError: (error) => toast.error(message(error)),
+  });
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const next: Record<string, string> = {};
+    if (!form.coaId)
+      next.coaId = validationMessage("otherIncome", "accountId", "REQUIRED");
+    if (!form.paymentAccountId)
+      next.paymentAccountId = validationMessage(
+        "otherIncome",
+        "paymentAccountId",
+        "REQUIRED",
+      );
+    if (!required(form.partyName ?? ""))
+      next.partyName = validationMessage("otherIncome", "party", "REQUIRED");
+    if (!required(form.description ?? ""))
+      next.description = validationMessage(
+        "otherIncome",
+        "description",
+        "REQUIRED",
+      );
+    if (!Number.isFinite(form.amount) || form.amount <= 0)
+      next.amount = validationMessage(
+        "otherIncome",
+        "amount",
+        "MUST_BE_POSITIVE",
+      );
+    if (!required(form.entryDate ?? ""))
+      next.entryDate = validationMessage("otherIncome", "date", "REQUIRED");
+    else if ((form.entryDate as string) > today())
+      next.entryDate = validationMessage("otherIncome", "date", "FUTURE_DATE");
+    const selected = paymentAccounts.data?.find(
+      (account) => account.id === form.paymentAccountId,
+    );
+    if (
+      selected &&
+      form.direction === "OUT" &&
+      form.amount > (selected.currentBalance ?? selected.openingBalance)
+    )
+      next.amount = validationMessage("otherIncome", "amount", "MAXIMUM");
+    setErrors(next);
+    if (!Object.keys(next).length) save.mutate();
+  };
+  if ((id && detail.isLoading) || paymentAccounts.isLoading)
+    return <LoadingState />;
+  return (
+    <>
+      <PageHeader
+        title={id ? "Other Income Detail" : "New Other Income"}
+        description={
+          id ? "Review or update this entry." : "Create an other income entry."
+        }
+        actions={
+          id ? (
+            <AuditHistoryButton
+              entityType="other-income"
+              entityId={id}
+              recordLabel={form.description}
+            />
+          ) : undefined
+        }
+      />
+      <Card>
+        <form className="accounting-form" noValidate onSubmit={submit}>
+          <FormField label="Direction" required error={errors.direction}>
+            <Select
+              value={form.direction}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  direction: event.target.value as Direction,
+                })
+              }
+              options={[
+                { value: "IN", label: "Credit — money in" },
+                { value: "OUT", label: "Debit — money out" },
+              ]}
+            />
+          </FormField>
+          <FormField label="Chart account" required error={errors.coaId}>
+            <AccountOptions
+              type="REVENUE"
+              value={String(form.coaId || "")}
+              onChange={(value) => setForm({ ...form, coaId: Number(value) })}
+            />
+          </FormField>
+          <FormField label="Entry date" required error={errors.entryDate}>
+            <DateInput
+              max={today()}
+              value={form.entryDate ?? ""}
+              onChange={(event) =>
+                setForm({ ...form, entryDate: event.target.value })
+              }
+            />
+          </FormField>
+          <FormField label="Amount" required error={errors.amount}>
+            <Input
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={form.amount || ""}
+              onChange={(event) =>
+                setForm({ ...form, amount: Number(event.target.value) })
+              }
+            />
+          </FormField>
+          <FormField
+            label="Payment account"
+            required
+            error={errors.paymentAccountId}
+          >
+            <PaymentOptions
+              value={String(form.paymentAccountId || "")}
+              onChange={(value) =>
+                setForm({ ...form, paymentAccountId: Number(value) })
+              }
+            />
+          </FormField>
+          <FormField label="Party" required error={errors.partyName}>
+            <Input
+              value={form.partyName ?? ""}
+              onChange={(event) =>
+                setForm({ ...form, partyName: event.target.value })
+              }
+            />
+          </FormField>
+          <FormField label="Description" required error={errors.description}>
+            <Textarea
+              value={form.description ?? ""}
+              onChange={(event) =>
+                setForm({ ...form, description: event.target.value })
+              }
+            />
+          </FormField>
+          <FormField label="Notes" error={errors.notes}>
+            <Textarea
+              value={form.notes ?? ""}
+              onChange={(event) =>
+                setForm({ ...form, notes: event.target.value })
+              }
+            />
+          </FormField>
+          <div className="form-actions">
+            {id && (
+              <Can resource="OTHER_INCOME" privilege="DELETE">
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => setConfirm(true)}
+                >
+                  <Trash2 size={16} /> Delete
+                </Button>
+              </Can>
+            )}
+            <Button type="submit" loading={save.isPending}>
+              {id ? "Save changes" : "Create entry"}
+            </Button>
+          </div>
+        </form>
+      </Card>
+      <ConfirmDialog
+        open={confirm}
+        title="Delete other income?"
         message="This action cannot be undone."
         confirmLabel="Delete"
         danger

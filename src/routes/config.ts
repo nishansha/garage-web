@@ -179,6 +179,14 @@ export const appRoutes: readonly AppRoute[] = [
     access: access("/accounting/direct-entry"),
   },
   {
+    path: "/accounting/other-income",
+    title: "Other Income",
+    description: "Record other income entries.",
+    group: "Accounting",
+    icon: CircleDollarSign,
+    access: access("/accounting/other-income"),
+  },
+  {
     path: "/accounting/journals",
     title: "Journals",
     description: "Review journal entries.",

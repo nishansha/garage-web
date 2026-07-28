@@ -11,6 +11,7 @@ export const AUDIT_ENTITY_TYPES = [
   "purchase-return",
   "sale-return-deduction",
   "direct-entry",
+  "other-income",
   "expense",
 ] as const;
 

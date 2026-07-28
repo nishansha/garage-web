@@ -424,6 +424,7 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
       pickupLocation: purchase?.pickupLocation ?? "",
       ownerName: purchase?.ownerName ?? "",
       ownerMobileNo: purchase?.ownerMobileNo ?? "",
+      ownerAddress: purchase?.ownerAddress ?? "",
       ownerShipSerialNo: purchase?.ownerShipSerialNo ?? "",
       expenses: purchase?.expenses?.map(purchaseExpensePayload) ?? [],
     },
@@ -860,6 +861,20 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
             />
           </FormField>
           <FormField
+            label="Owner address"
+            required
+            error={fieldError(errors.ownerAddress)}
+          >
+            <Input
+              {...register("ownerAddress", {
+                required: purchaseValidationMessage(
+                  "ownerAddress",
+                  "REQUIRED",
+                ),
+              })}
+            />
+          </FormField>
+          <FormField
             label="Pickup staff"
             error={fieldError(errors.pickupStaffId)}
           >
@@ -1212,6 +1227,7 @@ export const PurchaseDetailRoute = () => {
                 />
                 <Detail label="Vendor" value={purchase.ownerName} />
                 <Detail label="Mobile" value={purchase.ownerMobileNo} />
+                <Detail label="Address" value={purchase.ownerAddress} />
                 <Detail label="Pickup staff" value={purchase.pickupStaff} />
                 <Detail
                   label="Pickup location"

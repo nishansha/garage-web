@@ -149,6 +149,18 @@ const rules: AccessRule[] = [
     access: { resource: "DIRECT_ENTRY", privilege: "VIEW" },
   },
   {
+    pattern: /^\/accounting\/other-income\/new$/,
+    access: { resource: "OTHER_INCOME", privilege: "CREATE" },
+  },
+  {
+    pattern: /^\/accounting\/other-income\/\d+$/,
+    access: { resource: "OTHER_INCOME", privilege: "UPDATE" },
+  },
+  {
+    pattern: /^\/accounting\/other-income/,
+    access: { resource: "OTHER_INCOME", privilege: "VIEW" },
+  },
+  {
     pattern: /^\/accounting\/journals\/new$/,
     access: { resource: "JOURNAL", privilege: "CREATE" },
   },

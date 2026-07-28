@@ -99,6 +99,7 @@ export interface Purchase {
   pickupLocation: string | null;
   ownerName: string | null;
   ownerMobileNo: string | null;
+  ownerAddress: string | null;
   expenses: PurchaseExpenseInput[] | null;
   sold: boolean;
   returned?: boolean;
@@ -129,6 +130,7 @@ export interface PurchaseInput {
   pickupLocation: string;
   ownerName: string;
   ownerMobileNo: string;
+  ownerAddress: string;
   ownerShipSerialNo: string;
   expenses: PurchaseExpenseInput[];
   version?: number;
