@@ -123,6 +123,14 @@ export const appRoutes: readonly AppRoute[] = [
     access: access("/sales/outstandings/receivables"),
   },
   {
+    path: "/sales/outstandings/rc-due",
+    title: "Pending RC Dues",
+    description: "RC conversion amounts due from purchase vendors.",
+    group: "Sales",
+    icon: HandCoins,
+    access: access("/sales/outstandings/rc-due"),
+  },
+  {
     path: "/sales/outstandings/return-payables",
     title: "Sale-return Payables",
     description: "Amounts owed for sales returns.",

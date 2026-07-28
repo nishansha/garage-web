@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { Card, DataTable, PageHeader, StatCard } from "../../components/ui";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Card,
+  DataTable,
+  EmptyState,
+  PageHeader,
+  StatCard,
+} from "../../components/ui";
 import { formatCurrency, formatDate } from "../../lib/utils";
 import {
   operationsApi,
@@ -156,6 +162,102 @@ export const PurchaseReturnReceivablesRoute = () => (
 export const SalesReceivablesRoute = () => (
   <OutstandingRoute kind="sales-receivables" />
 );
+export const SalesRcDueRoute = () => {
+  const navigate = useNavigate();
+  const query = useQuery({
+    queryKey: ["operations", "outstanding", "sales-rc-due"],
+    queryFn: operationsApi.sales.rcDueSummary,
+  });
+  return (
+    <>
+      <PageHeader
+        title="Pending RC Dues"
+        description="Track RC conversion amounts still due from purchase vendors."
+      />
+      <QueryBoundary
+        pending={query.isPending}
+        error={query.error}
+        retry={() => void query.refetch()}
+      >
+        <div className="operations-kpis">
+          <StatCard label="Open records" value={query.data?.totalCount ?? 0} />
+          <StatCard
+            label="Total pending RC due"
+            value={formatCurrency(query.data?.totalPendingAmount)}
+          />
+        </div>
+        {!query.data?.items.length ? (
+          <EmptyState
+            title="No pending RC dues"
+            description="Settled RC due sales will drop off this list automatically."
+          />
+        ) : (
+          <Card>
+            <DataTable
+              caption="Pending RC dues"
+              rows={query.data.items}
+              rowKey={(row) => String(row.saleId)}
+              onRowClick={(row) => navigate(`/sales/sales/${row.saleId}`)}
+              columns={[
+                {
+                  key: "invoice",
+                  header: "Invoice",
+                  cell: (row) => <strong>{row.invoiceNo}</strong>,
+                },
+                {
+                  key: "vehicle",
+                  header: "Vehicle",
+                  cell: (row) => row.vehicleNo,
+                },
+                {
+                  key: "saleDate",
+                  header: "Sale date",
+                  cell: (row) => formatDate(row.saleDate),
+                },
+                {
+                  key: "vendor",
+                  header: "Vendor",
+                  cell: (row) => row.vendorName,
+                },
+                {
+                  key: "mobile",
+                  header: "Mobile",
+                  cell: (row) => row.vendorMobile ?? "—",
+                },
+                {
+                  key: "amount",
+                  header: "RC due",
+                  align: "right",
+                  cell: (row) => formatCurrency(row.amount),
+                },
+                {
+                  key: "pending",
+                  header: "Pending",
+                  align: "right",
+                  cell: (row) => formatCurrency(row.pendingAmount),
+                },
+                {
+                  key: "lastReceiptDate",
+                  header: "Last receipt",
+                  cell: (row) => formatDate(row.lastReceiptDate),
+                },
+                {
+                  key: "actions",
+                  header: "",
+                  cell: (row) => (
+                    <Link to={`/sales/sales/${row.saleId}/rc-due-receipts/new`}>
+                      Record receipt
+                    </Link>
+                  ),
+                },
+              ]}
+            />
+          </Card>
+        )}
+      </QueryBoundary>
+    </>
+  );
+};
 export const SaleReturnPayablesRoute = () => (
   <OutstandingRoute kind="sale-return-payables" />
 );

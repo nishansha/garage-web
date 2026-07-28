@@ -65,6 +65,14 @@ const rules: AccessRule[] = [
     access: { resource: "SALE", privilege: "CREATE" },
   },
   {
+    pattern: /^\/sales\/sales\/\d+\/rc-due-receipts\/new$/,
+    access: { resource: "SALE", privilege: "CREATE" },
+  },
+  {
+    pattern: /^\/sales\/sales\/\d+\/rc-due-receipts\/\d+\/edit$/,
+    access: { resource: "SALE", privilege: "UPDATE" },
+  },
+  {
     pattern: /^\/sales\/sales\/\d+\/return$/,
     access: { resource: "SALE_RETURN", privilege: "CREATE" },
   },
@@ -86,6 +94,10 @@ const rules: AccessRule[] = [
   },
   {
     pattern: /^\/sales\/outstandings\/receivables/,
+    access: { resource: "SALE_RECEIVABLE", privilege: "VIEW" },
+  },
+  {
+    pattern: /^\/sales\/outstandings\/rc-due/,
     access: { resource: "SALE_RECEIVABLE", privilege: "VIEW" },
   },
   {

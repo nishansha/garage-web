@@ -87,6 +87,7 @@ const SaleCreateRoute = lazyNamed(loadSales, "SaleCreateRoute");
 const SaleDetailRoute = lazyNamed(loadSales, "SaleDetailRoute");
 const SaleEditRoute = lazyNamed(loadSales, "SaleEditRoute");
 const SalePaymentRoute = lazyNamed(loadSales, "SalePaymentRoute");
+const SaleRcDueReceiptRoute = lazyNamed(loadSales, "SaleRcDueReceiptRoute");
 const SaleReturnCreateRoute = lazyNamed(loadSales, "SaleReturnCreateRoute");
 const SaleReturnsListRoute = lazyNamed(loadSales, "SaleReturnsListRoute");
 const SaleReturnDetailRoute = lazyNamed(loadSales, "SaleReturnDetailRoute");
@@ -95,6 +96,7 @@ const SalesReceivablesRoute = lazyNamed(
   loadOutstandings,
   "SalesReceivablesRoute",
 );
+const SalesRcDueRoute = lazyNamed(loadOutstandings, "SalesRcDueRoute");
 const SaleReturnPayablesRoute = lazyNamed(
   loadOutstandings,
   "SaleReturnPayablesRoute",
@@ -224,6 +226,14 @@ const operationsRoutes: readonly FeatureRoute[] = [
   { path: "/sales/sales/:saleId/edit", Page: SaleEditRoute },
   { path: "/sales/sales/:saleId/payment", Page: SalePaymentRoute },
   {
+    path: "/sales/sales/:saleId/rc-due-receipts/new",
+    Page: SaleRcDueReceiptRoute,
+  },
+  {
+    path: "/sales/sales/:saleId/rc-due-receipts/:receiptId/edit",
+    Page: SaleRcDueReceiptRoute,
+  },
+  {
     path: "/sales/sales/:saleId/payments/:paymentId/edit",
     Page: SalePaymentRoute,
   },
@@ -241,6 +251,10 @@ const operationsRoutes: readonly FeatureRoute[] = [
   {
     path: "/sales/outstandings/receivables",
     Page: SalesReceivablesRoute,
+  },
+  {
+    path: "/sales/outstandings/rc-due",
+    Page: SalesRcDueRoute,
   },
   {
     path: "/sales/outstandings/return-payables",

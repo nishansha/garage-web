@@ -20,6 +20,7 @@ import {
 } from "../../components/ui";
 import { Can } from "../../components/Can";
 import { AuditHistoryButton } from "../audit/AuditHistory";
+import { ApiError } from "../../lib/api";
 import { formatCurrency, formatDate } from "../../lib/utils";
 import {
   extractFieldErrors,
@@ -34,9 +35,11 @@ import {
   type ExchangeExpense,
   type ExchangeHandling,
   type Lookup,
+  type Payment,
   type PaymentAccount,
   type PaymentInput,
   type PayerType,
+  type RcDueReceipt,
   type Sale,
   type SaleInput,
   type SearchInput,
@@ -51,6 +54,7 @@ import {
   QueryBoundary,
   RouteFormPage,
   Section,
+  invalidateOutstanding,
   notifyError,
   numberValue,
   optionalText,
@@ -61,6 +65,7 @@ import {
 const SALES = "/sales/sales";
 const RETURNS = "/sales/returns";
 const CURRENT_YEAR = new Date().getFullYear();
+const RC_DUE_MAXIMUM_MESSAGE = "Receipt amount cannot exceed the remaining RC due";
 
 type FieldErrors = Record<string, string>;
 type ValidationModule = Parameters<typeof getFieldValidationMessage>[0];
@@ -97,6 +102,35 @@ const paymentAccountLabel = (account: PaymentAccount) =>
   account.accountType === "BANK" && account.bankName
     ? `${account.name} (${account.bankName})`
     : account.name;
+
+const rcDueReceiptAsPayment = (receipt?: RcDueReceipt): Payment | undefined =>
+  receipt
+    ? {
+        id: receipt.id,
+        version: receipt.version,
+        amount: receipt.amount,
+        paymentDate: receipt.receiptDate,
+        paymentMethod: receipt.paymentMethod,
+        paymentAccountId: receipt.paymentAccountId,
+        referenceNo: receipt.referenceNo ?? undefined,
+        notes: receipt.notes ?? undefined,
+      }
+    : undefined;
+
+const handleRcDueReceiptError = async (
+  error: unknown,
+  refetchSale: () => Promise<unknown>,
+) => {
+  if (
+    error instanceof ApiError &&
+    (error.code === "CON_100" || error.code === "CON_101")
+  ) {
+    toast.error("This RC due receipt changed on the server. Reloaded the latest sale.");
+    await refetchSale();
+    return;
+  }
+  notifyError(error);
+};
 const makeYear = requiredText.refine((value) => {
   const year = Number(value);
   return Number.isInteger(year) && year >= 1900 && year <= CURRENT_YEAR;
@@ -1342,6 +1376,7 @@ export const SaleDetailRoute = () => {
   const navigate = useNavigate();
   const client = useQueryClient();
   const [confirm, setConfirm] = useState(false);
+  const [deleteRcDueReceiptId, setDeleteRcDueReceiptId] = useState<number>();
   const query = useQuery({
     queryKey: ["operations", "sale", id],
     queryFn: () => operationsApi.sales.detail(id!),
@@ -1358,6 +1393,22 @@ export const SaleDetailRoute = () => {
       });
       toast.success("Sale deleted");
       navigate(SALES);
+    },
+    onError: notifyError,
+  });
+  const rcDueReceiptDeletion = useMutation({
+    mutationFn: () =>
+      operationsApi.sales.deleteRcDueReceipt(id!, deleteRcDueReceiptId!),
+    onSuccess: async () => {
+      setDeleteRcDueReceiptId(undefined);
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["operations", "sale", id] }),
+        client.invalidateQueries({ queryKey: ["operations", "sales"] }),
+        client.invalidateQueries({
+          queryKey: ["operations", "outstanding", "sales-rc-due"],
+        }),
+      ]);
+      toast.success("RC due receipt deleted");
     },
     onError: notifyError,
   });
@@ -1387,6 +1438,16 @@ export const SaleDetailRoute = () => {
                     to={`${SALES}/${id}/payment`}
                   >
                     Record payment
+                  </Link>
+                </Can>
+              )}
+              {(sale.pendingRcDueAmount ?? 0) > 0 && (
+                <Can resource="SALE" privilege="CREATE">
+                  <Link
+                    className="button button--secondary"
+                    to={`${SALES}/${id}/rc-due-receipts/new`}
+                  >
+                    Record RC Due Receipt
                   </Link>
                 </Can>
               )}
@@ -1447,6 +1508,10 @@ export const SaleDetailRoute = () => {
                 <Detail
                   label="Customer pending"
                   value={<Money value={sale.pendingCustomerAmount} />}
+                />
+                <Detail
+                  label="Net sale amount"
+                  value={<Money value={sale.netSaleAmount} />}
                 />
                 <Detail
                   label="Finance pending"
@@ -1521,6 +1586,101 @@ export const SaleDetailRoute = () => {
                 ]}
               />
             </Section>
+            {(sale.rcDueAmount ?? 0) > 0 && (
+              <>
+                <Section title="RC Due">
+                  <DetailGrid>
+                    <Detail label="Vendor" value={sale.rcDueVendorName} />
+                    <Detail label="Mobile" value={sale.rcDueVendorMobile} />
+                    <Detail
+                      label="RC due amount"
+                      value={<Money value={sale.rcDueAmount} />}
+                    />
+                    <Detail
+                      label="Received"
+                      value={<Money value={sale.paidRcDueAmount} />}
+                    />
+                    <Detail
+                      label="Pending"
+                      value={<Money value={sale.pendingRcDueAmount} />}
+                    />
+                  </DetailGrid>
+                </Section>
+                <Section
+                  title="RC due receipts"
+                  actions={
+                    (sale.pendingRcDueAmount ?? 0) > 0 ? (
+                      <Can resource="SALE" privilege="CREATE">
+                        <Link
+                          className="button button--secondary"
+                          to={`${SALES}/${id}/rc-due-receipts/new`}
+                        >
+                          Record RC Due Receipt
+                        </Link>
+                      </Can>
+                    ) : undefined
+                  }
+                >
+                  <DataTable
+                    caption="RC due receipts"
+                    rows={sale.rcDueReceipts ?? []}
+                    rowKey={(row) => String(row.id)}
+                    emptyMessage="No RC due receipts recorded"
+                    columns={[
+                      {
+                        key: "date",
+                        header: "Date",
+                        cell: (row) => formatDate(row.receiptDate),
+                      },
+                      {
+                        key: "method",
+                        header: "Method",
+                        cell: (row) => row.paymentMethod,
+                      },
+                      {
+                        key: "account",
+                        header: "Account",
+                        cell: (row) => row.paymentAccountName,
+                      },
+                      {
+                        key: "reference",
+                        header: "Reference",
+                        cell: (row) => row.referenceNo ?? "—",
+                      },
+                      {
+                        key: "amount",
+                        header: "Amount",
+                        align: "right",
+                        cell: (row) => formatCurrency(row.amount),
+                      },
+                      {
+                        key: "actions",
+                        header: "",
+                        cell: (row) => (
+                          <span className="operations-inline-actions">
+                            <Can resource="SALE" privilege="UPDATE">
+                              <Link
+                                to={`${SALES}/${id}/rc-due-receipts/${row.id}/edit`}
+                              >
+                                Edit
+                              </Link>
+                            </Can>
+                            <Can resource="SALE" privilege="DELETE">
+                              <Button
+                                variant="ghost"
+                                onClick={() => setDeleteRcDueReceiptId(row.id)}
+                              >
+                                Delete
+                              </Button>
+                            </Can>
+                          </span>
+                        ),
+                      },
+                    ]}
+                  />
+                </Section>
+              </>
+            )}
           </>
         )}
       </QueryBoundary>
@@ -1532,6 +1692,15 @@ export const SaleDetailRoute = () => {
         loading={deletion.isPending}
         onClose={() => setConfirm(false)}
         onConfirm={() => deletion.mutate()}
+      />
+      <ConfirmDialog
+        open={deleteRcDueReceiptId !== undefined}
+        title="Delete RC due receipt?"
+        message="The RC due receipt and its accounting transaction will be reversed."
+        danger
+        loading={rcDueReceiptDeletion.isPending}
+        onClose={() => setDeleteRcDueReceiptId(undefined)}
+        onConfirm={() => rcDueReceiptDeletion.mutate()}
       />
     </>
   );
@@ -1579,9 +1748,12 @@ export const SalePaymentRoute = () => {
             version: payment?.version ?? 0,
           })
         : operationsApi.sales.payment(id!, { ...value, payerType: payer }),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ["operations", "sale", id] });
-      void client.invalidateQueries({ queryKey: ["operations", "sales"] });
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["operations", "sale", id] }),
+        client.invalidateQueries({ queryKey: ["operations", "sales"] }),
+        invalidateOutstanding(client, "sales-receivables"),
+      ]);
       toast.success(paymentId ? "Payment updated" : "Payment recorded");
       navigate(`${SALES}/${id}`);
     },
@@ -1629,6 +1801,82 @@ export const SalePaymentRoute = () => {
             pending={mutation.isPending}
             cancelTo={`${SALES}/${id}`}
             submitLabel={paymentId ? "Update payment" : "Record payment"}
+            onSubmit={(value) => mutation.mutate(value)}
+          />
+        )}
+      </QueryBoundary>
+    </RouteFormPage>
+  );
+};
+
+export const SaleRcDueReceiptRoute = () => {
+  const id = useNumericParam("saleId");
+  const receiptId = useNumericParam("receiptId");
+  const client = useQueryClient();
+  const navigate = useNavigate();
+  const query = useQuery({
+    queryKey: ["operations", "sale", id],
+    queryFn: () => operationsApi.sales.detail(id!),
+    enabled: !!id,
+  });
+  const receipt = query.data?.rcDueReceipts?.find((item) => item.id === receiptId);
+  const payment = rcDueReceiptAsPayment(receipt);
+  const maximum = receiptId
+    ? (query.data?.pendingRcDueAmount ?? 0) + (receipt?.amount ?? 0)
+    : query.data?.pendingRcDueAmount;
+  const mutation = useMutation({
+    mutationFn: (value: PaymentInput) =>
+      receiptId
+        ? operationsApi.sales.updateRcDueReceipt(id!, receiptId, {
+            amount: value.amount,
+            receiptDate: value.paymentDate,
+            paymentMethod: value.paymentMethod,
+            paymentAccountId: value.paymentAccountId,
+            referenceNo: value.referenceNo,
+            notes: value.notes,
+            version: receipt?.version ?? 0,
+          })
+        : operationsApi.sales.rcDueReceipt(id!, {
+            amount: value.amount,
+            receiptDate: value.paymentDate,
+            paymentMethod: value.paymentMethod,
+            paymentAccountId: value.paymentAccountId,
+            referenceNo: value.referenceNo,
+            notes: value.notes,
+          }),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["operations", "sale", id] }),
+        client.invalidateQueries({ queryKey: ["operations", "sales"] }),
+        client.invalidateQueries({
+          queryKey: ["operations", "outstanding", "sales-rc-due"],
+        }),
+      ]);
+      toast.success(receiptId ? "RC due receipt updated" : "RC due receipt recorded");
+      navigate(`${SALES}/${id}`);
+    },
+    onError: async (error) => {
+      await handleRcDueReceiptError(error, query.refetch);
+    },
+  });
+  if (!id) return <InvalidRoute />;
+  return (
+    <RouteFormPage
+      title={receiptId ? "Edit RC due receipt" : "Record RC due receipt"}
+    >
+      <QueryBoundary pending={query.isPending} error={query.error}>
+        {receiptId && !receipt ? (
+          <InvalidRoute />
+        ) : (
+          <PaymentForm
+            key={`rc-due-${receiptId ?? "new"}-${maximum ?? 0}`}
+            payment={payment}
+            defaultAmount={receiptId ? undefined : (maximum ?? undefined)}
+            maximum={maximum ?? undefined}
+            maximumMessage={RC_DUE_MAXIMUM_MESSAGE}
+            pending={mutation.isPending}
+            cancelTo={`${SALES}/${id}`}
+            submitLabel={receiptId ? "Update receipt" : "Record receipt"}
             onSubmit={(value) => mutation.mutate(value)}
           />
         )}
@@ -2401,13 +2649,16 @@ export const SaleReturnRefundRoute = () => {
             version: refund?.version ?? 0,
           })
         : operationsApi.saleReturns.refund(id!, value),
-    onSuccess: () => {
-      void client.invalidateQueries({
-        queryKey: ["operations", "sale-return", id],
-      });
-      void client.invalidateQueries({
-        queryKey: ["operations", "sale-returns"],
-      });
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: ["operations", "sale-return", id],
+        }),
+        client.invalidateQueries({
+          queryKey: ["operations", "sale-returns"],
+        }),
+        invalidateOutstanding(client, "sale-return-payables"),
+      ]);
       toast.success(refundId ? "Refund updated" : "Refund recorded");
       navigate(`${RETURNS}/${id}`);
     },

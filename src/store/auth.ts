@@ -5,6 +5,7 @@ import {
 } from "@reduxjs/toolkit";
 import { useDispatch, useSelector } from "react-redux";
 import type { MyPermissions } from "../lib/rbac";
+import type { UserPreferences } from "../services/preferences";
 
 export type UserRole = "ADMIN" | "STAFF" | string;
 
@@ -27,6 +28,7 @@ export interface AuthSession {
 interface AuthState {
   session: AuthSession | null;
   permissions: MyPermissions | null;
+  preferences: UserPreferences | null;
   hydrated: boolean;
 }
 
@@ -57,6 +59,7 @@ const authSlice = createSlice({
   initialState: {
     session: readSession(),
     permissions: null as MyPermissions | null,
+    preferences: null as UserPreferences | null,
     hydrated: true,
   } satisfies AuthState,
   reducers: {
@@ -74,6 +77,12 @@ const authSlice = createSlice({
     clearPermissions(state) {
       state.permissions = null;
     },
+    setPreferences(state, action: PayloadAction<UserPreferences>) {
+      state.preferences = action.payload;
+    },
+    clearPreferences(state) {
+      state.preferences = null;
+    },
     updateTokens(
       state,
       action: PayloadAction<{ token: string; refreshToken?: string }>,
@@ -87,6 +96,7 @@ const authSlice = createSlice({
     clearSession(state) {
       state.session = null;
       state.permissions = null;
+      state.preferences = null;
       sessionStorage.clear();
     },
   },
@@ -95,8 +105,10 @@ const authSlice = createSlice({
 export const {
   clearSession,
   clearPermissions,
+  clearPreferences,
   setSession,
   setPermissions,
+  setPreferences,
   updateTokens,
 } = authSlice.actions;
 

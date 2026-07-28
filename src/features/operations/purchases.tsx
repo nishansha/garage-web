@@ -49,6 +49,7 @@ import {
   QueryBoundary,
   RouteFormPage,
   Section,
+  invalidateOutstanding,
   notifyError,
   optionalText,
   today,
@@ -1381,11 +1382,14 @@ export const PurchasePaymentRoute = () => {
             version: payment?.version ?? 0,
           })
         : operationsApi.purchases.payment(id!, value),
-    onSuccess: () => {
-      void client.invalidateQueries({
-        queryKey: ["operations", "purchase", id],
-      });
-      void client.invalidateQueries({ queryKey: ["operations", "purchases"] });
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: ["operations", "purchase", id],
+        }),
+        client.invalidateQueries({ queryKey: ["operations", "purchases"] }),
+        invalidateOutstanding(client, "purchase-payables"),
+      ]);
       toast.success(paymentId ? "Payment updated" : "Payment recorded");
       navigate(`${PURCHASES}/${id}`);
     },
@@ -1829,13 +1833,16 @@ export const PurchaseReturnReceiptRoute = () => {
             version: receipt?.version ?? 0,
           })
         : operationsApi.purchaseReturns.receipt(id!, value),
-    onSuccess: () => {
-      void client.invalidateQueries({
-        queryKey: ["operations", "purchase-return", id],
-      });
-      void client.invalidateQueries({
-        queryKey: ["operations", "purchase-returns"],
-      });
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: ["operations", "purchase-return", id],
+        }),
+        client.invalidateQueries({
+          queryKey: ["operations", "purchase-returns"],
+        }),
+        invalidateOutstanding(client, "purchase-return-receivables"),
+      ]);
       toast.success(receiptId ? "Receipt updated" : "Receipt recorded");
       navigate(`${RETURNS}/${id}`);
     },

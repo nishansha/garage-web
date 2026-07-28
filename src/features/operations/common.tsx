@@ -1,7 +1,7 @@
 /* oxlint-disable react/only-export-components -- route helpers intentionally colocated */
 import { useEffect, useMemo, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -31,6 +31,19 @@ import {
   type PaymentInput,
   type PayerType,
 } from "../../services/operations";
+
+export type OutstandingQueryKind =
+  | "purchase-payables"
+  | "purchase-return-receivables"
+  | "sales-receivables"
+  | "sales-rc-due"
+  | "sale-return-payables";
+
+export const invalidateOutstanding = (
+  client: QueryClient,
+  kind: OutstandingQueryKind,
+) =>
+  client.invalidateQueries({ queryKey: ["operations", "outstanding", kind] });
 
 export const today = () => new Date().toISOString().slice(0, 10);
 export const numberValue = (value: FormDataEntryValue | null) =>
@@ -169,7 +182,7 @@ const paymentSchema = (maximum?: number, maximumMessage?: string) =>
           1,
           getFieldValidationMessage("payment", "paymentDate", "REQUIRED"),
         ),
-      paymentMethod: z.enum(["CASH", "BANK"], {
+      paymentMethod: z.enum(["CASH", "BANK", "CHEQUE"], {
         error: getFieldValidationMessage(
           "payment",
           "paymentMethod",
@@ -366,6 +379,7 @@ export const PaymentForm = ({
               options={[
                 { value: "CASH", label: "Cash" },
                 { value: "BANK", label: "Bank" },
+                { value: "CHEQUE", label: "Cheque" },
               ]}
             />
           </FormField>

@@ -1,7 +1,7 @@
 import { api } from "../lib/api";
 
 export type Id = number;
-export type PaymentMethod = "CASH" | "BANK";
+export type PaymentMethod = "CASH" | "BANK" | "CHEQUE";
 export type PaymentStatus = "PENDING" | "UNPAID" | "PAID" | "PARTIAL";
 export type SalePaymentStatus =
   "PENDING" | "PAID" | "PARTIAL" | "FINANCE_PENDING" | "REFUND";
@@ -55,6 +55,33 @@ export interface PaymentInput {
   referenceNo?: string;
   notes?: string;
   version?: number;
+}
+export interface RcDueReceipt {
+  id: number;
+  version: number;
+  amount: number;
+  receiptDate: string;
+  paymentMethod: PaymentMethod;
+  paymentAccountId: number;
+  paymentAccountName: string;
+  referenceNo?: string | null;
+  notes?: string | null;
+}
+export interface RcDueReceiptInput {
+  amount: number;
+  receiptDate: string;
+  paymentMethod: PaymentMethod;
+  paymentAccountId: number;
+  referenceNo?: string;
+  notes?: string;
+  version?: number;
+}
+export interface RcDueReceiptResponse {
+  receiptId: number;
+  saleId: number;
+  amount: number;
+  totalReceived: number;
+  remainingRcDue: number;
 }
 export interface PurchaseExpenseInput {
   id?: number;
@@ -217,9 +244,16 @@ export interface Sale {
   pendingFinanceAmount?: number | null;
   paidCustomerAmount?: number | null;
   pendingCustomerAmount?: number | null;
+  netSaleAmount?: number | null;
   financeCompany?: string | null;
   financeAmount?: number | null;
   emiAmount?: number | null;
+  rcDueAmount?: number | null;
+  paidRcDueAmount?: number | null;
+  pendingRcDueAmount?: number | null;
+  rcDueVendorName?: string | null;
+  rcDueVendorMobile?: string | null;
+  rcDueReceipts?: RcDueReceipt[] | null;
   amountSplits?: AmountSplit[] | null;
   payments?: Payment[] | null;
 }
@@ -418,6 +452,22 @@ export interface Outstandings {
   totalPendingAmount: number;
   items: OutstandingItem[];
 }
+export interface RcDueSummaryItem {
+  saleId: number;
+  invoiceNo: string;
+  vehicleNo: string;
+  saleDate: string;
+  amount: number;
+  pendingAmount: number;
+  lastReceiptDate?: string | null;
+  vendorName: string;
+  vendorMobile?: string | null;
+}
+export interface RcDueSummary {
+  totalCount: number;
+  totalPendingAmount: number;
+  items: RcDueSummaryItem[];
+}
 export interface DashboardSummary {
   totalSales: string;
   salesDelta: number;
@@ -457,6 +507,17 @@ const cleanPayment = (value: PaymentInput) => ({
   paymentMethod: value.paymentMethod,
   paymentAccountId: value.paymentAccountId,
   ...(value.payerType ? { payerType: value.payerType } : {}),
+  ...(value.version !== undefined ? { version: value.version } : {}),
+  ...(value.referenceNo?.trim()
+    ? { referenceNo: value.referenceNo.trim() }
+    : {}),
+  ...(value.notes?.trim() ? { notes: value.notes.trim() } : {}),
+});
+const cleanRcDueReceipt = (value: RcDueReceiptInput) => ({
+  amount: value.amount,
+  receiptDate: value.receiptDate,
+  paymentMethod: value.paymentMethod,
+  paymentAccountId: value.paymentAccountId,
   ...(value.version !== undefined ? { version: value.version } : {}),
   ...(value.referenceNo?.trim()
     ? { referenceNo: value.referenceNo.trim() }
@@ -683,7 +744,24 @@ export const operationsApi = {
         `v1/sales/${id}/payments/${paymentId}`,
         cleanPayment(value),
       ),
+    rcDueReceipt: (id: number, value: RcDueReceiptInput) =>
+      api.post<RcDueReceiptResponse>(
+        `v1/sales/${id}/rc-due-receipts`,
+        cleanRcDueReceipt(value),
+      ),
+    updateRcDueReceipt: (
+      id: number,
+      receiptId: number,
+      value: RcDueReceiptInput & { version: number },
+    ) =>
+      api.put<RcDueReceiptResponse>(
+        `v1/sales/${id}/rc-due-receipts/${receiptId}`,
+        cleanRcDueReceipt(value),
+      ),
+    deleteRcDueReceipt: (id: number, receiptId: number) =>
+      api.delete<void>(`v1/sales/${id}/rc-due-receipts/${receiptId}`),
     receivables: () => api.get<Outstandings>("v1/sales/receivables"),
+    rcDueSummary: () => api.get<RcDueSummary>("v1/sales/rc-due-summary"),
   },
   saleReturns: {
     list: (page = 0, size = 20, filters?: SearchInput) =>

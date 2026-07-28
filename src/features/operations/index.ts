@@ -29,6 +29,7 @@ import {
   PurchasePayablesRoute,
   PurchaseReturnReceivablesRoute,
   SaleReturnPayablesRoute,
+  SalesRcDueRoute,
   SalesReceivablesRoute,
 } from "./outstandings";
 import {
@@ -36,6 +37,7 @@ import {
   SaleDetailRoute,
   SaleEditRoute,
   SalePaymentRoute,
+  SaleRcDueReceiptRoute,
   SaleReturnCreateRoute,
   SaleReturnDetailRoute,
   SaleReturnRefundRoute,
@@ -72,6 +74,8 @@ export const operationsRoutes = {
   "/sales/sales/:saleId": SaleDetailRoute,
   "/sales/sales/:saleId/edit": SaleEditRoute,
   "/sales/sales/:saleId/payment": SalePaymentRoute,
+  "/sales/sales/:saleId/rc-due-receipts/new": SaleRcDueReceiptRoute,
+  "/sales/sales/:saleId/rc-due-receipts/:receiptId/edit": SaleRcDueReceiptRoute,
   "/sales/sales/:saleId/payments/:paymentId/edit": SalePaymentRoute,
   "/sales/sales/:saleId/return": SaleReturnCreateRoute,
   "/sales/returns": SaleReturnsListRoute,
@@ -79,6 +83,7 @@ export const operationsRoutes = {
   "/sales/returns/:returnId/refund": SaleReturnRefundRoute,
   "/sales/returns/:returnId/refunds/:refundId/edit": SaleReturnRefundRoute,
   "/sales/outstandings/receivables": SalesReceivablesRoute,
+  "/sales/outstandings/rc-due": SalesRcDueRoute,
   "/sales/outstandings/return-payables": SaleReturnPayablesRoute,
   "/inventory/stock": InventoryStockRoute,
   "/inventory/stock/:inventoryId": InventoryDetailRoute,
