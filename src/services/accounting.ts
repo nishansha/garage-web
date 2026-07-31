@@ -199,7 +199,7 @@ export interface TrialBalance {
   }>;
   totalDebit: number;
   totalCredit: number;
-  isBalanced: boolean;
+  balanced: boolean;
 }
 
 export interface ReportAccountLine {
@@ -220,7 +220,7 @@ export interface BalanceSheet {
     currentYearEarnings?: number;
   };
   totalLiabilitiesAndEquity: number;
-  isBalanced: boolean;
+  balanced: boolean;
 }
 
 export interface JournalProfitLoss {

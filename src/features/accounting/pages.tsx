@@ -2411,7 +2411,7 @@ export const TrialBalancePage = () => {
             />
             <StatCard
               label="Status"
-              value={query.data?.isBalanced ? "Balanced" : "Out of balance"}
+              value={query.data?.balanced ? "Balanced" : "Out of balance"}
             />
           </div>
           <Card>
@@ -2539,7 +2539,7 @@ const BalanceSheetView = ({ report }: { report: BalanceSheet }) => (
       />
       <StatCard
         label="Status"
-        value={report.isBalanced ? "Balanced" : "Review"}
+        value={report.balanced ? "Balanced" : "Review"}
       />
     </div>
     <div className="report-grid">
