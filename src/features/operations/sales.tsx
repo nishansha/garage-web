@@ -51,6 +51,7 @@ import {
   QueryBoundary,
   RouteFormPage,
   Section,
+  invalidateOutstanding,
   notifyError,
   numberValue,
   optionalText,
@@ -1449,6 +1450,10 @@ export const SaleDetailRoute = () => {
                   value={<Money value={sale.pendingCustomerAmount} />}
                 />
                 <Detail
+                  label="Net sale amount"
+                  value={<Money value={sale.netSaleAmount} />}
+                />
+                <Detail
                   label="Finance pending"
                   value={<Money value={sale.pendingFinanceAmount} />}
                 />
@@ -1579,9 +1584,12 @@ export const SalePaymentRoute = () => {
             version: payment?.version ?? 0,
           })
         : operationsApi.sales.payment(id!, { ...value, payerType: payer }),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ["operations", "sale", id] });
-      void client.invalidateQueries({ queryKey: ["operations", "sales"] });
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["operations", "sale", id] }),
+        client.invalidateQueries({ queryKey: ["operations", "sales"] }),
+        invalidateOutstanding(client, "sales-receivables"),
+      ]);
       toast.success(paymentId ? "Payment updated" : "Payment recorded");
       navigate(`${SALES}/${id}`);
     },
@@ -2401,13 +2409,16 @@ export const SaleReturnRefundRoute = () => {
             version: refund?.version ?? 0,
           })
         : operationsApi.saleReturns.refund(id!, value),
-    onSuccess: () => {
-      void client.invalidateQueries({
-        queryKey: ["operations", "sale-return", id],
-      });
-      void client.invalidateQueries({
-        queryKey: ["operations", "sale-returns"],
-      });
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: ["operations", "sale-return", id],
+        }),
+        client.invalidateQueries({
+          queryKey: ["operations", "sale-returns"],
+        }),
+        invalidateOutstanding(client, "sale-return-payables"),
+      ]);
       toast.success(refundId ? "Refund updated" : "Refund recorded");
       navigate(`${RETURNS}/${id}`);
     },

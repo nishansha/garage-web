@@ -19,6 +19,7 @@ import {
   PurchaseDetailRoute,
   PurchaseEditRoute,
   PurchasePaymentRoute,
+  PurchaseRcDueReceiptRoute,
   PurchaseReturnCreateRoute,
   PurchaseReturnDetailRoute,
   PurchaseReturnReceiptRoute,
@@ -27,6 +28,7 @@ import {
 } from "./purchases";
 import {
   PurchasePayablesRoute,
+  PurchaseRcDueRoute,
   PurchaseReturnReceivablesRoute,
   SaleReturnPayablesRoute,
   SalesReceivablesRoute,
@@ -59,6 +61,10 @@ export const operationsRoutes = {
   "/purchase/purchases/:purchaseId/payment": PurchasePaymentRoute,
   "/purchase/purchases/:purchaseId/payments/:paymentId/edit":
     PurchasePaymentRoute,
+  "/purchase/purchases/:purchaseId/rc-due-receipts/new":
+    PurchaseRcDueReceiptRoute,
+  "/purchase/purchases/:purchaseId/rc-due-receipts/:receiptId/edit":
+    PurchaseRcDueReceiptRoute,
   "/purchase/returns": PurchaseReturnsListRoute,
   "/purchase/returns/new/:inventoryId": PurchaseReturnCreateRoute,
   "/purchase/returns/:returnId": PurchaseReturnDetailRoute,
@@ -67,6 +73,7 @@ export const operationsRoutes = {
     PurchaseReturnReceiptRoute,
   "/purchase/outstandings/payables": PurchasePayablesRoute,
   "/purchase/outstandings/return-receivables": PurchaseReturnReceivablesRoute,
+  "/purchase/outstandings/rc-due": PurchaseRcDueRoute,
   "/sales/sales": SalesListRoute,
   "/sales/sales/new": SaleCreateRoute,
   "/sales/sales/:saleId": SaleDetailRoute,

@@ -1,7 +1,7 @@
 import { api } from "../lib/api";
 
 export type Id = number;
-export type PaymentMethod = "CASH" | "BANK";
+export type PaymentMethod = "CASH" | "BANK" | "CHEQUE";
 export type PaymentStatus = "PENDING" | "UNPAID" | "PAID" | "PARTIAL";
 export type SalePaymentStatus =
   "PENDING" | "PAID" | "PARTIAL" | "FINANCE_PENDING" | "REFUND";
@@ -56,6 +56,33 @@ export interface PaymentInput {
   notes?: string;
   version?: number;
 }
+export interface RcDueReceipt {
+  id: number;
+  version: number;
+  amount: number;
+  receiptDate: string;
+  paymentMethod: PaymentMethod;
+  paymentAccountId: number;
+  paymentAccountName: string;
+  referenceNo?: string | null;
+  notes?: string | null;
+}
+export interface RcDueReceiptInput {
+  amount: number;
+  receiptDate: string;
+  paymentMethod: PaymentMethod;
+  paymentAccountId: number;
+  referenceNo?: string;
+  notes?: string;
+  version?: number;
+}
+export interface RcDueReceiptResponse {
+  receiptId: number;
+  purchaseId: number;
+  amount: number;
+  totalReceived: number;
+  remainingRcDue: number;
+}
 export interface PurchaseExpenseInput {
   id?: number;
   date: string;
@@ -99,6 +126,7 @@ export interface Purchase {
   pickupLocation: string | null;
   ownerName: string | null;
   ownerMobileNo: string | null;
+  ownerAddress: string | null;
   expenses: PurchaseExpenseInput[] | null;
   sold: boolean;
   returned?: boolean;
@@ -108,6 +136,10 @@ export interface Purchase {
   paidAmount?: number | null;
   pendingAmount?: number | null;
   payments?: Payment[] | null;
+  rcDueAmount?: number | null;
+  paidRcDueAmount?: number | null;
+  pendingRcDueAmount?: number | null;
+  rcDueReceipts?: RcDueReceipt[] | null;
 }
 export interface PurchaseInput {
   date: string;
@@ -125,10 +157,12 @@ export interface PurchaseInput {
   makeYear: string;
   odometer: string;
   purchaseRate: number;
+  rcDueAmount?: number | null;
   pickupStaffId?: number;
   pickupLocation: string;
   ownerName: string;
   ownerMobileNo: string;
+  ownerAddress: string;
   ownerShipSerialNo: string;
   expenses: PurchaseExpenseInput[];
   version?: number;
@@ -215,6 +249,7 @@ export interface Sale {
   pendingFinanceAmount?: number | null;
   paidCustomerAmount?: number | null;
   pendingCustomerAmount?: number | null;
+  netSaleAmount?: number | null;
   financeCompany?: string | null;
   financeAmount?: number | null;
   emiAmount?: number | null;
@@ -416,6 +451,23 @@ export interface Outstandings {
   totalPendingAmount: number;
   items: OutstandingItem[];
 }
+export interface RcDueSummaryItem {
+  purchaseId: number;
+  saleId?: number | null;
+  invoiceNo?: string | null;
+  vehicleNo: string;
+  saleDate?: string | null;
+  amount: number;
+  pendingAmount: number;
+  lastReceiptDate?: string | null;
+  vendorName: string;
+  vendorMobile?: string | null;
+}
+export interface RcDueSummary {
+  totalCount: number;
+  totalPendingAmount: number;
+  items: RcDueSummaryItem[];
+}
 export interface DashboardSummary {
   totalSales: string;
   salesDelta: number;
@@ -455,6 +507,17 @@ const cleanPayment = (value: PaymentInput) => ({
   paymentMethod: value.paymentMethod,
   paymentAccountId: value.paymentAccountId,
   ...(value.payerType ? { payerType: value.payerType } : {}),
+  ...(value.version !== undefined ? { version: value.version } : {}),
+  ...(value.referenceNo?.trim()
+    ? { referenceNo: value.referenceNo.trim() }
+    : {}),
+  ...(value.notes?.trim() ? { notes: value.notes.trim() } : {}),
+});
+const cleanRcDueReceipt = (value: RcDueReceiptInput) => ({
+  amount: value.amount,
+  receiptDate: value.receiptDate,
+  paymentMethod: value.paymentMethod,
+  paymentAccountId: value.paymentAccountId,
   ...(value.version !== undefined ? { version: value.version } : {}),
   ...(value.referenceNo?.trim()
     ? { referenceNo: value.referenceNo.trim() }
@@ -619,6 +682,23 @@ export const operationsApi = {
         cleanPayment(value),
       ),
     payables: () => api.get<Outstandings>("v1/purchase/payables"),
+    rcDueReceipt: (id: number, value: RcDueReceiptInput) =>
+      api.post<RcDueReceiptResponse>(
+        `v1/purchase/${id}/rc-due-receipts`,
+        cleanRcDueReceipt(value),
+      ),
+    updateRcDueReceipt: (
+      id: number,
+      receiptId: number,
+      value: RcDueReceiptInput & { version: number },
+    ) =>
+      api.put<RcDueReceiptResponse>(
+        `v1/purchase/${id}/rc-due-receipts/${receiptId}`,
+        cleanRcDueReceipt(value),
+      ),
+    deleteRcDueReceipt: (id: number, receiptId: number) =>
+      api.delete<void>(`v1/purchase/${id}/rc-due-receipts/${receiptId}`),
+    rcDueSummary: () => api.get<RcDueSummary>("v1/purchase/rc-due-summary"),
   },
   purchaseReturns: {
     list: (page = 0, size = 20, filters?: SearchInput) =>

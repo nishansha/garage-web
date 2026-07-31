@@ -99,6 +99,20 @@ export interface DirectEntryInput {
   version?: number;
 }
 
+export type OtherIncome = DirectEntry;
+
+export interface OtherIncomeInput {
+  entryDate?: string;
+  coaId: number;
+  direction: Direction;
+  amount: number;
+  paymentAccountId: number;
+  partyName?: string;
+  description?: string;
+  notes?: string;
+  version?: number;
+}
+
 export interface JournalSummary {
   id: number;
   journalDate: string;
@@ -498,6 +512,45 @@ export const accountingApi = {
     }),
   deleteDirectEntry: (id: number) =>
     api.delete<void>(`v1/direct-entries/${id}`),
+
+  async otherIncomes(filters: {
+    page: number;
+    size: number;
+    searchText?: string;
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<PageResult<OtherIncome>> {
+    const data = await api.get<{
+      entries: OtherIncome[] | null;
+      totalPages: number;
+      totalElements: number | null;
+    }>(`v1/other-incomes${query(filters)}`);
+    return { ...data, items: data.entries ?? [] };
+  },
+  otherIncome: (id: number) =>
+    api.get<OtherIncome>(`v1/other-incomes/${id}`),
+  createOtherIncome: (input: OtherIncomeInput) =>
+    api.post<void>("v1/other-incomes", {
+      ...input,
+      partyName: clean(input.partyName),
+      description: clean(input.description),
+      notes: clean(input.notes),
+      entryDate: clean(input.entryDate),
+    }),
+  updateOtherIncome: (id: number, input: OtherIncomeInput) =>
+    api.put<void>(`v1/other-incomes/${id}`, {
+      entryDate: clean(input.entryDate),
+      coaId: input.coaId,
+      direction: input.direction,
+      amount: input.amount,
+      paymentAccountId: input.paymentAccountId,
+      partyName: clean(input.partyName),
+      description: clean(input.description),
+      notes: clean(input.notes),
+      version: input.version,
+    }),
+  deleteOtherIncome: (id: number) =>
+    api.delete<void>(`v1/other-incomes/${id}`),
 
   async journals(filters: {
     page: number;

@@ -10,6 +10,8 @@ export {
   JournalProfitLossPage,
   JournalsPage,
   MonthlyOverviewPage,
+  OtherIncomeFormPage,
+  OtherIncomesPage,
   PaymentAccountFormPage,
   PaymentAccountsPage,
   PaymentAccountTransactionsPage,

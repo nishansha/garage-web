@@ -25,6 +25,14 @@ const rules: AccessRule[] = [
     access: { resource: "PURCHASE_PAYMENT", privilege: "CREATE" },
   },
   {
+    pattern: /^\/purchase\/purchases\/\d+\/rc-due-receipts\/new$/,
+    access: { resource: "PURCHASE_PAYMENT", privilege: "CREATE" },
+  },
+  {
+    pattern: /^\/purchase\/purchases\/\d+\/rc-due-receipts\/\d+\/edit$/,
+    access: { resource: "PURCHASE_PAYMENT", privilege: "UPDATE" },
+  },
+  {
     pattern: /^\/purchase\/purchases/,
     access: { resource: "PURCHASE_ORDER", privilege: "VIEW" },
   },
@@ -51,6 +59,10 @@ const rules: AccessRule[] = [
   {
     pattern: /^\/purchase\/outstandings\/return-receivables/,
     access: { resource: "PURCHASE_RETURN_RECEIVABLE", privilege: "VIEW" },
+  },
+  {
+    pattern: /^\/purchase\/outstandings\/rc-due/,
+    access: { resource: "PURCHASE_PAYABLE", privilege: "VIEW" },
   },
   {
     pattern: /^\/sales\/sales\/new$/,
@@ -147,6 +159,18 @@ const rules: AccessRule[] = [
   {
     pattern: /^\/accounting\/direct-entry/,
     access: { resource: "DIRECT_ENTRY", privilege: "VIEW" },
+  },
+  {
+    pattern: /^\/accounting\/other-income\/new$/,
+    access: { resource: "OTHER_INCOME", privilege: "CREATE" },
+  },
+  {
+    pattern: /^\/accounting\/other-income\/\d+$/,
+    access: { resource: "OTHER_INCOME", privilege: "UPDATE" },
+  },
+  {
+    pattern: /^\/accounting\/other-income/,
+    access: { resource: "OTHER_INCOME", privilege: "VIEW" },
   },
   {
     pattern: /^\/accounting\/journals\/new$/,

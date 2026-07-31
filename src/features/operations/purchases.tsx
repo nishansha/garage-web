@@ -36,6 +36,7 @@ import {
   type Purchase,
   type PurchaseExpenseInput,
   type PurchaseInput,
+  type RcDueReceipt,
   type SearchInput,
 } from "../../services/operations";
 import {
@@ -49,14 +50,49 @@ import {
   QueryBoundary,
   RouteFormPage,
   Section,
+  invalidateOutstanding,
   notifyError,
   optionalText,
   today,
   useNumericParam,
 } from "./common";
+import { ApiError } from "../../lib/api";
 
 const PURCHASES = "/purchase/purchases";
 const RETURNS = "/purchase/returns";
+const RC_DUE_MAXIMUM_MESSAGE =
+  "Receipt amount cannot exceed the remaining RCD";
+
+const rcDueReceiptAsPayment = (receipt?: RcDueReceipt): Payment | undefined =>
+  receipt
+    ? {
+        id: receipt.id,
+        version: receipt.version,
+        amount: receipt.amount,
+        paymentDate: receipt.receiptDate,
+        paymentMethod: receipt.paymentMethod,
+        paymentAccountId: receipt.paymentAccountId,
+        referenceNo: receipt.referenceNo ?? undefined,
+        notes: receipt.notes ?? undefined,
+      }
+    : undefined;
+
+const handleRcDueReceiptError = async (
+  error: unknown,
+  refetchPurchase: () => Promise<unknown>,
+) => {
+  if (
+    error instanceof ApiError &&
+    (error.code === "CON_100" || error.code === "CON_101")
+  ) {
+    toast.error(
+      "This RCD receipt changed on the server. Reloaded the latest purchase.",
+    );
+    await refetchPurchase();
+    return;
+  }
+  notifyError(error);
+};
 
 const fieldError = (error: unknown): string | undefined =>
   typeof error === "object" &&
@@ -420,10 +456,12 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
       makeYear: String(purchase?.makeYear ?? ""),
       odometer: String(purchase?.odometer ?? ""),
       purchaseRate: purchase?.purchaseRate ?? 0,
+      rcDueAmount: purchase?.rcDueAmount ?? undefined,
       pickupStaffId: purchase?.pickupStaffId ?? undefined,
       pickupLocation: purchase?.pickupLocation ?? "",
       ownerName: purchase?.ownerName ?? "",
       ownerMobileNo: purchase?.ownerMobileNo ?? "",
+      ownerAddress: purchase?.ownerAddress ?? "",
       ownerShipSerialNo: purchase?.ownerShipSerialNo ?? "",
       expenses: purchase?.expenses?.map(purchaseExpensePayload) ?? [],
     },
@@ -554,6 +592,12 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
         deliveredDate: optionalText(value.deliveredDate ?? null),
         notes: optionalText(value.notes ?? null),
         pickupStaffId: value.pickupStaffId || undefined,
+        rcDueAmount:
+          value.rcDueAmount === undefined ||
+          value.rcDueAmount === null ||
+          Number.isNaN(value.rcDueAmount)
+            ? null
+            : value.rcDueAmount,
         expenses: value.expenses.map(purchaseExpensePayload),
       });
     },
@@ -813,6 +857,40 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
             />
           </FormField>
           <FormField
+            label="RCD (refundable from vendor)"
+            error={fieldError(errors.rcDueAmount)}
+            hint="Optional amount to collect from the vendor at RCD conversion"
+          >
+            <Input
+              {...register("rcDueAmount", {
+                setValueAs: (value) =>
+                  value === "" || value === null || value === undefined
+                    ? undefined
+                    : Number(value),
+                validate: (value) => {
+                  if (value === undefined || value === null) return true;
+                  if (Number.isNaN(value))
+                    return purchaseValidationMessage(
+                      "rcDueAmount",
+                      "NON_NEGATIVE",
+                    );
+                  if (value < 0)
+                    return purchaseValidationMessage(
+                      "rcDueAmount",
+                      "NON_NEGATIVE",
+                    );
+                  const rate = Number(watch("purchaseRate"));
+                  if (Number.isFinite(rate) && value > rate)
+                    return purchaseValidationMessage("rcDueAmount", "MAXIMUM");
+                  return true;
+                },
+              })}
+              type="number"
+              min="0"
+              step="0.01"
+            />
+          </FormField>
+          <FormField
             label="Ownership serial number"
             required
             error={fieldError(errors.ownerShipSerialNo)}
@@ -857,6 +935,20 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
                 ),
               })}
               type="tel"
+            />
+          </FormField>
+          <FormField
+            label="Owner address"
+            required
+            error={fieldError(errors.ownerAddress)}
+          >
+            <Input
+              {...register("ownerAddress", {
+                required: purchaseValidationMessage(
+                  "ownerAddress",
+                  "REQUIRED",
+                ),
+              })}
             />
           </FormField>
           <FormField
@@ -1094,6 +1186,7 @@ export const PurchaseDetailRoute = () => {
   const navigate = useNavigate();
   const client = useQueryClient();
   const [confirm, setConfirm] = useState(false);
+  const [deleteRcDueReceiptId, setDeleteRcDueReceiptId] = useState<number>();
   const query = useQuery({
     queryKey: ["operations", "purchase", id],
     queryFn: () => operationsApi.purchases.detail(id!),
@@ -1110,6 +1203,20 @@ export const PurchaseDetailRoute = () => {
       });
       toast.success("Purchase deleted");
       navigate(PURCHASES);
+    },
+    onError: notifyError,
+  });
+  const rcDueReceiptDeletion = useMutation({
+    mutationFn: () =>
+      operationsApi.purchases.deleteRcDueReceipt(id!, deleteRcDueReceiptId!),
+    onSuccess: async () => {
+      setDeleteRcDueReceiptId(undefined);
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["operations", "purchase", id] }),
+        client.invalidateQueries({ queryKey: ["operations", "purchases"] }),
+        invalidateOutstanding(client, "purchase-rc-due"),
+      ]);
+      toast.success("RCD receipt deleted");
     },
     onError: notifyError,
   });
@@ -1144,6 +1251,16 @@ export const PurchaseDetailRoute = () => {
                     </Link>
                   </Can>
                 )}
+              {(purchase.pendingRcDueAmount ?? 0) > 0 && (
+                <Can resource="PURCHASE_PAYMENT" privilege="CREATE">
+                  <Link
+                    className="button button--secondary"
+                    to={`${PURCHASES}/${id}/rc-due-receipts/new`}
+                  >
+                    Record RCD Receipt
+                  </Link>
+                </Can>
+              )}
               {purchase.paymentStatus !== "PENDING" &&
                 !purchase.sold &&
                 !purchase.returned &&
@@ -1212,6 +1329,7 @@ export const PurchaseDetailRoute = () => {
                 />
                 <Detail label="Vendor" value={purchase.ownerName} />
                 <Detail label="Mobile" value={purchase.ownerMobileNo} />
+                <Detail label="Address" value={purchase.ownerAddress} />
                 <Detail label="Pickup staff" value={purchase.pickupStaff} />
                 <Detail
                   label="Pickup location"
@@ -1227,7 +1345,7 @@ export const PurchaseDetailRoute = () => {
                   value={<Money value={purchase.purchaseRate} />}
                 />
                 <Detail
-                  label="Landed cost"
+                  label="Total Amount"
                   value={<Money value={purchase.totalCost} />}
                 />
                 <Detail
@@ -1328,6 +1446,99 @@ export const PurchaseDetailRoute = () => {
                 ]}
               />
             </Section>
+            {(purchase.rcDueAmount ?? 0) > 0 && (
+              <>
+                <Section title="RCD">
+                  <DetailGrid>
+                    <Detail
+                      label="RCD amount"
+                      value={<Money value={purchase.rcDueAmount} />}
+                    />
+                    <Detail
+                      label="Received"
+                      value={<Money value={purchase.paidRcDueAmount} />}
+                    />
+                    <Detail
+                      label="Pending"
+                      value={<Money value={purchase.pendingRcDueAmount} />}
+                    />
+                  </DetailGrid>
+                </Section>
+                <Section
+                  title="RCD receipts"
+                  actions={
+                    (purchase.pendingRcDueAmount ?? 0) > 0 ? (
+                      <Can resource="PURCHASE_PAYMENT" privilege="CREATE">
+                        <Link
+                          className="button button--secondary"
+                          to={`${PURCHASES}/${id}/rc-due-receipts/new`}
+                        >
+                          Record RCD Receipt
+                        </Link>
+                      </Can>
+                    ) : undefined
+                  }
+                >
+                  <DataTable
+                    caption="RCD receipts"
+                    rows={purchase.rcDueReceipts ?? []}
+                    rowKey={(row) => String(row.id)}
+                    emptyMessage="No RCD receipts recorded"
+                    columns={[
+                      {
+                        key: "date",
+                        header: "Date",
+                        cell: (row) => formatDate(row.receiptDate),
+                      },
+                      {
+                        key: "method",
+                        header: "Method",
+                        cell: (row) => row.paymentMethod,
+                      },
+                      {
+                        key: "account",
+                        header: "Account",
+                        cell: (row) => row.paymentAccountName,
+                      },
+                      {
+                        key: "reference",
+                        header: "Reference",
+                        cell: (row) => row.referenceNo ?? "—",
+                      },
+                      {
+                        key: "amount",
+                        header: "Amount",
+                        align: "right",
+                        cell: (row) => formatCurrency(row.amount),
+                      },
+                      {
+                        key: "actions",
+                        header: "",
+                        cell: (row) => (
+                          <span className="operations-inline-actions">
+                            <Can resource="PURCHASE_PAYMENT" privilege="UPDATE">
+                              <Link
+                                to={`${PURCHASES}/${id}/rc-due-receipts/${row.id}/edit`}
+                              >
+                                Edit
+                              </Link>
+                            </Can>
+                            <Can resource="PURCHASE_PAYMENT" privilege="DELETE">
+                              <Button
+                                variant="ghost"
+                                onClick={() => setDeleteRcDueReceiptId(row.id)}
+                              >
+                                Delete
+                              </Button>
+                            </Can>
+                          </span>
+                        ),
+                      },
+                    ]}
+                  />
+                </Section>
+              </>
+            )}
           </>
         )}
       </QueryBoundary>
@@ -1339,6 +1550,15 @@ export const PurchaseDetailRoute = () => {
         loading={deletion.isPending}
         onClose={() => setConfirm(false)}
         onConfirm={() => deletion.mutate()}
+      />
+      <ConfirmDialog
+        open={deleteRcDueReceiptId !== undefined}
+        title="Delete RCD receipt?"
+        message="The RCD receipt and its accounting transaction will be reversed."
+        danger
+        loading={rcDueReceiptDeletion.isPending}
+        onClose={() => setDeleteRcDueReceiptId(undefined)}
+        onConfirm={() => rcDueReceiptDeletion.mutate()}
       />
     </>
   );
@@ -1365,11 +1585,14 @@ export const PurchasePaymentRoute = () => {
             version: payment?.version ?? 0,
           })
         : operationsApi.purchases.payment(id!, value),
-    onSuccess: () => {
-      void client.invalidateQueries({
-        queryKey: ["operations", "purchase", id],
-      });
-      void client.invalidateQueries({ queryKey: ["operations", "purchases"] });
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: ["operations", "purchase", id],
+        }),
+        client.invalidateQueries({ queryKey: ["operations", "purchases"] }),
+        invalidateOutstanding(client, "purchase-payables"),
+      ]);
       toast.success(paymentId ? "Payment updated" : "Payment recorded");
       navigate(`${PURCHASES}/${id}`);
     },
@@ -1400,6 +1623,84 @@ export const PurchasePaymentRoute = () => {
             pending={mutation.isPending}
             cancelTo={`${PURCHASES}/${id}`}
             submitLabel={paymentId ? "Update payment" : "Record payment"}
+            onSubmit={(value) => mutation.mutate(value)}
+          />
+        )}
+      </QueryBoundary>
+    </RouteFormPage>
+  );
+};
+
+export const PurchaseRcDueReceiptRoute = () => {
+  const id = useNumericParam("purchaseId");
+  const receiptId = useNumericParam("receiptId");
+  const client = useQueryClient();
+  const navigate = useNavigate();
+  const query = useQuery({
+    queryKey: ["operations", "purchase", id],
+    queryFn: () => operationsApi.purchases.detail(id!),
+    enabled: id !== undefined,
+  });
+  const receipt = query.data?.rcDueReceipts?.find(
+    (item) => item.id === receiptId,
+  );
+  const payment = rcDueReceiptAsPayment(receipt);
+  const maximum = receiptId
+    ? (query.data?.pendingRcDueAmount ?? 0) + (receipt?.amount ?? 0)
+    : query.data?.pendingRcDueAmount;
+  const mutation = useMutation({
+    mutationFn: (value: PaymentInput) =>
+      receiptId
+        ? operationsApi.purchases.updateRcDueReceipt(id!, receiptId, {
+            amount: value.amount,
+            receiptDate: value.paymentDate,
+            paymentMethod: value.paymentMethod,
+            paymentAccountId: value.paymentAccountId,
+            referenceNo: value.referenceNo,
+            notes: value.notes,
+            version: receipt?.version ?? 0,
+          })
+        : operationsApi.purchases.rcDueReceipt(id!, {
+            amount: value.amount,
+            receiptDate: value.paymentDate,
+            paymentMethod: value.paymentMethod,
+            paymentAccountId: value.paymentAccountId,
+            referenceNo: value.referenceNo,
+            notes: value.notes,
+          }),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["operations", "purchase", id] }),
+        client.invalidateQueries({ queryKey: ["operations", "purchases"] }),
+        invalidateOutstanding(client, "purchase-rc-due"),
+      ]);
+      toast.success(
+        receiptId ? "RCD receipt updated" : "RCD receipt recorded",
+      );
+      navigate(`${PURCHASES}/${id}`);
+    },
+    onError: async (error) => {
+      await handleRcDueReceiptError(error, query.refetch);
+    },
+  });
+  if (!id) return <InvalidRoute />;
+  return (
+    <RouteFormPage
+      title={receiptId ? "Edit RCD receipt" : "Record RCD receipt"}
+    >
+      <QueryBoundary pending={query.isPending} error={query.error}>
+        {receiptId && !receipt ? (
+          <InvalidRoute />
+        ) : (
+          <PaymentForm
+            key={`rc-due-${receiptId ?? "new"}-${maximum ?? 0}`}
+            payment={payment}
+            defaultAmount={receiptId ? undefined : (maximum ?? undefined)}
+            maximum={maximum ?? undefined}
+            maximumMessage={RC_DUE_MAXIMUM_MESSAGE}
+            pending={mutation.isPending}
+            cancelTo={`${PURCHASES}/${id}`}
+            submitLabel={receiptId ? "Update receipt" : "Record receipt"}
             onSubmit={(value) => mutation.mutate(value)}
           />
         )}
@@ -1813,13 +2114,16 @@ export const PurchaseReturnReceiptRoute = () => {
             version: receipt?.version ?? 0,
           })
         : operationsApi.purchaseReturns.receipt(id!, value),
-    onSuccess: () => {
-      void client.invalidateQueries({
-        queryKey: ["operations", "purchase-return", id],
-      });
-      void client.invalidateQueries({
-        queryKey: ["operations", "purchase-returns"],
-      });
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: ["operations", "purchase-return", id],
+        }),
+        client.invalidateQueries({
+          queryKey: ["operations", "purchase-returns"],
+        }),
+        invalidateOutstanding(client, "purchase-return-receivables"),
+      ]);
       toast.success(receiptId ? "Receipt updated" : "Receipt recorded");
       navigate(`${RETURNS}/${id}`);
     },

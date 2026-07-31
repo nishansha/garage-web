@@ -58,6 +58,10 @@ const PurchaseCreateRoute = lazyNamed(loadPurchases, "PurchaseCreateRoute");
 const PurchaseDetailRoute = lazyNamed(loadPurchases, "PurchaseDetailRoute");
 const PurchaseEditRoute = lazyNamed(loadPurchases, "PurchaseEditRoute");
 const PurchasePaymentRoute = lazyNamed(loadPurchases, "PurchasePaymentRoute");
+const PurchaseRcDueReceiptRoute = lazyNamed(
+  loadPurchases,
+  "PurchaseRcDueReceiptRoute",
+);
 const PurchaseReturnsListRoute = lazyNamed(
   loadPurchases,
   "PurchaseReturnsListRoute",
@@ -95,6 +99,7 @@ const SalesReceivablesRoute = lazyNamed(
   loadOutstandings,
   "SalesReceivablesRoute",
 );
+const PurchaseRcDueRoute = lazyNamed(loadOutstandings, "PurchaseRcDueRoute");
 const SaleReturnPayablesRoute = lazyNamed(
   loadOutstandings,
   "SaleReturnPayablesRoute",
@@ -139,6 +144,8 @@ const PaymentAccountTransactionsPage = lazyNamed(
 );
 const DirectEntriesPage = lazyNamed(loadAccounting, "DirectEntriesPage");
 const DirectEntryFormPage = lazyNamed(loadAccounting, "DirectEntryFormPage");
+const OtherIncomesPage = lazyNamed(loadAccounting, "OtherIncomesPage");
+const OtherIncomeFormPage = lazyNamed(loadAccounting, "OtherIncomeFormPage");
 const JournalsPage = lazyNamed(loadAccounting, "JournalsPage");
 const JournalDetailPage = lazyNamed(loadAccounting, "JournalDetailPage");
 const JournalFormPage = lazyNamed(loadAccounting, "JournalFormPage");
@@ -191,6 +198,14 @@ const operationsRoutes: readonly FeatureRoute[] = [
     path: "/purchase/purchases/:purchaseId/payments/:paymentId/edit",
     Page: PurchasePaymentRoute,
   },
+  {
+    path: "/purchase/purchases/:purchaseId/rc-due-receipts/new",
+    Page: PurchaseRcDueReceiptRoute,
+  },
+  {
+    path: "/purchase/purchases/:purchaseId/rc-due-receipts/:receiptId/edit",
+    Page: PurchaseRcDueReceiptRoute,
+  },
   { path: "/purchase/returns", Page: PurchaseReturnsListRoute },
   {
     path: "/purchase/returns/new/:inventoryId",
@@ -215,6 +230,10 @@ const operationsRoutes: readonly FeatureRoute[] = [
   {
     path: "/purchase/outstandings/return-receivables",
     Page: PurchaseReturnReceivablesRoute,
+  },
+  {
+    path: "/purchase/outstandings/rc-due",
+    Page: PurchaseRcDueRoute,
   },
   { path: "/sales/sales", Page: SalesListRoute },
   { path: "/sales/sales/new", Page: SaleCreateRoute },
@@ -298,6 +317,18 @@ const accountingRoutes: readonly FeatureRoute[] = [
   {
     path: "/accounting/direct-entry/:entryId",
     Page: DirectEntryFormPage,
+  },
+  {
+    path: "/accounting/other-income",
+    Page: OtherIncomesPage,
+  },
+  {
+    path: "/accounting/other-income/new",
+    Page: OtherIncomeFormPage,
+  },
+  {
+    path: "/accounting/other-income/:entryId",
+    Page: OtherIncomeFormPage,
   },
   { path: "/accounting/journals", Page: JournalsPage },
   {

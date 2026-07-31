@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   ChevronLeft,
@@ -6,6 +6,7 @@ import {
   ChevronsUpDown,
   LogOut,
   Menu,
+  Settings,
   Wrench,
   X,
 } from "lucide-react";
@@ -27,6 +28,7 @@ import {
   routeGroups,
   type AppRoute,
 } from "./routes/config";
+import { DEFAULT_PREFERENCES } from "./services/preferences";
 import { useAppSelector } from "./store/auth";
 import {
   Button,
@@ -36,6 +38,7 @@ import {
   Input,
   PageHeader,
 } from "./components/ui";
+import { PreferencesModal } from "./components/PreferencesModal";
 import { cx } from "./lib/utils";
 
 export const AuthGate = () => {
@@ -136,6 +139,14 @@ export const LoginPage = () => {
   );
 };
 
+const isRouteActive = (pathname: string, route: AppRoute) =>
+  route.path === "/"
+    ? pathname === "/"
+    : pathname === route.path || pathname.startsWith(`${route.path}/`);
+
+const isGroupActive = (pathname: string, routes: readonly AppRoute[]) =>
+  routes.some((route) => isRouteActive(pathname, route));
+
 const SidebarLink = ({
   route,
   onNavigate,
@@ -160,12 +171,164 @@ const SidebarLink = ({
   );
 };
 
-export const AppShell = () => {
-  const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem("garage.web.sidebar") === "collapsed",
-  );
-  const [drawerOpen, setDrawerOpen] = useState(false);
+const BrandLink = ({ onNavigate }: { onNavigate?: () => void }) => (
+  <Link
+    to="/"
+    className="brand-link"
+    aria-label="Garage dashboard"
+    onClick={onNavigate}
+  >
+    <span className="brand-mark brand-mark--small">
+      <Wrench aria-hidden="true" />
+    </span>
+    <span>
+      <strong>Garage</strong>
+      <small></small>
+    </span>
+  </Link>
+);
+
+const UserMenu = ({
+  roleLabel,
+  onLogout,
+}: {
+  roleLabel: string;
+  onLogout: () => void;
+}) => {
   const session = useAppSelector((state) => state.auth.session);
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
+
+  const openPreferences = () => {
+    if (detailsRef.current) detailsRef.current.open = false;
+    setPreferencesOpen(true);
+  };
+
+  return (
+    <>
+      <details ref={detailsRef} className="user-menu">
+        <summary>
+          <span className="avatar">
+            {(
+              session?.user.fullName ??
+              session?.user.username ??
+              "U"
+            ).charAt(0)}
+          </span>
+          <span className="user-menu__text">
+            <strong>{session?.user.fullName ?? session?.user.username}</strong>
+            <small>{roleLabel}</small>
+          </span>
+          <ChevronsUpDown aria-hidden="true" />
+        </summary>
+        <div className="user-menu__popover">
+          <div>
+            <strong>{session?.user.fullName ?? session?.user.username}</strong>
+            <small>{session?.user.email ? session.user.email : roleLabel}</small>
+          </div>
+          <Button variant="ghost" onClick={openPreferences}>
+            <Settings aria-hidden="true" /> Preferences
+          </Button>
+          <Button variant="ghost" onClick={onLogout}>
+            <LogOut aria-hidden="true" /> Sign out
+          </Button>
+        </div>
+      </details>
+      <PreferencesModal
+        open={preferencesOpen}
+        onClose={() => setPreferencesOpen(false)}
+      />
+    </>
+  );
+};
+
+const Breadcrumbs = ({ currentRoute }: { currentRoute?: AppRoute }) => (
+  <nav className="breadcrumbs" aria-label="Breadcrumb">
+    <Link to="/">Home</Link>
+    {currentRoute && currentRoute.path !== "/" && (
+      <>
+        <span aria-hidden="true">/</span>
+        {currentRoute.group && <span>{currentRoute.group}</span>}
+        <span aria-hidden="true">/</span>
+        <strong>{currentRoute.title}</strong>
+      </>
+    )}
+  </nav>
+);
+
+const SidebarNav = ({
+  dashboard,
+  visibleRoutes,
+  collapsed,
+  onNavigate,
+}: {
+  dashboard?: AppRoute;
+  visibleRoutes: AppRoute[];
+  collapsed: boolean;
+  onNavigate: () => void;
+}) => (
+  <nav className="sidebar__nav" aria-label="Primary navigation">
+    {dashboard && (
+      <SidebarLink
+        route={dashboard}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+      />
+    )}
+    {routeGroups.map((group) => {
+      const routes = visibleRoutes.filter((route) => route.group === group);
+      if (!routes.length) return null;
+      return (
+        <section className="nav-group" key={group}>
+          <h2>{group}</h2>
+          {routes.map((route) => (
+            <SidebarLink
+              key={route.path}
+              route={route}
+              collapsed={collapsed}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </section>
+      );
+    })}
+  </nav>
+);
+
+const getGroupRoutes = (visibleRoutes: AppRoute[], group: string) =>
+  visibleRoutes.filter((route) => route.group === group);
+
+const findActiveGroup = (pathname: string, visibleRoutes: AppRoute[]) =>
+  routeGroups.find((group) =>
+    isGroupActive(pathname, getGroupRoutes(visibleRoutes, group)),
+  );
+
+const TopSubnav = ({ routes }: { routes: AppRoute[] }) => (
+  <nav className="top-subnav" aria-label="Section navigation">
+    <div className="top-subnav__inner">
+      {routes.map((route) => {
+        const Icon = route.icon;
+        return (
+          <NavLink
+            key={route.path}
+            to={route.path}
+            className={({ isActive }) =>
+              cx("top-subnav__link", isActive && "is-active")
+            }
+          >
+            <Icon aria-hidden="true" />
+            <span>{route.title}</span>
+          </NavLink>
+        );
+      })}
+    </div>
+  </nav>
+);
+
+const useShellNavigation = () => {
+  const session = useAppSelector((state) => state.auth.session);
+  const preferences =
+    useAppSelector((state) => state.auth.preferences) ?? DEFAULT_PREFERENCES;
   const location = useLocation();
   const navigate = useNavigate();
   const currentRoute = getRouteByPath(location.pathname);
@@ -183,6 +346,49 @@ export const AppShell = () => {
   });
   const dashboard = visibleRoutes.find((route) => route.path === "/");
 
+  const logout = async () => {
+    await authApi.logout().catch(() => undefined);
+    toast.success("Signed out");
+    navigate("/login", { replace: true });
+  };
+
+  return {
+    preferences,
+    location,
+    navigate,
+    currentRoute,
+    roleLabel,
+    visibleRoutes,
+    dashboard,
+    logout,
+  };
+};
+
+export const AppShell = () => {
+  const {
+    preferences,
+    location,
+    navigate,
+    currentRoute,
+    roleLabel,
+    visibleRoutes,
+    dashboard,
+    logout,
+  } = useShellNavigation();
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem("garage.web.sidebar") === "collapsed",
+  );
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const topNav = preferences.navbarPosition === "TOP";
+  const activeGroup = findActiveGroup(location.pathname, visibleRoutes);
+  const activeGroupRoutes = activeGroup
+    ? getGroupRoutes(visibleRoutes, activeGroup)
+    : [];
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname, topNav]);
+
   const toggleSidebar = () => {
     setCollapsed((value) => {
       localStorage.setItem(
@@ -192,11 +398,104 @@ export const AppShell = () => {
       return !value;
     });
   };
-  const logout = async () => {
-    await authApi.logout().catch(() => undefined);
-    toast.success("Signed out");
-    navigate("/login", { replace: true });
+
+  const openGroup = (routes: AppRoute[]) => {
+    const first = routes[0];
+    if (!first) return;
+    if (!isGroupActive(location.pathname, routes)) {
+      navigate(first.path);
+    }
+    setDrawerOpen(false);
   };
+
+  if (topNav) {
+    return (
+      <div className="app-shell app-shell--top">
+        {drawerOpen && (
+          <button
+            className="drawer-scrim"
+            aria-label="Close navigation"
+            onClick={() => setDrawerOpen(false)}
+          />
+        )}
+        <div className="top-chrome">
+          <header className="top-navbar">
+            <button
+              className="icon-button topbar__menu"
+              aria-label="Open navigation"
+              onClick={() => setDrawerOpen(true)}
+            >
+              <Menu aria-hidden="true" />
+            </button>
+            <BrandLink />
+            <nav className="top-nav" aria-label="Primary navigation">
+              {dashboard && (
+                <NavLink
+                  to={dashboard.path}
+                  end
+                  className={({ isActive }) =>
+                    cx("top-nav__link", isActive && "is-active")
+                  }
+                >
+                  <dashboard.icon aria-hidden="true" />
+                  <span>{dashboard.title}</span>
+                </NavLink>
+              )}
+              {routeGroups.map((group) => {
+                const routes = getGroupRoutes(visibleRoutes, group);
+                if (!routes.length) return null;
+                const active = activeGroup === group;
+                return (
+                  <button
+                    key={group}
+                    type="button"
+                    className={cx("top-nav__link", active && "is-active")}
+                    aria-current={active ? "true" : undefined}
+                    onClick={() => openGroup(routes)}
+                  >
+                    <span>{group}</span>
+                  </button>
+                );
+              })}
+            </nav>
+            <UserMenu roleLabel={roleLabel} onLogout={() => void logout()} />
+          </header>
+          {activeGroupRoutes.length > 0 && (
+            <TopSubnav routes={activeGroupRoutes} />
+          )}
+        </div>
+        <aside
+          className={cx(
+            "sidebar",
+            "sidebar--drawer",
+            drawerOpen && "sidebar--open",
+          )}
+        >
+          <div className="sidebar__brand">
+            <BrandLink onNavigate={() => setDrawerOpen(false)} />
+            <button
+              className="icon-button sidebar__mobile-close"
+              aria-label="Close navigation"
+              onClick={() => setDrawerOpen(false)}
+            >
+              <X aria-hidden="true" />
+            </button>
+          </div>
+          <SidebarNav
+            dashboard={dashboard}
+            visibleRoutes={visibleRoutes}
+            collapsed={false}
+            onNavigate={() => setDrawerOpen(false)}
+          />
+        </aside>
+        <div className="app-main">
+          <main className="page-content">
+            <Outlet />
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cx("app-shell", collapsed && "app-shell--collapsed")}>
@@ -209,15 +508,7 @@ export const AppShell = () => {
       )}
       <aside className={cx("sidebar", drawerOpen && "sidebar--open")}>
         <div className="sidebar__brand">
-          <Link to="/" className="brand-link" aria-label="Garage dashboard">
-            <span className="brand-mark brand-mark--small">
-              <Wrench aria-hidden="true" />
-            </span>
-            <span>
-              <strong>Garage</strong>
-              <small></small>
-            </span>
-          </Link>
+          <BrandLink onNavigate={() => setDrawerOpen(false)} />
           <button
             className="icon-button sidebar__mobile-close"
             aria-label="Close navigation"
@@ -226,34 +517,12 @@ export const AppShell = () => {
             <X aria-hidden="true" />
           </button>
         </div>
-        <nav className="sidebar__nav" aria-label="Primary navigation">
-          {dashboard && (
-            <SidebarLink
-              route={dashboard}
-              collapsed={collapsed}
-              onNavigate={() => setDrawerOpen(false)}
-            />
-          )}
-          {routeGroups.map((group) => {
-            const routes = visibleRoutes.filter(
-              (route) => route.group === group,
-            );
-            if (!routes.length) return null;
-            return (
-              <section className="nav-group" key={group}>
-                <h2>{group}</h2>
-                {routes.map((route) => (
-                  <SidebarLink
-                    key={route.path}
-                    route={route}
-                    collapsed={collapsed}
-                    onNavigate={() => setDrawerOpen(false)}
-                  />
-                ))}
-              </section>
-            );
-          })}
-        </nav>
+        <SidebarNav
+          dashboard={dashboard}
+          visibleRoutes={visibleRoutes}
+          collapsed={collapsed}
+          onNavigate={() => setDrawerOpen(false)}
+        />
         <button className="sidebar__collapse" onClick={toggleSidebar}>
           {collapsed ? <ChevronRight /> : <ChevronLeft />}
           <span>{collapsed ? "Expand" : "Collapse"} sidebar</span>
@@ -268,48 +537,8 @@ export const AppShell = () => {
           >
             <Menu aria-hidden="true" />
           </button>
-          <nav className="breadcrumbs" aria-label="Breadcrumb">
-            <Link to="/">Home</Link>
-            {currentRoute && currentRoute.path !== "/" && (
-              <>
-                <span aria-hidden="true">/</span>
-                {currentRoute.group && <span>{currentRoute.group}</span>}
-                <span aria-hidden="true">/</span>
-                <strong>{currentRoute.title}</strong>
-              </>
-            )}
-          </nav>
-          <details className="user-menu">
-            <summary>
-              <span className="avatar">
-                {(
-                  session?.user.fullName ??
-                  session?.user.username ??
-                  "U"
-                ).charAt(0)}
-              </span>
-              <span className="user-menu__text">
-                <strong>
-                  {session?.user.fullName ?? session?.user.username}
-                </strong>
-                <small>{roleLabel}</small>
-              </span>
-              <ChevronsUpDown aria-hidden="true" />
-            </summary>
-            <div className="user-menu__popover">
-              <div>
-                <strong>
-                  {session?.user.fullName ?? session?.user.username}
-                </strong>
-                <small>
-                  {session?.user.email ? session.user.email : roleLabel}
-                </small>
-              </div>
-              <Button variant="ghost" onClick={() => void logout()}>
-                <LogOut aria-hidden="true" /> Sign out
-              </Button>
-            </div>
-          </details>
+          <Breadcrumbs currentRoute={currentRoute} />
+          <UserMenu roleLabel={roleLabel} onLogout={() => void logout()} />
         </header>
         <main className="page-content">
           <Outlet />

@@ -12,6 +12,7 @@ export const AUDIT_ENTITY_LABELS: Record<AuditEntityType, string> = {
   "purchase-return": "Purchase Return",
   "sale-return-deduction": "Sale Return Deduction",
   "direct-entry": "Direct Entry",
+  "other-income": "Other Income",
   expense: "Expense",
 };
 

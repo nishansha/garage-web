@@ -41,9 +41,13 @@ export const validationMessageConfig: Record<string, string> = {
   "purchase.purchaseRate.REQUIRED": "Purchase rate is required",
   "purchase.purchaseRate.MUST_BE_POSITIVE":
     "Purchase rate must be greater than zero",
+  "purchase.rcDueAmount.NON_NEGATIVE": "RCD amount cannot be negative",
+  "purchase.rcDueAmount.MAXIMUM":
+    "RCD amount cannot exceed the purchase rate",
   "purchase.ownerShipSerialNo.REQUIRED": "Ownership serial number is required",
   "purchase.ownerName.REQUIRED": "Owner/vendor name is required",
   "purchase.ownerMobileNo.REQUIRED": "Owner mobile is required",
+  "purchase.ownerAddress.REQUIRED": "Owner address is required",
   "purchase.pickupLocation.REQUIRED": "Pickup location is required",
   "purchase.expenses.date.REQUIRED": "Expense date is required",
   "purchase.expenses.typeId.REQUIRED": "Expense type is required",
@@ -182,6 +186,15 @@ export const validationMessageConfig: Record<string, string> = {
   "directEntry.date.REQUIRED": "Date is required",
   "directEntry.date.FUTURE_DATE": "Date cannot be in the future",
 
+  "otherIncome.accountId.REQUIRED": "Account is required",
+  "otherIncome.paymentAccountId.REQUIRED": "Payment account is required",
+  "otherIncome.party.REQUIRED": "Party is required",
+  "otherIncome.description.REQUIRED": "Description is required",
+  "otherIncome.amount.MUST_BE_POSITIVE": "Amount must be greater than zero",
+  "otherIncome.amount.MAXIMUM": "Amount exceeds the available balance",
+  "otherIncome.date.REQUIRED": "Date is required",
+  "otherIncome.date.FUTURE_DATE": "Date cannot be in the future",
+
   "journal.description.REQUIRED": "Description is required",
   "journal.date.REQUIRED": "Journal date is required",
   "journal.date.FUTURE_DATE": "Journal date cannot be in the future",
@@ -223,6 +236,7 @@ export type ValidationModule =
   | "paymentAccount"
   | "directAdjustment"
   | "directEntry"
+  | "otherIncome"
   | "journal"
   | "chartOfAccount"
   | "staff"
