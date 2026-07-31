@@ -41,6 +41,9 @@ export const validationMessageConfig: Record<string, string> = {
   "purchase.purchaseRate.REQUIRED": "Purchase rate is required",
   "purchase.purchaseRate.MUST_BE_POSITIVE":
     "Purchase rate must be greater than zero",
+  "purchase.rcDueAmount.NON_NEGATIVE": "RCD amount cannot be negative",
+  "purchase.rcDueAmount.MAXIMUM":
+    "RCD amount cannot exceed the purchase rate",
   "purchase.ownerShipSerialNo.REQUIRED": "Ownership serial number is required",
   "purchase.ownerName.REQUIRED": "Owner/vendor name is required",
   "purchase.ownerMobileNo.REQUIRED": "Owner mobile is required",

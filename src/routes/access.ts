@@ -25,6 +25,14 @@ const rules: AccessRule[] = [
     access: { resource: "PURCHASE_PAYMENT", privilege: "CREATE" },
   },
   {
+    pattern: /^\/purchase\/purchases\/\d+\/rc-due-receipts\/new$/,
+    access: { resource: "PURCHASE_PAYMENT", privilege: "CREATE" },
+  },
+  {
+    pattern: /^\/purchase\/purchases\/\d+\/rc-due-receipts\/\d+\/edit$/,
+    access: { resource: "PURCHASE_PAYMENT", privilege: "UPDATE" },
+  },
+  {
     pattern: /^\/purchase\/purchases/,
     access: { resource: "PURCHASE_ORDER", privilege: "VIEW" },
   },
@@ -53,6 +61,10 @@ const rules: AccessRule[] = [
     access: { resource: "PURCHASE_RETURN_RECEIVABLE", privilege: "VIEW" },
   },
   {
+    pattern: /^\/purchase\/outstandings\/rc-due/,
+    access: { resource: "PURCHASE_PAYABLE", privilege: "VIEW" },
+  },
+  {
     pattern: /^\/sales\/sales\/new$/,
     access: { resource: "SALE", privilege: "CREATE" },
   },
@@ -63,14 +75,6 @@ const rules: AccessRule[] = [
   {
     pattern: /^\/sales\/sales\/\d+\/payment/,
     access: { resource: "SALE", privilege: "CREATE" },
-  },
-  {
-    pattern: /^\/sales\/sales\/\d+\/rc-due-receipts\/new$/,
-    access: { resource: "SALE", privilege: "CREATE" },
-  },
-  {
-    pattern: /^\/sales\/sales\/\d+\/rc-due-receipts\/\d+\/edit$/,
-    access: { resource: "SALE", privilege: "UPDATE" },
   },
   {
     pattern: /^\/sales\/sales\/\d+\/return$/,
@@ -94,10 +98,6 @@ const rules: AccessRule[] = [
   },
   {
     pattern: /^\/sales\/outstandings\/receivables/,
-    access: { resource: "SALE_RECEIVABLE", privilege: "VIEW" },
-  },
-  {
-    pattern: /^\/sales\/outstandings\/rc-due/,
     access: { resource: "SALE_RECEIVABLE", privilege: "VIEW" },
   },
   {

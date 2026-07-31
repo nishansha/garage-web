@@ -36,7 +36,7 @@ export type OutstandingQueryKind =
   | "purchase-payables"
   | "purchase-return-receivables"
   | "sales-receivables"
-  | "sales-rc-due"
+  | "purchase-rc-due"
   | "sale-return-payables";
 
 export const invalidateOutstanding = (

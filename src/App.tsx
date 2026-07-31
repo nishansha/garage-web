@@ -58,6 +58,10 @@ const PurchaseCreateRoute = lazyNamed(loadPurchases, "PurchaseCreateRoute");
 const PurchaseDetailRoute = lazyNamed(loadPurchases, "PurchaseDetailRoute");
 const PurchaseEditRoute = lazyNamed(loadPurchases, "PurchaseEditRoute");
 const PurchasePaymentRoute = lazyNamed(loadPurchases, "PurchasePaymentRoute");
+const PurchaseRcDueReceiptRoute = lazyNamed(
+  loadPurchases,
+  "PurchaseRcDueReceiptRoute",
+);
 const PurchaseReturnsListRoute = lazyNamed(
   loadPurchases,
   "PurchaseReturnsListRoute",
@@ -87,7 +91,6 @@ const SaleCreateRoute = lazyNamed(loadSales, "SaleCreateRoute");
 const SaleDetailRoute = lazyNamed(loadSales, "SaleDetailRoute");
 const SaleEditRoute = lazyNamed(loadSales, "SaleEditRoute");
 const SalePaymentRoute = lazyNamed(loadSales, "SalePaymentRoute");
-const SaleRcDueReceiptRoute = lazyNamed(loadSales, "SaleRcDueReceiptRoute");
 const SaleReturnCreateRoute = lazyNamed(loadSales, "SaleReturnCreateRoute");
 const SaleReturnsListRoute = lazyNamed(loadSales, "SaleReturnsListRoute");
 const SaleReturnDetailRoute = lazyNamed(loadSales, "SaleReturnDetailRoute");
@@ -96,7 +99,7 @@ const SalesReceivablesRoute = lazyNamed(
   loadOutstandings,
   "SalesReceivablesRoute",
 );
-const SalesRcDueRoute = lazyNamed(loadOutstandings, "SalesRcDueRoute");
+const PurchaseRcDueRoute = lazyNamed(loadOutstandings, "PurchaseRcDueRoute");
 const SaleReturnPayablesRoute = lazyNamed(
   loadOutstandings,
   "SaleReturnPayablesRoute",
@@ -195,6 +198,14 @@ const operationsRoutes: readonly FeatureRoute[] = [
     path: "/purchase/purchases/:purchaseId/payments/:paymentId/edit",
     Page: PurchasePaymentRoute,
   },
+  {
+    path: "/purchase/purchases/:purchaseId/rc-due-receipts/new",
+    Page: PurchaseRcDueReceiptRoute,
+  },
+  {
+    path: "/purchase/purchases/:purchaseId/rc-due-receipts/:receiptId/edit",
+    Page: PurchaseRcDueReceiptRoute,
+  },
   { path: "/purchase/returns", Page: PurchaseReturnsListRoute },
   {
     path: "/purchase/returns/new/:inventoryId",
@@ -220,19 +231,15 @@ const operationsRoutes: readonly FeatureRoute[] = [
     path: "/purchase/outstandings/return-receivables",
     Page: PurchaseReturnReceivablesRoute,
   },
+  {
+    path: "/purchase/outstandings/rc-due",
+    Page: PurchaseRcDueRoute,
+  },
   { path: "/sales/sales", Page: SalesListRoute },
   { path: "/sales/sales/new", Page: SaleCreateRoute },
   { path: "/sales/sales/:saleId", Page: SaleDetailRoute },
   { path: "/sales/sales/:saleId/edit", Page: SaleEditRoute },
   { path: "/sales/sales/:saleId/payment", Page: SalePaymentRoute },
-  {
-    path: "/sales/sales/:saleId/rc-due-receipts/new",
-    Page: SaleRcDueReceiptRoute,
-  },
-  {
-    path: "/sales/sales/:saleId/rc-due-receipts/:receiptId/edit",
-    Page: SaleRcDueReceiptRoute,
-  },
   {
     path: "/sales/sales/:saleId/payments/:paymentId/edit",
     Page: SalePaymentRoute,
@@ -251,10 +258,6 @@ const operationsRoutes: readonly FeatureRoute[] = [
   {
     path: "/sales/outstandings/receivables",
     Page: SalesReceivablesRoute,
-  },
-  {
-    path: "/sales/outstandings/rc-due",
-    Page: SalesRcDueRoute,
   },
   {
     path: "/sales/outstandings/return-payables",

@@ -162,17 +162,17 @@ export const PurchaseReturnReceivablesRoute = () => (
 export const SalesReceivablesRoute = () => (
   <OutstandingRoute kind="sales-receivables" />
 );
-export const SalesRcDueRoute = () => {
+export const PurchaseRcDueRoute = () => {
   const navigate = useNavigate();
   const query = useQuery({
-    queryKey: ["operations", "outstanding", "sales-rc-due"],
-    queryFn: operationsApi.sales.rcDueSummary,
+    queryKey: ["operations", "outstanding", "purchase-rc-due"],
+    queryFn: operationsApi.purchases.rcDueSummary,
   });
   return (
     <>
       <PageHeader
-        title="Pending RC Dues"
-        description="Track RC conversion amounts still due from purchase vendors."
+        title="Pending RCD"
+        description="Track RCD amounts still due from purchase vendors."
       />
       <QueryBoundary
         pending={query.isPending}
@@ -182,27 +182,29 @@ export const SalesRcDueRoute = () => {
         <div className="operations-kpis">
           <StatCard label="Open records" value={query.data?.totalCount ?? 0} />
           <StatCard
-            label="Total pending RC due"
+            label="Total pending RCD"
             value={formatCurrency(query.data?.totalPendingAmount)}
           />
         </div>
         {!query.data?.items.length ? (
           <EmptyState
-            title="No pending RC dues"
-            description="Settled RC due sales will drop off this list automatically."
+            title="No pending RCD"
+            description="Settled RCDs will drop off this list automatically."
           />
         ) : (
           <Card>
             <DataTable
-              caption="Pending RC dues"
+              caption="Pending RCD"
               rows={query.data.items}
-              rowKey={(row) => String(row.saleId)}
-              onRowClick={(row) => navigate(`/sales/sales/${row.saleId}`)}
+              rowKey={(row) => String(row.purchaseId)}
+              onRowClick={(row) =>
+                navigate(`/purchase/purchases/${row.purchaseId}`)
+              }
               columns={[
                 {
                   key: "invoice",
-                  header: "Invoice",
-                  cell: (row) => <strong>{row.invoiceNo}</strong>,
+                  header: "Sale invoice",
+                  cell: (row) => <strong>{row.invoiceNo ?? "—"}</strong>,
                 },
                 {
                   key: "vehicle",
@@ -226,7 +228,7 @@ export const SalesRcDueRoute = () => {
                 },
                 {
                   key: "amount",
-                  header: "RC due",
+                  header: "RC Deposits",
                   align: "right",
                   cell: (row) => formatCurrency(row.amount),
                 },
@@ -245,7 +247,9 @@ export const SalesRcDueRoute = () => {
                   key: "actions",
                   header: "",
                   cell: (row) => (
-                    <Link to={`/sales/sales/${row.saleId}/rc-due-receipts/new`}>
+                    <Link
+                      to={`/purchase/purchases/${row.purchaseId}/rc-due-receipts/new`}
+                    >
                       Record receipt
                     </Link>
                   ),

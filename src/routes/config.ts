@@ -91,6 +91,14 @@ export const appRoutes: readonly AppRoute[] = [
     access: access("/purchase/outstandings/return-receivables"),
   },
   {
+    path: "/purchase/outstandings/rc-due",
+    title: "Pending RCD",
+    description: "RC Deposit amounts due from purchase vendors.",
+    group: "Purchase",
+    icon: HandCoins,
+    access: access("/purchase/outstandings/rc-due"),
+  },
+  {
     path: "/sales/sales",
     title: "Sales",
     description: "Manage sales transactions.",
@@ -121,14 +129,6 @@ export const appRoutes: readonly AppRoute[] = [
     group: "Sales",
     icon: CircleDollarSign,
     access: access("/sales/outstandings/receivables"),
-  },
-  {
-    path: "/sales/outstandings/rc-due",
-    title: "Pending RC Dues",
-    description: "RC conversion amounts due from purchase vendors.",
-    group: "Sales",
-    icon: HandCoins,
-    access: access("/sales/outstandings/rc-due"),
   },
   {
     path: "/sales/outstandings/return-payables",

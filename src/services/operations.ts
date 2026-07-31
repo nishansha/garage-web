@@ -78,7 +78,7 @@ export interface RcDueReceiptInput {
 }
 export interface RcDueReceiptResponse {
   receiptId: number;
-  saleId: number;
+  purchaseId: number;
   amount: number;
   totalReceived: number;
   remainingRcDue: number;
@@ -136,6 +136,10 @@ export interface Purchase {
   paidAmount?: number | null;
   pendingAmount?: number | null;
   payments?: Payment[] | null;
+  rcDueAmount?: number | null;
+  paidRcDueAmount?: number | null;
+  pendingRcDueAmount?: number | null;
+  rcDueReceipts?: RcDueReceipt[] | null;
 }
 export interface PurchaseInput {
   date: string;
@@ -153,6 +157,7 @@ export interface PurchaseInput {
   makeYear: string;
   odometer: string;
   purchaseRate: number;
+  rcDueAmount?: number | null;
   pickupStaffId?: number;
   pickupLocation: string;
   ownerName: string;
@@ -248,12 +253,6 @@ export interface Sale {
   financeCompany?: string | null;
   financeAmount?: number | null;
   emiAmount?: number | null;
-  rcDueAmount?: number | null;
-  paidRcDueAmount?: number | null;
-  pendingRcDueAmount?: number | null;
-  rcDueVendorName?: string | null;
-  rcDueVendorMobile?: string | null;
-  rcDueReceipts?: RcDueReceipt[] | null;
   amountSplits?: AmountSplit[] | null;
   payments?: Payment[] | null;
 }
@@ -453,10 +452,11 @@ export interface Outstandings {
   items: OutstandingItem[];
 }
 export interface RcDueSummaryItem {
-  saleId: number;
-  invoiceNo: string;
+  purchaseId: number;
+  saleId?: number | null;
+  invoiceNo?: string | null;
   vehicleNo: string;
-  saleDate: string;
+  saleDate?: string | null;
   amount: number;
   pendingAmount: number;
   lastReceiptDate?: string | null;
@@ -682,6 +682,23 @@ export const operationsApi = {
         cleanPayment(value),
       ),
     payables: () => api.get<Outstandings>("v1/purchase/payables"),
+    rcDueReceipt: (id: number, value: RcDueReceiptInput) =>
+      api.post<RcDueReceiptResponse>(
+        `v1/purchase/${id}/rc-due-receipts`,
+        cleanRcDueReceipt(value),
+      ),
+    updateRcDueReceipt: (
+      id: number,
+      receiptId: number,
+      value: RcDueReceiptInput & { version: number },
+    ) =>
+      api.put<RcDueReceiptResponse>(
+        `v1/purchase/${id}/rc-due-receipts/${receiptId}`,
+        cleanRcDueReceipt(value),
+      ),
+    deleteRcDueReceipt: (id: number, receiptId: number) =>
+      api.delete<void>(`v1/purchase/${id}/rc-due-receipts/${receiptId}`),
+    rcDueSummary: () => api.get<RcDueSummary>("v1/purchase/rc-due-summary"),
   },
   purchaseReturns: {
     list: (page = 0, size = 20, filters?: SearchInput) =>
@@ -744,24 +761,7 @@ export const operationsApi = {
         `v1/sales/${id}/payments/${paymentId}`,
         cleanPayment(value),
       ),
-    rcDueReceipt: (id: number, value: RcDueReceiptInput) =>
-      api.post<RcDueReceiptResponse>(
-        `v1/sales/${id}/rc-due-receipts`,
-        cleanRcDueReceipt(value),
-      ),
-    updateRcDueReceipt: (
-      id: number,
-      receiptId: number,
-      value: RcDueReceiptInput & { version: number },
-    ) =>
-      api.put<RcDueReceiptResponse>(
-        `v1/sales/${id}/rc-due-receipts/${receiptId}`,
-        cleanRcDueReceipt(value),
-      ),
-    deleteRcDueReceipt: (id: number, receiptId: number) =>
-      api.delete<void>(`v1/sales/${id}/rc-due-receipts/${receiptId}`),
     receivables: () => api.get<Outstandings>("v1/sales/receivables"),
-    rcDueSummary: () => api.get<RcDueSummary>("v1/sales/rc-due-summary"),
   },
   saleReturns: {
     list: (page = 0, size = 20, filters?: SearchInput) =>
