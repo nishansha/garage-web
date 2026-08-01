@@ -592,13 +592,15 @@ select.control option:disabled {
   display: grid;
   place-items: center;
   border-radius: 15px;
-  color: #07110e;
-  background: var(--primary);
-  box-shadow: 0 15px 45px rgba(94, 224, 181, 0.18);
+  overflow: hidden;
+  background: #1B2430;
+  box-shadow: 0 15px 45px rgba(27, 36, 48, 0.35);
 }
-.brand-mark svg {
-  width: 29px;
-  height: 29px;
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .login-brand span {
   color: var(--primary);
@@ -709,9 +711,11 @@ select.control option:disabled {
   border-radius: 10px;
   box-shadow: none;
 }
-.brand-mark--small svg {
-  width: 20px;
-  height: 20px;
+.brand-mark--small img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .brand-link > span:last-child {
   display: flex;
