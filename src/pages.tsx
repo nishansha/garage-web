@@ -7,7 +7,6 @@ import {
   LogOut,
   Menu,
   Settings,
-  Wrench,
   X,
 } from "lucide-react";
 import {
@@ -94,7 +93,7 @@ export const LoginPage = () => {
     <main className="login-page">
       <section className="login-brand" aria-label="Garage">
         <div className="brand-mark">
-          <Wrench aria-hidden="true" />
+          <img src="/logo.png" alt="" width={58} height={58} />
         </div>
         <div>
           <span>Garage</span>
@@ -179,7 +178,7 @@ const BrandLink = ({ onNavigate }: { onNavigate?: () => void }) => (
     onClick={onNavigate}
   >
     <span className="brand-mark brand-mark--small">
-      <Wrench aria-hidden="true" />
+      <img src="/logo.png" alt="" width={39} height={39} />
     </span>
     <span>
       <strong>Garage</strong>
