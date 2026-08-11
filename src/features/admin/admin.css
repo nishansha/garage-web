@@ -79,9 +79,32 @@
   gap: 18px;
 }
 
+.admin-permission-module-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 .admin-permission-module h2 {
-  margin: 0 0 12px;
+  margin: 0;
   font-size: 1rem;
+}
+
+.admin-permission-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.admin-permission-select-all:has(input:disabled) {
+  cursor: default;
 }
 
 .admin-permission-table-wrap {
@@ -105,6 +128,23 @@
 .admin-permission-table td:first-child {
   text-align: left;
   min-width: 200px;
+}
+
+.admin-permission-col-header {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-permission-resource {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.admin-permission-resource > input {
+  margin-top: 3px;
 }
 
 .admin-permission-resource-code {

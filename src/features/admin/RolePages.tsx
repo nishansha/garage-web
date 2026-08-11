@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -35,6 +35,37 @@ import {
   type UpdateRolePayload,
 } from "../../services/rbac";
 import { usePermission } from "../../hooks/usePermission";
+
+type TriState = { checked: boolean; indeterminate: boolean };
+
+const PrivilegeSelectAllCheckbox = ({
+  checked,
+  indeterminate,
+  disabled,
+  onChange,
+  "aria-label": ariaLabel,
+}: {
+  checked: boolean;
+  indeterminate: boolean;
+  disabled?: boolean;
+  onChange: () => void;
+  "aria-label": string;
+}) => {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate;
+  }, [indeterminate]);
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={checked}
+      disabled={disabled}
+      onChange={onChange}
+      aria-label={ariaLabel}
+    />
+  );
+};
 
 const normalizeCode = (value: string) =>
   value.replace(/[^a-zA-Z0-9_]/g, "").toUpperCase();
@@ -388,6 +419,84 @@ export const RolePermissionsPage = () => {
     });
   };
 
+  const moduleSelection = (mod: RbacModule): TriState => {
+    let total = 0;
+    let selected = 0;
+    for (const resource of mod.resources) {
+      for (const privilege of RBAC_PRIVILEGES) {
+        total += 1;
+        if (grid[resource.id]?.has(privilege)) selected += 1;
+      }
+    }
+    return {
+      checked: total > 0 && selected === total,
+      indeterminate: selected > 0 && selected < total,
+    };
+  };
+
+  const columnSelection = (
+    mod: RbacModule,
+    privilege: RbacPrivilege,
+  ): TriState => {
+    const total = mod.resources.length;
+    const selected = mod.resources.filter((resource) =>
+      grid[resource.id]?.has(privilege),
+    ).length;
+    return {
+      checked: total > 0 && selected === total,
+      indeterminate: selected > 0 && selected < total,
+    };
+  };
+
+  const rowSelection = (resourceId: number): TriState => {
+    const selected = RBAC_PRIVILEGES.filter((privilege) =>
+      grid[resourceId]?.has(privilege),
+    ).length;
+    const total = RBAC_PRIVILEGES.length;
+    return {
+      checked: selected === total,
+      indeterminate: selected > 0 && selected < total,
+    };
+  };
+
+  const toggleModule = (mod: RbacModule) => {
+    if (matrixReadOnly) return;
+    const { checked } = moduleSelection(mod);
+    setGrid((current) => {
+      const next = { ...current };
+      for (const resource of mod.resources) {
+        next[resource.id] = checked
+          ? new Set()
+          : new Set(RBAC_PRIVILEGES);
+      }
+      return next;
+    });
+  };
+
+  const toggleColumn = (mod: RbacModule, privilege: RbacPrivilege) => {
+    if (matrixReadOnly) return;
+    const { checked } = columnSelection(mod, privilege);
+    setGrid((current) => {
+      const next = { ...current };
+      for (const resource of mod.resources) {
+        const set = new Set(next[resource.id] ?? []);
+        if (checked) set.delete(privilege);
+        else set.add(privilege);
+        next[resource.id] = set;
+      }
+      return next;
+    });
+  };
+
+  const toggleRow = (resourceId: number) => {
+    if (matrixReadOnly) return;
+    const { checked } = rowSelection(resourceId);
+    setGrid((current) => ({
+      ...current,
+      [resourceId]: checked ? new Set() : new Set(RBAC_PRIVILEGES),
+    }));
+  };
+
   if (!Number.isInteger(id) || id <= 0) {
     return <ErrorState message="Invalid role." />;
   }
@@ -438,49 +547,93 @@ export const RolePermissionsPage = () => {
       />
 
       <div className="admin-permission-matrix">
-        {modules.map((mod) => (
-          <Card key={mod.id} className="admin-permission-module">
-            <h2>{mod.description || mod.code}</h2>
-            <div className="admin-permission-table-wrap">
-              <table className="admin-permission-table">
-                <thead>
-                  <tr>
-                    <th>Resource</th>
-                    {RBAC_PRIVILEGES.map((priv) => (
-                      <th key={priv}>{priv}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {mod.resources.map((resource) => (
-                    <tr key={resource.id}>
-                      <td>
-                        <strong>{resource.description}</strong>
-                        <div className="admin-permission-resource-code">
-                          {resource.code}
-                        </div>
-                      </td>
+        {modules.map((mod) => {
+          const moduleState = moduleSelection(mod);
+          return (
+            <Card key={mod.id} className="admin-permission-module">
+              <div className="admin-permission-module-header">
+                <h2>{mod.description || mod.code}</h2>
+                <label className="admin-permission-select-all">
+                  <PrivilegeSelectAllCheckbox
+                    checked={moduleState.checked}
+                    indeterminate={moduleState.indeterminate}
+                    disabled={matrixReadOnly}
+                    onChange={() => toggleModule(mod)}
+                    aria-label={`Select all privileges in ${mod.description || mod.code}`}
+                  />
+                  Select all
+                </label>
+              </div>
+              <div className="admin-permission-table-wrap">
+                <table className="admin-permission-table">
+                  <thead>
+                    <tr>
+                      <th>Resource</th>
                       {RBAC_PRIVILEGES.map((priv) => {
-                        const checked = grid[resource.id]?.has(priv) ?? false;
+                        const columnState = columnSelection(mod, priv);
                         return (
-                          <td key={priv}>
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              disabled={matrixReadOnly}
-                              onChange={() => toggle(resource.id, priv)}
-                              aria-label={`${resource.code} ${priv}`}
-                            />
-                          </td>
+                          <th key={priv}>
+                            <div className="admin-permission-col-header">
+                              <PrivilegeSelectAllCheckbox
+                                checked={columnState.checked}
+                                indeterminate={columnState.indeterminate}
+                                disabled={matrixReadOnly}
+                                onChange={() => toggleColumn(mod, priv)}
+                                aria-label={`Select ${priv} for all resources in ${mod.description || mod.code}`}
+                              />
+                              <span>{priv}</span>
+                            </div>
+                          </th>
                         );
                       })}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        ))}
+                  </thead>
+                  <tbody>
+                    {mod.resources.map((resource) => {
+                      const rowState = rowSelection(resource.id);
+                      return (
+                        <tr key={resource.id}>
+                          <td>
+                            <div className="admin-permission-resource">
+                              <PrivilegeSelectAllCheckbox
+                                checked={rowState.checked}
+                                indeterminate={rowState.indeterminate}
+                                disabled={matrixReadOnly}
+                                onChange={() => toggleRow(resource.id)}
+                                aria-label={`Select all privileges for ${resource.code}`}
+                              />
+                              <div>
+                                <strong>{resource.description}</strong>
+                                <div className="admin-permission-resource-code">
+                                  {resource.code}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          {RBAC_PRIVILEGES.map((priv) => {
+                            const checked =
+                              grid[resource.id]?.has(priv) ?? false;
+                            return (
+                              <td key={priv}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  disabled={matrixReadOnly}
+                                  onChange={() => toggle(resource.id, priv)}
+                                  aria-label={`${resource.code} ${priv}`}
+                                />
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          );
+        })}
       </div>
     </>
   );
