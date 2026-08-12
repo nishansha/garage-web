@@ -49,6 +49,9 @@ const loadAccounting = () => import("./features/accounting/pages");
 const loadAudit = () => import("./features/audit/RecycleBinPage");
 const loadAdminPages = () => import("./features/admin/AdminPages");
 const loadRolePages = () => import("./features/admin/RolePages");
+const loadWarehousePages = () => import("./features/admin/WarehousePages");
+const loadWarehouseComparison = () =>
+  import("./features/accounting/WarehouseComparisonPage");
 const loadProductManagement = () =>
   import("./features/admin/ProductManagementPage");
 
@@ -173,6 +176,14 @@ const CustomersPage = lazyNamed(loadAdminPages, "CustomersPage");
 const StaffManagementPage = lazyNamed(loadAdminPages, "StaffManagementPage");
 const RolesManagementPage = lazyNamed(loadRolePages, "RolesManagementPage");
 const RolePermissionsPage = lazyNamed(loadRolePages, "RolePermissionsPage");
+const WarehousesManagementPage = lazyNamed(
+  loadWarehousePages,
+  "WarehousesManagementPage",
+);
+const WarehouseComparisonPage = lazyNamed(
+  loadWarehouseComparison,
+  "WarehouseComparisonPage",
+);
 const ClearDataPage = lazyNamed(loadAdminPages, "ClearDataPage");
 const ProductManagementPage = lazyNamed(
   loadProductManagement,
@@ -356,6 +367,7 @@ const accountingRoutes: readonly FeatureRoute[] = [
     Page: JournalProfitLossPage,
   },
   { path: "/accounting/profit-and-loss", Page: ProfitLossReportPage },
+  { path: "/accounting/warehouse-comparison", Page: WarehouseComparisonPage },
   { path: "/accounting/monthly-overview", Page: MonthlyOverviewPage },
   {
     path: "/accounting/chart-of-accounts",
@@ -382,6 +394,7 @@ const adminRoutes: readonly FeatureRoute[] = [
     path: "/more/products",
     Page: ProductManagementPage,
   },
+  { path: "/more/warehouses", Page: WarehousesManagementPage },
   { path: "/more/clear-data", Page: ClearDataPage },
 ];
 

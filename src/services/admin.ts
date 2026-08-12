@@ -85,7 +85,6 @@ export type MasterDataType =
   | "COLOR"
   | "FUEL_TYPE"
   | "TRANSMISSION_TYPE"
-  | "WAREHOUSE"
   | "EXPENSE_TYPE";
 
 export interface MasterDataContext {
@@ -109,7 +108,6 @@ const LOOKUP_MASTER_TYPES: ReadonlySet<MasterDataType> = new Set([
   "COLOR",
   "FUEL_TYPE",
   "TRANSMISSION_TYPE",
-  "WAREHOUSE",
 ]);
 
 export interface ResetDataResponse {
@@ -148,7 +146,6 @@ const listEndpoint = (
     case "COLOR":
     case "FUEL_TYPE":
     case "TRANSMISSION_TYPE":
-    case "WAREHOUSE":
       return `v1/lookup?type=${encodeURIComponent(type)}`;
     case "EXPENSE_TYPE":
       return "v1/account?type=EXPENSE";
@@ -175,7 +172,6 @@ const extractItems = (
     case "COLOR":
     case "FUEL_TYPE":
     case "TRANSMISSION_TYPE":
-    case "WAREHOUSE":
       return toItems(response.values);
   }
 };

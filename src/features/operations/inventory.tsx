@@ -18,6 +18,7 @@ import {
   type SearchInput,
   type Stock,
 } from "../../services/operations";
+import { warehouseApi } from "../../services/warehouse";
 import {
   Detail,
   DetailGrid,
@@ -42,6 +43,7 @@ const STOCK_FILTER_KEYS = [
   "modelId",
   "variantId",
   "fuelTypeId",
+  "warehouseId",
 ] as const satisfies ReadonlyArray<keyof SearchInput>;
 
 const isActiveFilterValue = (value: unknown) =>
@@ -85,6 +87,10 @@ const StockFilters = ({
   const fuelTypes = useQuery({
     queryKey: ["operations", "lookups", "FUEL_TYPE"],
     queryFn: () => operationsApi.lookups("FUEL_TYPE"),
+  });
+  const warehouses = useQuery({
+    queryKey: ["warehouses"],
+    queryFn: warehouseApi.list,
   });
 
   return (
@@ -197,6 +203,23 @@ const StockFilters = ({
       >
         <option value="">All fuel types</option>
         {fuelTypes.data?.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </Select>
+      <Select
+        aria-label="Warehouse"
+        value={value.warehouseId || ""}
+        onChange={(event) =>
+          onChange({
+            ...value,
+            warehouseId: optionalFilterId(event.target.value),
+          })
+        }
+      >
+        <option value="">All warehouses</option>
+        {warehouses.data?.map((item) => (
           <option key={item.id} value={item.id}>
             {item.name}
           </option>

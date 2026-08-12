@@ -39,6 +39,7 @@ import {
   type RcDueReceipt,
   type SearchInput,
 } from "../../services/operations";
+import { warehouseApi } from "../../services/warehouse";
 import {
   DateValue,
   Detail,
@@ -57,6 +58,11 @@ import {
   useNumericParam,
 } from "./common";
 import { ApiError } from "../../lib/api";
+
+const optionalId = (value: number | null | undefined) =>
+  typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : undefined;
 
 const PURCHASES = "/purchase/purchases";
 const RETURNS = "/purchase/returns";
@@ -452,7 +458,7 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
       fuelTypeId: purchase?.fuelTypeId ?? 0,
       transmissionTypeId: purchase?.transmissionTypeId ?? 0,
       segmentId: purchase?.segmentId ?? 0,
-      warehouseId: purchase?.warehouseId ?? 1,
+      warehouseId: purchase?.warehouseId ?? undefined,
       makeYear: String(purchase?.makeYear ?? ""),
       odometer: String(purchase?.odometer ?? ""),
       purchaseRate: purchase?.purchaseRate ?? 0,
@@ -508,15 +514,24 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
     queryKey: ["operations", "payment-accounts"],
     queryFn: operationsApi.paymentAccounts,
   });
+  const warehouses = useQuery({
+    queryKey: ["warehouses"],
+    queryFn: warehouseApi.list,
+  });
   const watchedExpenses = watch("expenses");
   const mutation = useMutation<unknown, Error, PurchaseInput>({
-    mutationFn: (value: PurchaseInput) =>
-      purchase
+    mutationFn: (value: PurchaseInput) => {
+      const payload: PurchaseInput = {
+        ...value,
+        warehouseId: optionalId(value.warehouseId),
+      };
+      return purchase
         ? operationsApi.purchases.update(purchase.id, {
-            ...value,
+            ...payload,
             version: purchase.version,
           })
-        : operationsApi.purchases.create(value),
+        : operationsApi.purchases.create(payload);
+    },
     onSuccess: async () => {
       const invalidations = [
         client.invalidateQueries({ queryKey: ["operations", "purchases"] }),
@@ -778,20 +793,19 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
           {select("segmentId", "Segment", purchase?.segmentId)}
           <FormField
             label="Warehouse"
-            required
             error={fieldError(errors.warehouseId)}
           >
             <Select
               {...register("warehouseId", {
-                required: purchaseValidationMessage("warehouseId", "REQUIRED"),
-                min: {
-                  value: 1,
-                  message: purchaseValidationMessage("warehouseId", "REQUIRED"),
-                },
-                valueAsNumber: true,
+                setValueAs: (raw) => optionalId(Number(raw)),
               })}
             >
-              <option value="1">Future Cars</option>
+              <option value="">Select warehouse</option>
+              {warehouses.data?.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
             </Select>
           </FormField>
           <FormField

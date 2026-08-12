@@ -622,6 +622,25 @@
   color: var(--text-muted, #64748b);
 }
 
+.warehouse-comparison-secondary-stats .stat-card__label,
+.warehouse-comparison-secondary-stats .stat-card__value {
+  color: var(--text-muted);
+}
+
+.warehouse-comparison-overhead {
+  margin-top: 0.75rem;
+}
+
+.warehouse-comparison-overhead .report-row {
+  margin-inline: 0;
+  padding-inline: 0;
+  border-bottom: 0;
+}
+
+.warehouse-comparison-overhead .report-row:hover {
+  background: transparent;
+}
+
 @media (max-width: 680px) {
   .accounting-form {
     grid-template-columns: 1fr;

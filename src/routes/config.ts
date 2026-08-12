@@ -25,6 +25,7 @@ import {
   UserCog,
   UsersRound,
   WalletCards,
+  Warehouse,
   type LucideIcon,
 } from "lucide-react";
 import type { RouteAccess } from "./access";
@@ -243,6 +244,14 @@ export const appRoutes: readonly AppRoute[] = [
     access: access("/accounting/journal-profit-and-loss"),
   },
   {
+    path: "/accounting/warehouse-comparison",
+    title: "Warehouse Comparison",
+    description: "Compare stock and sales by warehouse.",
+    group: "Accounting",
+    icon: Warehouse,
+    access: access("/accounting/warehouse-comparison"),
+  },
+  {
     path: "/more/recycle-bin",
     title: "Recycle Bin",
     description: "Review deleted records and audit history.",
@@ -281,6 +290,14 @@ export const appRoutes: readonly AppRoute[] = [
     group: "More",
     icon: PackageOpen,
     access: access("/more/products"),
+  },
+  {
+    path: "/more/warehouses",
+    title: "Warehouses",
+    description: "Manage inventory storage locations.",
+    group: "More",
+    icon: Warehouse,
+    access: access("/more/warehouses"),
   },
   {
     path: "/more/clear-data",

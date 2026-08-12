@@ -8,7 +8,6 @@ import {
   ReceiptText,
   Settings2,
   Shapes,
-  Warehouse,
   type LucideIcon,
 } from "lucide-react";
 import type { MasterDataType } from "../../services/admin";
@@ -68,12 +67,6 @@ export const masterDataTypes: readonly MasterTypeConfig[] = [
     label: "Transmission types",
     description: "Supported vehicle transmission types",
     icon: Settings2,
-  },
-  {
-    type: "WAREHOUSE",
-    label: "Warehouses",
-    description: "Inventory storage locations",
-    icon: Warehouse,
   },
   {
     type: "EXPENSE_TYPE",

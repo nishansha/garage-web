@@ -153,7 +153,7 @@ export interface PurchaseInput {
   fuelTypeId: number;
   transmissionTypeId: number;
   segmentId: number;
-  warehouseId: number;
+  warehouseId?: number | null;
   makeYear: string;
   odometer: string;
   purchaseRate: number;
@@ -193,7 +193,7 @@ export interface ExchangeVehicleInput {
   fuelTypeId: number;
   transmissionTypeId: number;
   segmentId: number;
-  warehouseId: number;
+  warehouseId?: number | null;
   makeYear: string;
   odometer: string;
   purchaseRate: number;
@@ -532,6 +532,7 @@ export interface SearchInput {
   modelId?: number;
   variantId?: number;
   fuelTypeId?: number;
+  warehouseId?: number;
   staffId?: number | null;
   vehicleNo?: string;
   status?: string;

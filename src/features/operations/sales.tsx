@@ -41,6 +41,7 @@ import {
   type SaleInput,
   type SearchInput,
 } from "../../services/operations";
+import { warehouseApi } from "../../services/warehouse";
 import {
   Detail,
   DetailGrid,
@@ -469,6 +470,10 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
     queryKey: ["operations", "payment-accounts"],
     queryFn: operationsApi.paymentAccounts,
   });
+  const warehouses = useQuery({
+    queryKey: ["warehouses"],
+    queryFn: warehouseApi.list,
+  });
   const mutation = useMutation<unknown, Error, SaleInput>({
     mutationFn: async (value: SaleInput) => {
       if (sale) {
@@ -569,7 +574,6 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
         "fuelTypeId",
         "transmissionTypeId",
         "segmentId",
-        "warehouseId",
       ].forEach((field) =>
         validateSaleField(
           `exchange.${field}`,
@@ -724,7 +728,10 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
               data.get("exchange.transmissionTypeId"),
             ),
             segmentId: numberValue(data.get("exchange.segmentId")),
-            warehouseId: numberValue(data.get("exchange.warehouseId")),
+            warehouseId: (() => {
+              const id = numberValue(data.get("exchange.warehouseId"));
+              return Number.isFinite(id) && id > 0 ? id : undefined;
+            })(),
             makeYear: String(data.get("exchange.makeYear")),
             odometer: String(data.get("exchange.odometer")),
             purchaseRate: numberValue(data.get("exchange.purchaseRate")),
@@ -1052,15 +1059,22 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
               )}
               <FormField
                 label="Warehouse"
-                required
                 error={errors["exchange.warehouseId"]}
               >
                 <Select
                   name="exchange.warehouseId"
-                  required
-                  defaultValue={String(exchangeVehicle?.warehouseId ?? 1)}
+                  defaultValue={
+                    exchangeVehicle?.warehouseId
+                      ? String(exchangeVehicle.warehouseId)
+                      : ""
+                  }
                 >
-                  <option value="1">Future Cars</option>
+                  <option value="">Select warehouse</option>
+                  {warehouses.data?.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
                 </Select>
               </FormField>
               <FormField
