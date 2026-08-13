@@ -511,7 +511,11 @@
     linear-gradient(
       135deg,
       color-mix(in srgb, var(--primary) 10%, transparent),
-      color-mix(in srgb, var(--dashboard-profit, var(--primary)) 6%, transparent)
+      color-mix(
+        in srgb,
+        var(--dashboard-profit, var(--primary)) 6%,
+        transparent
+      )
     ),
     var(--surface-raised);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary) 18%, transparent);
@@ -524,15 +528,27 @@
 }
 
 .operations-inventory-metrics > div:first-child {
-  border-left-color: color-mix(in srgb, var(--dashboard-purchases, #a78bfa) 70%, transparent);
+  border-left-color: color-mix(
+    in srgb,
+    var(--dashboard-purchases, #a78bfa) 70%,
+    transparent
+  );
 }
 
 .operations-inventory-metrics > div:nth-child(2) {
-  border-left-color: color-mix(in srgb, var(--dashboard-sales, #5ee0b5) 70%, transparent);
+  border-left-color: color-mix(
+    in srgb,
+    var(--dashboard-sales, #5ee0b5) 70%,
+    transparent
+  );
 }
 
 .operations-inventory-metrics > div:nth-child(3) {
-  border-left-color: color-mix(in srgb, var(--dashboard-profit, #6ca8ff) 70%, transparent);
+  border-left-color: color-mix(
+    in srgb,
+    var(--dashboard-profit, #6ca8ff) 70%,
+    transparent
+  );
 }
 
 .operations-inventory-metrics span {
@@ -657,6 +673,27 @@
 .operations-radio-group label.is-disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.operations-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.operations-expand-toggle {
+  width: 2.25rem;
+  color: var(--text-muted);
+}
+
+.operations-expand-row > td {
+  padding: 0;
+  background: color-mix(in srgb, var(--surface) 88%, #fff 12%);
+}
+
+.operations-expand-row .table-wrap {
+  border: none;
+  border-radius: 0;
 }
 
 @media (max-width: 1000px) {

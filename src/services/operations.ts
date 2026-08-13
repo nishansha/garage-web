@@ -451,6 +451,47 @@ export interface Outstandings {
   totalPendingAmount: number;
   items: OutstandingItem[];
 }
+export interface SalesReceivableItem {
+  saleId: number;
+  invoiceNo: string;
+  paymentStatus: SalePaymentStatus;
+  vehicleNo: string;
+  saleDate: string;
+  amount: number;
+  pendingAmount: number;
+  lastPaymentDate?: string | null;
+  customerName: string;
+  customerMobile?: string | null;
+}
+export interface SalesReceivables {
+  totalCount: number;
+  totalPendingAmount: number;
+  financePendingAmount: number;
+  totalOutstandingAmount: number;
+  items: SalesReceivableItem[];
+}
+export interface FinanceReceivableSale {
+  saleId: number;
+  invoiceNo: string;
+  paymentStatus: SalePaymentStatus;
+  vehicleNo: string;
+  saleDate: string;
+  financeAmount: number;
+  pendingAmount: number;
+  customerName: string;
+}
+export interface FinanceReceivableCompany {
+  financeCompanyId: number;
+  financeCompanyName: string;
+  contactNumber?: string | null;
+  totalPending: number;
+  sales: FinanceReceivableSale[];
+}
+export interface FinanceReceivables {
+  totalCount: number;
+  totalPendingAmount: number;
+  items: FinanceReceivableCompany[];
+}
 export interface RcDueSummaryItem {
   purchaseId: number;
   saleId?: number | null;
@@ -762,7 +803,9 @@ export const operationsApi = {
         `v1/sales/${id}/payments/${paymentId}`,
         cleanPayment(value),
       ),
-    receivables: () => api.get<Outstandings>("v1/sales/receivables"),
+    receivables: () => api.get<SalesReceivables>("v1/sales/receivables"),
+    financeReceivables: () =>
+      api.get<FinanceReceivables>("v1/reports/finance-receivables"),
   },
   saleReturns: {
     list: (page = 0, size = 20, filters?: SearchInput) =>

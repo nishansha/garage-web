@@ -1,9 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type FormEvent,
-} from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Plus, Trash2 } from "lucide-react";
 import {
@@ -292,6 +287,8 @@ export const PaymentAccountsPage = () => {
               caption="Payment accounts"
               columns={columns}
               rows={query.data ?? []}
+              emptyMessage="No payment accounts"
+              emptyDescription="Payment accounts will appear here once they are created."
               rowKey={(account) => String(account.id)}
               onRowClick={(account) =>
                 navigate(`/accounting/accounts/${account.id}/transactions`)
@@ -916,6 +913,14 @@ export const PaymentAccountTransactionsPage = () => {
           caption="Account transactions"
           columns={columns}
           rows={transactions.data?.items ?? []}
+          emptyMessage={
+            unreconciled ? "No unreconciled transactions" : "No transactions"
+          }
+          emptyDescription={
+            unreconciled
+              ? "All transactions for this account have been reconciled."
+              : "Posted activity for this account will appear here."
+          }
           rowKey={(item) => String(item.id)}
         />
         <Pagination
@@ -1048,6 +1053,8 @@ export const DirectEntriesPage = () => {
             caption="Direct entries"
             columns={columns}
             rows={query.data?.items ?? []}
+            emptyMessage="No direct entries yet"
+            emptyDescription="Direct accounting entries will appear here once they are recorded."
             rowKey={(entry) => String(entry.id)}
             onRowClick={(entry) =>
               navigate(`/accounting/direct-entry/${entry.id}`)
@@ -1429,6 +1436,8 @@ export const OtherIncomesPage = () => {
             caption="Other income entries"
             columns={columns}
             rows={query.data?.items ?? []}
+            emptyMessage="No other income yet"
+            emptyDescription="Other income entries will appear here once they are recorded."
             rowKey={(entry) => String(entry.id)}
             onRowClick={(entry) =>
               navigate(`/accounting/other-income/${entry.id}`)
@@ -1828,6 +1837,8 @@ export const JournalsPage = () => {
             caption="Journals"
             columns={columns}
             rows={query.data?.items ?? []}
+            emptyMessage="No journals yet"
+            emptyDescription="Journal entries will appear here once they are posted."
             rowKey={(journal) => String(journal.id)}
             onRowClick={(journal) =>
               navigate(`/accounting/journals/${journal.id}`)
@@ -1867,7 +1878,13 @@ export const JournalDetailPage = () => {
       <QueryError error={query.error} retry={() => void query.refetch()} />
     );
   const journal = query.data;
-  if (!journal) return <EmptyState />;
+  if (!journal)
+    return (
+      <EmptyState
+        title="Journal not found"
+        description="This journal may have been removed or the link is invalid."
+      />
+    );
   return (
     <>
       <PageHeader
@@ -1892,6 +1909,8 @@ export const JournalDetailPage = () => {
         <DataTable
           caption="Journal lines"
           rows={journal.lines}
+          emptyMessage="No journal lines"
+          emptyDescription="Account lines for this journal will appear here."
           rowKey={(line) => String(line.id)}
           columns={[
             {
@@ -2314,6 +2333,8 @@ export const GeneralLedgerPage = () => {
             <DataTable
               caption="General ledger"
               rows={query.data.lines}
+              emptyMessage="No ledger activity"
+              emptyDescription="Posted movements for this account and date range will appear here."
               rowKey={(line) =>
                 `${line.journalId}-${line.journalDate}-${line.runningBalance}`
               }
@@ -2418,6 +2439,8 @@ export const TrialBalancePage = () => {
             <DataTable
               caption="Trial balance"
               rows={query.data?.lines ?? []}
+              emptyMessage="No trial balance lines"
+              emptyDescription="Account balances for this period will appear here."
               rowKey={(line) => String(line.accountId)}
               columns={[
                 {
@@ -3168,6 +3191,8 @@ export const MonthlyOverviewPage = () => {
           <DataTable
             caption="Monthly accounting overview"
             rows={rows}
+            emptyMessage="No monthly overview"
+            emptyDescription="Monthly accounting summaries will appear here."
             rowKey={(row) => row.month}
             columns={[
               {
@@ -3303,6 +3328,8 @@ export const ChartOfAccountsPage = () => {
                 ? codeA - codeB
                 : a.code.localeCompare(b.code);
             })}
+            emptyMessage="No accounts"
+            emptyDescription="The chart of accounts will appear here once accounts are created."
             rowKey={(account) => String(account.id)}
             columns={[
               {

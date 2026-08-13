@@ -58,9 +58,7 @@ export const WarehouseComparisonPage = () => {
   const rows = useMemo(() => {
     const warehouses = query.data?.warehouses ?? [];
     if (selectedWarehouseId === "all") return warehouses;
-    return warehouses.filter(
-      (row) => row.warehouseId === selectedWarehouseId,
-    );
+    return warehouses.filter((row) => row.warehouseId === selectedWarehouseId);
   }, [query.data?.warehouses, selectedWarehouseId]);
 
   const totals = useMemo(() => {
@@ -281,11 +279,10 @@ export const WarehouseComparisonPage = () => {
               columns={columns}
               rows={rows}
               rowKey={(row) =>
-                row.warehouseId == null
-                  ? "unassigned"
-                  : String(row.warehouseId)
+                row.warehouseId == null ? "unassigned" : String(row.warehouseId)
               }
               emptyMessage="No warehouse performance data for this month"
+              emptyDescription="Warehouse results will appear here once there is activity in the selected month."
               onRowClick={(row) => {
                 if (row.warehouseId == null) {
                   setSelectedWarehouseId("all");

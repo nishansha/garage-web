@@ -126,7 +126,7 @@ export const appRoutes: readonly AppRoute[] = [
   {
     path: "/sales/outstandings/receivables",
     title: "Sales Receivables",
-    description: "Amounts due from customers.",
+    description: "Amounts due from customers and finance companies.",
     group: "Sales",
     icon: CircleDollarSign,
     access: access("/sales/outstandings/receivables"),

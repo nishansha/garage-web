@@ -66,8 +66,7 @@ const optionalId = (value: number | null | undefined) =>
 
 const PURCHASES = "/purchase/purchases";
 const RETURNS = "/purchase/returns";
-const RC_DUE_MAXIMUM_MESSAGE =
-  "Receipt amount cannot exceed the remaining RCD";
+const RC_DUE_MAXIMUM_MESSAGE = "Receipt amount cannot exceed the remaining RCD";
 
 const rcDueReceiptAsPayment = (receipt?: RcDueReceipt): Payment | undefined =>
   receipt
@@ -346,10 +345,10 @@ export const PurchasesListRoute = () => {
             row.exchange
               ? "info"
               : row.paymentStatus === "PAID"
-              ? "success"
-              : row.paymentStatus === "PARTIAL"
-                ? "warning"
-                : "danger"
+                ? "success"
+                : row.paymentStatus === "PARTIAL"
+                  ? "warning"
+                  : "danger"
           }
         >
           {row.exchange ? "Trade-in" : (row.paymentStatus ?? "UNPAID")}
@@ -388,6 +387,8 @@ export const PurchasesListRoute = () => {
           rows={rows}
           rowKey={(row) => String(row.id)}
           caption="Purchases"
+          emptyMessage="No purchases yet"
+          emptyDescription="New purchases will appear here once they are recorded."
           onRowClick={(row) => navigate(`${PURCHASES}/${row.id}`)}
         />
         <Pagination
@@ -791,10 +792,7 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
             purchase?.transmissionTypeId,
           )}
           {select("segmentId", "Segment", purchase?.segmentId)}
-          <FormField
-            label="Warehouse"
-            error={fieldError(errors.warehouseId)}
-          >
+          <FormField label="Warehouse" error={fieldError(errors.warehouseId)}>
             <Select
               {...register("warehouseId", {
                 setValueAs: (raw) => optionalId(Number(raw)),
@@ -918,9 +916,6 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
               })}
             />
           </FormField>
-          <FormField label="Notes" error={fieldError(errors.notes)}>
-            <Textarea {...register("notes")} />
-          </FormField>
         </div>
       </Section>
       <Section title="Vendor and pickup">
@@ -958,10 +953,7 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
           >
             <Input
               {...register("ownerAddress", {
-                required: purchaseValidationMessage(
-                  "ownerAddress",
-                  "REQUIRED",
-                ),
+                required: purchaseValidationMessage("ownerAddress", "REQUIRED"),
               })}
             />
           </FormField>
@@ -1156,6 +1148,14 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
           </fieldset>
         ))}
       </Section>
+      <Section title="Notes">
+        <FormField
+          label="Additional details"
+          error={fieldError(errors.notes)}
+        >
+          <Textarea {...register("notes")} />
+        </FormField>
+      </Section>
       <FormActions
         cancelTo={purchase ? `${PURCHASES}/${purchase.id}` : PURCHASES}
         pending={mutation.isPending}
@@ -1211,7 +1211,9 @@ export const PurchaseDetailRoute = () => {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["operations", "purchases"] });
       void client.invalidateQueries({ queryKey: ["operations", "stock"] });
-      void client.invalidateQueries({ queryKey: ["operations", "stock-detail"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "stock-detail"],
+      });
       void client.invalidateQueries({
         queryKey: ["operations", "stock-products"],
       });
@@ -1377,6 +1379,8 @@ export const PurchaseDetailRoute = () => {
               <DataTable
                 caption="Purchase expenses"
                 rows={purchase.expenses ?? []}
+                emptyMessage="No expenses"
+                emptyDescription="Expenses recorded against this purchase will appear here."
                 rowKey={(row) => String(row.id)}
                 columns={[
                   {
@@ -1414,6 +1418,8 @@ export const PurchaseDetailRoute = () => {
               <DataTable
                 caption="Purchase payments"
                 rows={purchase.payments ?? []}
+                emptyMessage="No payments recorded"
+                emptyDescription="Vendor payments for this purchase will appear here."
                 rowKey={(row) => String(row.id)}
                 columns={[
                   {
@@ -1498,6 +1504,7 @@ export const PurchaseDetailRoute = () => {
                     rows={purchase.rcDueReceipts ?? []}
                     rowKey={(row) => String(row.id)}
                     emptyMessage="No RCD receipts recorded"
+                    emptyDescription="Receipts against this purchase's RC deposit will appear here."
                     columns={[
                       {
                         key: "date",
@@ -1688,9 +1695,7 @@ export const PurchaseRcDueReceiptRoute = () => {
         client.invalidateQueries({ queryKey: ["operations", "purchases"] }),
         invalidateOutstanding(client, "purchase-rc-due"),
       ]);
-      toast.success(
-        receiptId ? "RCD receipt updated" : "RCD receipt recorded",
-      );
+      toast.success(receiptId ? "RCD receipt updated" : "RCD receipt recorded");
       navigate(`${PURCHASES}/${id}`);
     },
     onError: async (error) => {
@@ -1765,6 +1770,8 @@ export const PurchaseReturnsListRoute = () => {
         <DataTable
           caption="Purchase returns"
           rows={rows}
+          emptyMessage="No purchase returns yet"
+          emptyDescription="Returned purchases will appear here once they are recorded."
           rowKey={(row) => String(row.id)}
           onRowClick={(row) => navigate(`${RETURNS}/${row.id}`)}
           columns={[
@@ -1907,6 +1914,8 @@ export const PurchaseReturnDetailRoute = () => {
               <DataTable
                 caption="Return receipts"
                 rows={item.receipts}
+                emptyMessage="No receipts recorded"
+                emptyDescription="Refunds received for this return will appear here."
                 rowKey={(row) => String(row.id)}
                 columns={[
                   {
@@ -1980,7 +1989,9 @@ export const PurchaseReturnCreateRoute = () => {
     }) => operationsApi.purchaseReturns.create(inventoryId!, value),
     onSuccess: (response) => {
       void client.invalidateQueries({ queryKey: ["operations", "stock"] });
-      void client.invalidateQueries({ queryKey: ["operations", "stock-detail"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "stock-detail"],
+      });
       void client.invalidateQueries({
         queryKey: ["operations", "stock-products"],
       });

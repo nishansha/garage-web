@@ -67,6 +67,7 @@ export const RecycleBinPage = () => {
             rows={query.data ?? []}
             rowKey={(record) => `${record.id}-${record.revision}`}
             emptyMessage={`No deleted ${AUDIT_ENTITY_LABELS[entityType].toLowerCase()} records.`}
+            emptyDescription="Deleted records will appear here after they are removed."
             onRowClick={setSelected}
             columns={[
               {

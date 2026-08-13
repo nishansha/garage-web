@@ -218,6 +218,9 @@ select.control option:disabled {
   font-size: 0.9rem;
   font-weight: 600;
 }
+.form-field:has(.textarea) {
+  grid-column: 1 / -1;
+}
 .form-field > span:first-child {
   color: #c7ced8;
 }
@@ -249,6 +252,12 @@ select.control option:disabled {
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.025) inset;
+}
+.card:has(> .state-panel:only-child) {
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .stat-card {
@@ -363,11 +372,6 @@ select.control option:disabled {
 .data-table__clickable-row:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: -2px;
-}
-.data-table .table-empty {
-  padding: 42px 16px;
-  color: var(--text-muted);
-  text-align: center;
 }
 .pagination {
   display: flex;
@@ -498,6 +502,9 @@ select.control option:disabled {
   justify-content: center;
   text-align: center;
   color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 .state-panel > svg {
   width: 42px;
@@ -1188,6 +1195,8 @@ select.control option:disabled {
 .standalone-state .state-panel {
   width: 100%;
   min-height: auto;
+  border: none;
+  background: transparent;
 }
 .drawer-scrim {
   display: none;

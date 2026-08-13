@@ -283,6 +283,7 @@ export const RolesManagementPage = () => {
             rows={rolesQuery.data ?? []}
             rowKey={(row) => String(row.id)}
             emptyMessage="No roles yet"
+            emptyDescription="Roles will appear here once they are created."
             onRowClick={(row) => {
               if (!isSuperAdminRoleCode(row.code) && can("ROLE", "VIEW")) {
                 navigate(`/more/roles/${row.id}/permissions`);
@@ -465,9 +466,7 @@ export const RolePermissionsPage = () => {
     setGrid((current) => {
       const next = { ...current };
       for (const resource of mod.resources) {
-        next[resource.id] = checked
-          ? new Set()
-          : new Set(RBAC_PRIVILEGES);
+        next[resource.id] = checked ? new Set() : new Set(RBAC_PRIVILEGES);
       }
       return next;
     });

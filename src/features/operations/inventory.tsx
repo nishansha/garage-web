@@ -263,6 +263,12 @@ const InventoryList = ({ sold }: { sold: boolean }) => {
         <DataTable<Stock>
           caption={sold ? "Sold inventory" : "Stock inventory"}
           rows={rows}
+          emptyMessage={sold ? "No sold inventory" : "No stock yet"}
+          emptyDescription={
+            sold
+              ? "Sold vehicles will appear here after a sale is recorded."
+              : "Available vehicles will appear here once they are purchased."
+          }
           rowKey={(row) => String(row.productId)}
           onRowClick={(row) =>
             navigate(`/inventory/${sold ? "sold" : "stock"}/${row.productId}`)
@@ -447,6 +453,8 @@ export const InventoryDetailRoute = () => {
               <DataTable
                 caption="Inventory expenses"
                 rows={item.expenses ?? []}
+                emptyMessage="No expenses"
+                emptyDescription="Expenses recorded against this vehicle will appear here."
                 rowKey={(row) => String(row.id)}
                 columns={[
                   {

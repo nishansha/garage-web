@@ -152,7 +152,8 @@ export function DataTable<T>({
   rows,
   rowKey,
   caption,
-  emptyMessage = "No records found",
+  emptyMessage,
+  emptyDescription,
   onRowClick,
 }: {
   columns: ReadonlyArray<DataColumn<T>>;
@@ -160,11 +161,16 @@ export function DataTable<T>({
   rowKey: (row: T) => string;
   caption: string;
   emptyMessage?: string;
+  emptyDescription?: string;
   onRowClick?: (row: T) => void;
 }) {
   const isInteractiveTarget = (target: EventTarget | null) =>
     target instanceof Element &&
     !!target.closest("a, button, input, select, textarea");
+
+  if (!rows.length) {
+    return <EmptyState title={emptyMessage} description={emptyDescription} />;
+  }
 
   return (
     <div className="table-wrap">
@@ -206,13 +212,6 @@ export function DataTable<T>({
               ))}
             </tr>
           ))}
-          {!rows.length && (
-            <tr>
-              <td className="table-empty" colSpan={columns.length}>
-                {emptyMessage}
-              </td>
-            </tr>
-          )}
         </tbody>
       </table>
     </div>
@@ -227,27 +226,30 @@ export const Pagination = ({
   page: number;
   pageCount: number;
   onPageChange: (page: number) => void;
-}) => (
-  <nav className="pagination" aria-label="Pagination">
-    <Button
-      variant="secondary"
-      disabled={page <= 1}
-      onClick={() => onPageChange(page - 1)}
-    >
-      Previous
-    </Button>
-    <span>
-      Page {page} of {Math.max(pageCount, 1)}
-    </span>
-    <Button
-      variant="secondary"
-      disabled={page >= pageCount}
-      onClick={() => onPageChange(page + 1)}
-    >
-      Next
-    </Button>
-  </nav>
-);
+}) => {
+  if (pageCount < 1) return null;
+  return (
+    <nav className="pagination" aria-label="Pagination">
+      <Button
+        variant="secondary"
+        disabled={page <= 1}
+        onClick={() => onPageChange(page - 1)}
+      >
+        Previous
+      </Button>
+      <span>
+        Page {page} of {pageCount}
+      </span>
+      <Button
+        variant="secondary"
+        disabled={page >= pageCount}
+        onClick={() => onPageChange(page + 1)}
+      >
+        Next
+      </Button>
+    </nav>
+  );
+};
 
 export const FormField = ({
   label,

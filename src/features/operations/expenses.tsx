@@ -166,6 +166,8 @@ export const GeneralExpensesListRoute = () => {
         <DataTable<Expense>
           caption="General expenses"
           rows={query.data?.expenses ?? []}
+          emptyMessage="No general expenses yet"
+          emptyDescription="Operating expenses will appear here once they are recorded."
           rowKey={(row) => String(row.id)}
           onRowClick={(row) => navigate(`${GENERAL}/${row.id}`)}
           columns={[
@@ -269,6 +271,8 @@ export const PurchaseExpensesListRoute = () => {
         <DataTable<PurchaseExpenseSummary>
           caption="Purchase expense summaries"
           rows={rows}
+          emptyMessage="No purchase expenses yet"
+          emptyDescription="Vehicles with purchase expenses will appear here."
           rowKey={(row) => String(row.id)}
           onRowClick={(row) => navigate(`${PURCHASE}/${row.id}`)}
           columns={[
@@ -409,10 +413,7 @@ const ExpenseEditor = ({
   });
   const submit = (data: ExpenseFormValues) => {
     clearErrors("amount");
-    if (
-      accountBalance != null &&
-      Number(data.amount) > accountBalance
-    ) {
+    if (accountBalance != null && Number(data.amount) > accountBalance) {
       setError("amount", {
         type: "validate",
         message: `Payment amount cannot exceed account balance (${formatCurrency(accountBalance)})`,
@@ -681,6 +682,8 @@ export const PurchaseExpenseDetailRoute = () => {
         <DataTable
           caption="Expenses for purchase"
           rows={query.data ?? []}
+          emptyMessage="No expenses"
+          emptyDescription="Expenses recorded against this purchase will appear here."
           rowKey={(row) => String(row.id)}
           columns={[
             {

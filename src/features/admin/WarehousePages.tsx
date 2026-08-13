@@ -25,7 +25,10 @@ import {
 } from "../../services/warehouse";
 
 const normalizeCode = (value: string) =>
-  value.replace(/[^a-zA-Z0-9_]/g, "").toUpperCase().slice(0, 50);
+  value
+    .replace(/[^a-zA-Z0-9_]/g, "")
+    .toUpperCase()
+    .slice(0, 50);
 
 const errorMessage = (error: unknown, fallback: string) =>
   error instanceof ApiError ? error.message : fallback;
@@ -219,6 +222,7 @@ export const WarehousesManagementPage = () => {
             rows={warehousesQuery.data ?? []}
             rowKey={(row) => String(row.id)}
             emptyMessage="No warehouses yet"
+            emptyDescription="Warehouses will appear here once they are added."
           />
         </Card>
       )}
@@ -232,10 +236,7 @@ export const WarehousesManagementPage = () => {
             <Button variant="secondary" onClick={() => setEditing(undefined)}>
               Cancel
             </Button>
-            <Button
-              loading={saveWarehouse.isPending}
-              onClick={validateAndSave}
-            >
+            <Button loading={saveWarehouse.isPending} onClick={validateAndSave}>
               {editing ? "Save changes" : "Create warehouse"}
             </Button>
           </>
@@ -309,9 +310,7 @@ export const WarehousesManagementPage = () => {
         danger
         loading={removeWarehouse.isPending}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={() =>
-          deleteTarget && removeWarehouse.mutate(deleteTarget)
-        }
+        onConfirm={() => deleteTarget && removeWarehouse.mutate(deleteTarget)}
       />
     </>
   );

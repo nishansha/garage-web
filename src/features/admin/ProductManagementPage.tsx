@@ -413,6 +413,7 @@ export const ProductManagementPage = () => {
           rows={listQuery.data ?? []}
           rowKey={(item) => String(item.id)}
           emptyMessage={`No ${config.label.toLowerCase()} yet`}
+          emptyDescription={`${config.label} will appear here once they are added.`}
         />
       )}
       <Modal

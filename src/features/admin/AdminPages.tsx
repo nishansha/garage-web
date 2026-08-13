@@ -89,6 +89,8 @@ export const VendorsPage = () => {
             caption="Vendors"
             columns={vendorColumns}
             rows={query.data?.vendors ?? []}
+            emptyMessage="No vendors yet"
+            emptyDescription="Vendors will appear here once they are added."
             rowKey={(row) => String(row.id)}
           />
           <Pagination
@@ -132,6 +134,8 @@ export const CustomersPage = () => {
             caption="Customers"
             columns={vendorColumns}
             rows={query.data?.customers ?? []}
+            emptyMessage="No customers yet"
+            emptyDescription="Customers will appear here once they are added."
             rowKey={(row) => String(row.id)}
           />
           <Pagination
@@ -351,6 +355,7 @@ export const StaffManagementPage = () => {
           rows={staffQuery.data}
           rowKey={(row) => String(row.id)}
           emptyMessage="No team members yet"
+          emptyDescription="Staff accounts will appear here once they are added."
         />
       )}
       <Modal

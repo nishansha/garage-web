@@ -346,6 +346,8 @@ export const SalesListRoute = () => {
         <DataTable
           caption="Sales"
           rows={rows}
+          emptyMessage="No sales yet"
+          emptyDescription="New sales will appear here once they are recorded."
           rowKey={(row) => String(row.id)}
           onRowClick={(row) => navigate(`${SALES}/${row.id}`)}
           columns={[
@@ -488,7 +490,9 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
     onSuccess: (response) => {
       void client.invalidateQueries({ queryKey: ["operations", "sales"] });
       void client.invalidateQueries({ queryKey: ["operations", "stock"] });
-      void client.invalidateQueries({ queryKey: ["operations", "stock-detail"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "stock-detail"],
+      });
       void client.invalidateQueries({
         queryKey: ["operations", "stock-products"],
       });
@@ -1177,7 +1181,9 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
                     <Select
                       name={`exchangeExpenses.${index}.typeId`}
                       required
-                      defaultValue={expense.typeId ? String(expense.typeId) : ""}
+                      defaultValue={
+                        expense.typeId ? String(expense.typeId) : ""
+                      }
                     >
                       <option value="">Select type</option>
                       {lookup("EXPENSE_TYPE").map((item) => (
@@ -1215,9 +1221,7 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
                   <FormField
                     label="Payment account"
                     required
-                    error={
-                      errors[`exchangeExpenses.${index}.paymentAccountId`]
-                    }
+                    error={errors[`exchangeExpenses.${index}.paymentAccountId`]}
                     hint={
                       expense.paymentAccountId > 0 && selectedBalance != null
                         ? `Available balance: ${formatCurrency(selectedBalance)}`
@@ -1234,7 +1238,8 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
                           : ""
                       }
                       onChange={(event) => {
-                        const paymentAccountId = Number(event.target.value) || 0;
+                        const paymentAccountId =
+                          Number(event.target.value) || 0;
                         setExchangeExpenses((items) =>
                           items.map((item, row) =>
                             row === index
@@ -1367,7 +1372,9 @@ export const SaleDetailRoute = () => {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["operations", "sales"] });
       void client.invalidateQueries({ queryKey: ["operations", "stock"] });
-      void client.invalidateQueries({ queryKey: ["operations", "stock-detail"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "stock-detail"],
+      });
       void client.invalidateQueries({
         queryKey: ["operations", "stock-products"],
       });
@@ -1478,6 +1485,8 @@ export const SaleDetailRoute = () => {
               <DataTable
                 caption="Sale amount splits"
                 rows={sale.amountSplits ?? []}
+                emptyMessage="No amount splits"
+                emptyDescription="Payment splits for this sale will appear here."
                 rowKey={(row) => String(row.id)}
                 columns={[
                   {
@@ -1498,6 +1507,8 @@ export const SaleDetailRoute = () => {
               <DataTable
                 caption="Sale payments"
                 rows={sale.payments ?? []}
+                emptyMessage="No payments recorded"
+                emptyDescription="Customer receipts for this sale will appear here."
                 rowKey={(row) => String(row.id)}
                 columns={[
                   {
@@ -1708,6 +1719,8 @@ export const SaleReturnsListRoute = () => {
         <DataTable
           caption="Sale returns"
           rows={rows}
+          emptyMessage="No sale returns yet"
+          emptyDescription="Returned sales will appear here once they are recorded."
           rowKey={(row) => String(row.id)}
           onRowClick={(row) => navigate(`${RETURNS}/${row.id}`)}
           columns={[
@@ -1850,6 +1863,8 @@ export const SaleReturnDetailRoute = () => {
               <DataTable
                 caption="Return deductions"
                 rows={item.deductions ?? []}
+                emptyMessage="No deductions"
+                emptyDescription="Deductions applied to this return will appear here."
                 rowKey={(row) => String(row.id)}
                 columns={[
                   {
@@ -1886,6 +1901,8 @@ export const SaleReturnDetailRoute = () => {
               <DataTable
                 caption="Return refunds"
                 rows={item.refunds ?? []}
+                emptyMessage="No refunds recorded"
+                emptyDescription="Refunds issued for this return will appear here."
                 rowKey={(row) => String(row.id)}
                 columns={[
                   {
@@ -2050,7 +2067,9 @@ export const SaleReturnCreateRoute = () => {
         queryKey: ["operations", "sale-returns"],
       });
       void client.invalidateQueries({ queryKey: ["operations", "stock"] });
-      void client.invalidateQueries({ queryKey: ["operations", "stock-detail"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "stock-detail"],
+      });
       void client.invalidateQueries({
         queryKey: ["operations", "stock-products"],
       });
