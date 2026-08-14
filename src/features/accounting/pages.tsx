@@ -2781,6 +2781,11 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
     report.exchangeGain !== 0 ||
     report.exchangeReturnLoss !== 0 ||
     report.purchaseReturnLoss !== 0;
+  const salesCounts: Record<SalesFilter, number> = {
+    sold: report.salesTotals.count,
+    returned: report.salesTotals.returnCount,
+    all: report.salesTotals.count + report.salesTotals.returnCount,
+  };
   const profitable = report.netProfit >= 0;
   const flowMax = Math.max(
     report.totalRevenue,
@@ -2947,47 +2952,50 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
                 onClick={() => setSalesFilter(filter)}
               >
                 {humanize(filter)}
+                <span className="pl-pill__count">{salesCounts[filter]}</span>
               </button>
             ))}
           </div>
-          {filteredSales.length ? (
-            <div className="pl-list">
-              {filteredSales.map((sale) => (
-                <article
-                  className={`pl-item${sale.returned ? " is-muted" : ""}`}
-                  key={sale.saleId}
-                >
-                  <div className="pl-item__top">
-                    <strong>{sale.vehicleNo}</strong>
-                    <strong className="pl-item__amount">
-                      {money(sale.saleRate)}
-                    </strong>
-                  </div>
-                  <span className="pl-item__meta">
-                    {sale.customerName?.trim() || "Walk-in"}
-                  </span>
-                  <div className="pl-item__foot">
-                    <span className={positive(sale.profit)}>
-                      Profit {money(sale.profit)}
+          <div className="pl-scroll">
+            {filteredSales.length ? (
+              <div className="pl-list">
+                {filteredSales.map((sale) => (
+                  <article
+                    className={`pl-item${sale.returned ? " is-muted" : ""}`}
+                    key={sale.saleId}
+                  >
+                    <div className="pl-item__top">
+                      <strong>{sale.vehicleNo}</strong>
+                      <strong className="pl-item__amount">
+                        {money(sale.saleRate)}
+                      </strong>
+                    </div>
+                    <span className="pl-item__meta">
+                      {sale.customerName?.trim() || "Walk-in"}
                     </span>
-                    <span className="pl-item__badges">
-                      {sale.returned && <Badge>Returned</Badge>}
-                      {sale.pendingAmount > 0 && (
-                        <Badge tone="warning">
-                          {money(sale.pendingAmount)} due
-                        </Badge>
-                      )}
-                    </span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p className="pl-empty">
-              No {salesFilter === "all" ? "" : `${salesFilter} `}sales this
-              month.
-            </p>
-          )}
+                    <div className="pl-item__foot">
+                      <span className={positive(sale.profit)}>
+                        Profit {money(sale.profit)}
+                      </span>
+                      <span className="pl-item__badges">
+                        {sale.returned && <Badge>Returned</Badge>}
+                        {sale.pendingAmount > 0 && (
+                          <Badge tone="warning">
+                            {money(sale.pendingAmount)} due
+                          </Badge>
+                        )}
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="pl-empty">
+                No {salesFilter === "all" ? "" : `${salesFilter} `}sales this
+                month.
+              </p>
+            )}
+          </div>
         </Card>
 
         <Card className="pl-panel pl-panel--expenses">
@@ -3005,28 +3013,30 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
               </div>
             </div>
           </div>
-          {expenses.length ? (
-            <div className="pl-list">
-              {expenses.map((expense, index) => (
-                <article
-                  className="pl-item"
-                  key={`${expense.date}-${expense.expenseName}-${index}`}
-                >
-                  <div className="pl-item__top">
-                    <strong>{expense.expenseName}</strong>
-                    <strong className="pl-item__amount amount-out">
-                      {money(expense.amount)}
-                    </strong>
-                  </div>
-                  <span className="pl-item__meta">
-                    {formatDate(expense.date)} · {expense.accountName}
-                  </span>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p className="pl-empty">No expenses this month.</p>
-          )}
+          <div className="pl-scroll">
+            {expenses.length ? (
+              <div className="pl-list">
+                {expenses.map((expense, index) => (
+                  <article
+                    className="pl-item"
+                    key={`${expense.date}-${expense.expenseName}-${index}`}
+                  >
+                    <div className="pl-item__top">
+                      <strong>{expense.expenseName}</strong>
+                      <strong className="pl-item__amount amount-out">
+                        {money(expense.amount)}
+                      </strong>
+                    </div>
+                    <span className="pl-item__meta">
+                      {formatDate(expense.date)} · {expense.accountName}
+                    </span>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="pl-empty">No expenses this month.</p>
+            )}
+          </div>
         </Card>
       </div>
 
@@ -3046,67 +3056,69 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
               </div>
             </div>
           </div>
-          {directEntries.length ? (
-            (["INCOME", "EXPENSE", "OTHER"] as const).map((group) => {
-              const total = groupTotals[group];
-              if (!total.count && !groupedEntries[group].length) return null;
-              return (
-                <section className="pl-group" key={group}>
-                  <div className="pl-group__head">
-                    <div>
-                      <h3>{humanize(group)}</h3>
-                      <span>
-                        {total.count} item{total.count === 1 ? "" : "s"}
-                      </span>
-                    </div>
-                    <strong
-                      className={
-                        group === "INCOME"
-                          ? "amount-in"
-                          : group === "EXPENSE"
-                            ? "amount-out"
-                            : "muted"
-                      }
-                    >
-                      {money(total.amount)}
-                    </strong>
-                  </div>
-                  {group === "OTHER" && (
-                    <p className="pl-group__note">
-                      Capital/drawings — not counted in profit
-                    </p>
-                  )}
-                  {groupedEntries[group].map((entry, index) => (
-                    <article
-                      className={`pl-item${group === "OTHER" ? " is-muted" : ""}`}
-                      key={`${entry.date}-${entry.name}-${index}`}
-                    >
-                      <div className="pl-item__top">
-                        <strong>{entry.name}</strong>
-                        <strong
-                          className={`pl-item__amount${
-                            group === "OTHER"
-                              ? " muted"
-                              : entry.direction === "OUT"
-                                ? " amount-out"
-                                : " amount-in"
-                          }`}
-                        >
-                          {entry.direction === "OUT" ? "−" : ""}
-                          {money(entry.amount)}
-                        </strong>
+          <div className="pl-scroll">
+            {directEntries.length ? (
+              (["INCOME", "EXPENSE", "OTHER"] as const).map((group) => {
+                const total = groupTotals[group];
+                if (!total.count && !groupedEntries[group].length) return null;
+                return (
+                  <section className="pl-group" key={group}>
+                    <div className="pl-group__head">
+                      <div>
+                        <h3>{humanize(group)}</h3>
+                        <span>
+                          {total.count} item{total.count === 1 ? "" : "s"}
+                        </span>
                       </div>
-                      <span className="pl-item__meta">
-                        {entry.category} · {entry.accountName}
-                      </span>
-                    </article>
-                  ))}
-                </section>
-              );
-            })
-          ) : (
-            <p className="pl-empty">No direct entries this month.</p>
-          )}
+                      <strong
+                        className={
+                          group === "INCOME"
+                            ? "amount-in"
+                            : group === "EXPENSE"
+                              ? "amount-out"
+                              : "muted"
+                        }
+                      >
+                        {money(total.amount)}
+                      </strong>
+                    </div>
+                    {group === "OTHER" && (
+                      <p className="pl-group__note">
+                        Capital/drawings — not counted in profit
+                      </p>
+                    )}
+                    {groupedEntries[group].map((entry, index) => (
+                      <article
+                        className={`pl-item${group === "OTHER" ? " is-muted" : ""}`}
+                        key={`${entry.date}-${entry.name}-${index}`}
+                      >
+                        <div className="pl-item__top">
+                          <strong>{entry.name}</strong>
+                          <strong
+                            className={`pl-item__amount${
+                              group === "OTHER"
+                                ? " muted"
+                                : entry.direction === "OUT"
+                                  ? " amount-out"
+                                  : " amount-in"
+                            }`}
+                          >
+                            {entry.direction === "OUT" ? "−" : ""}
+                            {money(entry.amount)}
+                          </strong>
+                        </div>
+                        <span className="pl-item__meta">
+                          {entry.category} · {entry.accountName}
+                        </span>
+                      </article>
+                    ))}
+                  </section>
+                );
+              })
+            ) : (
+              <p className="pl-empty">No direct entries this month.</p>
+            )}
+          </div>
         </Card>
 
         <Card className="pl-panel pl-panel--cash">
@@ -3136,82 +3148,84 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
         </Card>
       </div>
 
-      <Card className="pl-panel pl-panel--outstanding">
-        <div className="pl-panel__heading">
-          <span className="pl-panel__icon" aria-hidden="true">
-            <Wallet size={18} />
-          </span>
-          <h2>Outstanding</h2>
-        </div>
-        <div className="pl-metrics">
-          <div className="pl-metric is-in">
-            <span>Receivables</span>
-            <strong className="amount-in">
-              {money(report.totalReceivables)}
-            </strong>
-            <small>Till date</small>
-            <strong className="amount-in">
-              {money(report.totalReceivablesTillDate)}
-            </strong>
+      <div className="pl-columns">
+        <Card className="pl-panel pl-panel--outstanding">
+          <div className="pl-panel__heading">
+            <span className="pl-panel__icon" aria-hidden="true">
+              <Wallet size={18} />
+            </span>
+            <h2>Outstanding</h2>
           </div>
-          <div className="pl-metric is-out">
-            <span>Payables</span>
-            <strong className="amount-out">
-              {money(report.totalPayables)}
-            </strong>
-            <small>Till date</small>
-            <strong className="amount-out">
-              {money(report.totalPayablesTillDate)}
-            </strong>
+          <div className="pl-metrics">
+            <div className="pl-metric is-in">
+              <span>Receivables</span>
+              <strong className="amount-in">
+                {money(report.totalReceivables)}
+              </strong>
+              <small>Till date</small>
+              <strong className="amount-in">
+                {money(report.totalReceivablesTillDate)}
+              </strong>
+            </div>
+            <div className="pl-metric is-out">
+              <span>Payables</span>
+              <strong className="amount-out">
+                {money(report.totalPayables)}
+              </strong>
+              <small>Till date</small>
+              <strong className="amount-out">
+                {money(report.totalPayablesTillDate)}
+              </strong>
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
 
-      <Card className="pl-panel pl-panel--purchases">
-        <details className="pl-fold">
-          <summary>
-            <span className="pl-panel__heading">
+        <Card className="pl-panel pl-panel--purchases">
+          <div className="pl-panel__header">
+            <div className="pl-panel__heading">
               <span className="pl-panel__icon" aria-hidden="true">
                 <ShoppingCart size={18} />
               </span>
-              <span>
-                <strong>Purchases</strong>
-                <small>
+              <div>
+                <h2>Purchases</h2>
+                <p>
                   {report.purchaseTotals.count} vehicles ·{" "}
                   {money(report.purchaseTotals.landedCost)} spent
-                </small>
-              </span>
-            </span>
-          </summary>
-          {purchases.length ? (
-            <div className="pl-list">
-              {purchases.map((purchase) => (
-                <article
-                  className={`pl-item${purchase.returned ? " is-muted" : ""}`}
-                  key={purchase.purchaseId}
-                >
-                  <div className="pl-item__top">
-                    <strong>{purchase.vehicleNo}</strong>
-                    <strong className="pl-item__amount">
-                      {money(purchase.landedCost)}
-                    </strong>
-                  </div>
-                  <span className="pl-item__meta">
-                    {purchase.vendorName} · {formatDate(purchase.purchaseDate)}
-                  </span>
-                  {purchase.returned && (
-                    <div className="pl-item__foot">
-                      <Badge>Returned</Badge>
-                    </div>
-                  )}
-                </article>
-              ))}
+                </p>
+              </div>
             </div>
-          ) : (
-            <p className="pl-empty">No purchases this month.</p>
-          )}
-        </details>
-      </Card>
+          </div>
+          <div className="pl-scroll">
+            {purchases.length ? (
+              <div className="pl-list">
+                {purchases.map((purchase) => (
+                  <article
+                    className={`pl-item${purchase.returned ? " is-muted" : ""}`}
+                    key={purchase.purchaseId}
+                  >
+                    <div className="pl-item__top">
+                      <strong>{purchase.vehicleNo}</strong>
+                      <strong className="pl-item__amount">
+                        {money(purchase.landedCost)}
+                      </strong>
+                    </div>
+                    <span className="pl-item__meta">
+                      {purchase.vendorName} · {formatDate(purchase.purchaseDate)}
+                    </span>
+                    {purchase.returned && (
+                      <div className="pl-item__foot">
+                        <Badge>Returned</Badge>
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="pl-empty">No purchases this month.</p>
+            )}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 };

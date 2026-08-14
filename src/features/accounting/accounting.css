@@ -673,6 +673,9 @@
   --pl-accent: var(--primary);
   position: relative;
   padding: 1.2rem 1.25rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   overflow: hidden;
   border-color: color-mix(in srgb, var(--pl-accent) 18%, var(--border));
   background:
@@ -792,6 +795,10 @@
   flex: 1;
   min-height: 34px;
   padding: 0.4rem 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   border: 0;
   border-radius: 999px;
   background: transparent;
@@ -801,6 +808,12 @@
   cursor: pointer;
 }
 
+.pl-pill__count {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.72;
+}
+
 .pl-pill:hover:not(.is-active) {
   color: var(--text);
 }
@@ -808,6 +821,28 @@
 .pl-pill.is-active {
   background: var(--primary);
   color: #06110d;
+}
+
+.pl-pill.is-active .pl-pill__count {
+  opacity: 0.8;
+}
+
+.pl-scroll {
+  margin-top: 0.35rem;
+  min-height: 0;
+  max-height: 22rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.pl-scroll > .pl-list {
+  margin-top: 0;
+}
+
+.pl-scroll > .pl-group:first-child {
+  margin-top: 0.15rem;
 }
 
 .pl-list {
@@ -885,6 +920,11 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
+}
+
+.pl-panel--outstanding .pl-metrics {
+  flex: 1;
+  align-content: center;
 }
 
 .pl-metric {
