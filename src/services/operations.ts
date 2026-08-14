@@ -803,9 +803,7 @@ export const operationsApi = {
         `v1/sales/${id}/payments/${paymentId}`,
         cleanPayment(value),
       ),
-    receivables: () => api.get<SalesReceivables>("v1/sales/receivables"),
-    financeReceivables: () =>
-      api.get<FinanceReceivables>("v1/reports/finance-receivables"),
+    receivables: () => api.get<Outstandings>("v1/sales/receivables"),
   },
   saleReturns: {
     list: (page = 0, size = 20, filters?: SearchInput) =>
