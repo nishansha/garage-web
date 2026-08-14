@@ -755,7 +755,7 @@
   }
 }
 
-.purchase-order {
+.order-document {
   max-width: 920px;
   margin: 0 auto 2rem;
   padding: 1.75rem 1.85rem 1.5rem;
@@ -771,7 +771,7 @@
   box-shadow: var(--shadow);
 }
 
-.purchase-order__masthead {
+.order-document__masthead {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -780,7 +780,7 @@
   border-bottom: 1px solid var(--border);
 }
 
-.purchase-order__kicker {
+.order-document__kicker {
   margin: 0 0 0.35rem;
   color: var(--primary);
   font-size: 0.72rem;
@@ -789,7 +789,7 @@
   text-transform: uppercase;
 }
 
-.purchase-order__masthead h2 {
+.order-document__masthead h2 {
   margin: 0;
   color: var(--text);
   font-size: clamp(1.45rem, 2vw, 1.85rem);
@@ -797,43 +797,43 @@
   line-height: 1.15;
 }
 
-.purchase-order__subtitle {
+.order-document__subtitle {
   margin: 0.4rem 0 0;
   color: var(--text-muted);
   font-size: 0.95rem;
 }
 
-.purchase-order__meta {
+.order-document__meta {
   display: grid;
   justify-items: end;
   gap: 0.55rem;
   text-align: right;
 }
 
-.purchase-order__code {
+.order-document__code {
   color: var(--text);
   font-size: 1.05rem;
   letter-spacing: 0.02em;
 }
 
-.purchase-order__meta dl {
+.order-document__meta dl {
   margin: 0.15rem 0 0;
   display: grid;
   gap: 0.2rem;
 }
 
-.purchase-order__meta dl div,
-.purchase-order__totals dl div,
-.purchase-order__rcd dl div,
-.purchase-order-modal__summary div {
+.order-document__meta dl div,
+.order-document__totals dl div,
+.order-document__callout dl div,
+.order-document-modal__summary div {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 0.75rem;
   align-items: baseline;
 }
 
-.purchase-order dt,
-.purchase-order-modal__summary dt {
+.order-document dt,
+.order-document-modal__summary dt {
   color: var(--text-subtle);
   font-size: 0.75rem;
   font-weight: 600;
@@ -841,22 +841,26 @@
   text-transform: uppercase;
 }
 
-.purchase-order dd,
-.purchase-order-modal__summary dd {
+.order-document dd,
+.order-document-modal__summary dd {
   margin: 0;
   color: var(--text);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.purchase-order__tabs {
+.order-document a {
+  color: var(--primary);
+}
+
+.order-document__tabs {
   margin: 1rem 0 0;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
 
-.purchase-order__tabs button {
+.order-document__tabs button {
   padding: 0.45rem 0.8rem;
   display: inline-flex;
   align-items: center;
@@ -868,12 +872,12 @@
   cursor: pointer;
 }
 
-.purchase-order__tabs button:hover {
+.order-document__tabs button:hover {
   border-color: var(--primary);
   background: var(--primary-soft);
 }
 
-.purchase-order__count {
+.order-document__count {
   min-width: 1.35rem;
   padding: 0.05rem 0.4rem;
   border-radius: 999px;
@@ -884,14 +888,14 @@
   text-align: center;
 }
 
-.purchase-order__parties {
+.order-document__parties {
   margin-top: 1.35rem;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.25rem;
 }
 
-.purchase-order h3 {
+.order-document h3 {
   margin: 0 0 0.45rem;
   color: var(--text-subtle);
   font-size: 0.72rem;
@@ -900,19 +904,19 @@
   text-transform: uppercase;
 }
 
-.purchase-order__parties strong,
-.purchase-order__vehicle p {
+.order-document__parties strong,
+.order-document__vehicle p {
   color: var(--text);
 }
 
-.purchase-order__parties p,
-.purchase-order__notes p {
+.order-document__parties p,
+.order-document__notes p {
   margin: 0.15rem 0 0;
   color: var(--text-muted);
   line-height: 1.45;
 }
 
-.purchase-order__vehicle {
+.order-document__vehicle {
   margin-top: 1.25rem;
   padding: 0.9rem 1rem;
   border: 1px solid var(--border);
@@ -920,26 +924,26 @@
   background: var(--surface);
 }
 
-.purchase-order__vehicle p {
+.order-document__vehicle p {
   margin: 0;
   font-size: 0.92rem;
 }
 
-.purchase-order__lines {
+.order-document__lines {
   width: 100%;
   margin-top: 1.35rem;
   border-collapse: collapse;
 }
 
-.purchase-order__lines th,
-.purchase-order__lines td {
+.order-document__lines th,
+.order-document__lines td {
   padding: 0.75rem 0.5rem;
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
 }
 
-.purchase-order__lines th {
+.order-document__lines th {
   color: var(--text-subtle);
   font-size: 0.72rem;
   font-weight: 700;
@@ -947,57 +951,57 @@
   text-transform: uppercase;
 }
 
-.purchase-order__lines th:nth-child(2),
-.purchase-order__lines td:nth-child(2),
-.purchase-order__lines th:nth-child(3),
-.purchase-order__lines td:nth-child(3),
-.purchase-order__lines th:nth-child(4),
-.purchase-order__lines td:nth-child(4) {
+.order-document__lines th:nth-child(2),
+.order-document__lines td:nth-child(2),
+.order-document__lines th:nth-child(3),
+.order-document__lines td:nth-child(3),
+.order-document__lines th:nth-child(4),
+.order-document__lines td:nth-child(4) {
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
-.purchase-order__lines td strong {
+.order-document__lines td strong {
   display: block;
   color: var(--text);
 }
 
-.purchase-order__lines td small {
+.order-document__lines td small {
   display: block;
   margin-top: 0.2rem;
   color: var(--text-subtle);
 }
 
-.purchase-order__totals {
+.order-document__totals {
   margin-top: 1rem;
   display: flex;
   justify-content: flex-end;
 }
 
-.purchase-order__totals dl {
+.order-document__totals dl {
   width: min(22rem, 100%);
   margin: 0;
   display: grid;
   gap: 0.45rem;
 }
 
-.purchase-order__totals dd {
+.order-document__totals dd {
   text-align: right;
 }
 
-.purchase-order__total {
+.order-document__total {
   padding-top: 0.5rem;
   border-top: 1px solid var(--border-strong);
 }
 
-.purchase-order__total dt,
-.purchase-order__total dd {
+.order-document__total dt,
+.order-document__total dd {
   color: var(--text);
   font-size: 1.05rem;
 }
 
-.purchase-order__rcd {
+.order-document__callout {
   margin-top: 1.25rem;
   padding: 0.95rem 1rem;
   border: 1px solid color-mix(in srgb, var(--warning) 40%, var(--border));
@@ -1005,32 +1009,42 @@
   background: color-mix(in srgb, var(--warning) 8%, var(--surface));
 }
 
-.purchase-order__rcd dl {
+.order-document__callout--info {
+  border-color: color-mix(in srgb, var(--info) 40%, var(--border));
+  background: color-mix(in srgb, var(--info) 8%, var(--surface));
+}
+
+.order-document__callout dl {
   margin: 0.35rem 0 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
 }
 
-.purchase-order__rcd dl div {
+.order-document__callout dl div {
   grid-template-columns: 1fr;
   gap: 0.2rem;
 }
 
-.purchase-order__notes {
+.order-document__callout p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.order-document__notes {
   margin-top: 1.25rem;
   padding-top: 1rem;
   border-top: 1px dashed var(--border);
 }
 
-.purchase-order-modal__summary {
+.order-document-modal__summary {
   margin: 0 0 1.15rem;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
 }
 
-.purchase-order-modal__summary div {
+.order-document-modal__summary div {
   padding: 0.75rem 0.85rem;
   grid-template-columns: 1fr;
   gap: 0.3rem;
@@ -1040,17 +1054,17 @@
 }
 
 @media (max-width: 720px) {
-  .purchase-order {
+  .order-document {
     padding: 1.2rem;
   }
-  .purchase-order__masthead,
-  .purchase-order__parties,
-  .purchase-order__rcd dl,
-  .purchase-order-modal__summary {
+  .order-document__masthead,
+  .order-document__parties,
+  .order-document__callout dl,
+  .order-document-modal__summary {
     grid-template-columns: 1fr;
   }
-  .purchase-order__masthead,
-  .purchase-order__meta {
+  .order-document__masthead,
+  .order-document__meta {
     display: grid;
     justify-items: start;
     text-align: left;
@@ -1063,7 +1077,7 @@
   .topbar,
   .drawer-scrim,
   .page-header__actions,
-  .purchase-order__tabs,
+  .order-document__tabs,
   .modal-backdrop {
     display: none !important;
   }
@@ -1079,7 +1093,7 @@
     background: #fff;
   }
 
-  .purchase-order {
+  .order-document {
     max-width: none;
     margin: 0;
     padding: 0;
@@ -1090,26 +1104,27 @@
     color: #111;
   }
 
-  .purchase-order__kicker,
-  .purchase-order h3,
-  .purchase-order dt,
-  .purchase-order__lines th,
-  .purchase-order__lines td small,
-  .purchase-order__parties p,
-  .purchase-order__notes p {
+  .order-document__kicker,
+  .order-document h3,
+  .order-document dt,
+  .order-document__lines th,
+  .order-document__lines td small,
+  .order-document__parties p,
+  .order-document__notes p,
+  .order-document__callout p {
     color: #555;
   }
 
-  .purchase-order__masthead h2,
-  .purchase-order__code,
-  .purchase-order dd,
-  .purchase-order__parties strong,
-  .purchase-order__lines td strong {
+  .order-document__masthead h2,
+  .order-document__code,
+  .order-document dd,
+  .order-document__parties strong,
+  .order-document__lines td strong {
     color: #111;
   }
 
-  .purchase-order__vehicle,
-  .purchase-order__rcd {
+  .order-document__vehicle,
+  .order-document__callout {
     background: #f7f7f7;
     border-color: #ddd;
   }

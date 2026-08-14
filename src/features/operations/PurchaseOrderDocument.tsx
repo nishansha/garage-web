@@ -64,12 +64,12 @@ export const PurchaseOrderDocument = ({
 
   return (
     <>
-      <article className="purchase-order">
-        <header className="purchase-order__masthead">
+      <article className="order-document">
+        <header className="order-document__masthead">
           <div>
-            <p className="purchase-order__kicker">Purchase order</p>
+            <p className="order-document__kicker">Purchase order</p>
             <h2>{purchase.vehicleNo}</h2>
-            <p className="purchase-order__subtitle">
+            <p className="order-document__subtitle">
               {joinMeta([
                 purchase.brandName,
                 purchase.modelName,
@@ -77,13 +77,17 @@ export const PurchaseOrderDocument = ({
               ])}
             </p>
           </div>
-          <div className="purchase-order__meta">
+          <div className="order-document__meta">
             {purchase.code && (
-              <strong className="purchase-order__code">#PO-{purchase.id}</strong>
+              <strong className="order-document__code">#PO-{purchase.id}</strong>
             )}
-            <Badge tone={paymentTone(purchase.paymentStatus)}>
-              {purchase.paymentStatus ?? "PENDING"}
-            </Badge>
+            {purchase.returned ? (
+              <Badge tone="warning">Returned</Badge>
+            ) : (
+              <Badge tone={paymentTone(purchase.paymentStatus)}>
+                {purchase.paymentStatus ?? "PENDING"}
+              </Badge>
+            )}
             <dl>
               <div>
                 <dt>Date</dt>
@@ -97,20 +101,20 @@ export const PurchaseOrderDocument = ({
           </div>
         </header>
 
-        <nav className="purchase-order__tabs" aria-label="Related records">
+        <nav className="order-document__tabs" aria-label="Related records">
           <button type="button" onClick={() => setModal("payments")}>
             Payments
-            <span className="purchase-order__count">{payments.length}</span>
+            <span className="order-document__count">{payments.length}</span>
           </button>
           {hasRcd && (
             <button type="button" onClick={() => setModal("rcd")}>
               RCD
-              <span className="purchase-order__count">{receipts.length}</span>
+              <span className="order-document__count">{receipts.length}</span>
             </button>
           )}
         </nav>
 
-        <section className="purchase-order__parties">
+        <section className="order-document__parties">
           <div>
             <h3>Vendor</h3>
             <strong>{purchase.ownerName ?? "—"}</strong>
@@ -120,17 +124,17 @@ export const PurchaseOrderDocument = ({
           <div>
             <h3>Pickup / warehouse</h3>
             <strong>{purchase.warehouseName ?? "—"}</strong>
-            <p>{purchase.pickupStaff ?? "No pickup staff"}</p>
+            <p>{purchase.pickupStaffName ?? "No pickup staff"}</p>
             <p>{purchase.pickupLocation ?? "—"}</p>
           </div>
         </section>
 
-        <section className="purchase-order__vehicle">
+        <section className="order-document__vehicle">
           <h3>{purchase.code}</h3>
           <p>{vehicleMeta || "—"}</p>
         </section>
 
-        <table className="purchase-order__lines">
+        <table className="order-document__lines">
           <caption className="sr-only">Order lines</caption>
           <thead>
             <tr>
@@ -169,7 +173,7 @@ export const PurchaseOrderDocument = ({
           </tbody>
         </table>
 
-        <div className="purchase-order__totals">
+        <div className="order-document__totals">
           <dl>
             <div>
               <dt>Purchase rate</dt>
@@ -189,7 +193,7 @@ export const PurchaseOrderDocument = ({
                 <Money value={expenseTotal(purchase)} />
               </dd>
             </div>
-            <div className="purchase-order__total">
+            <div className="order-document__total">
               <dt>Total</dt>
               <dd>
                 <Money value={purchase.totalCost} />
@@ -211,7 +215,7 @@ export const PurchaseOrderDocument = ({
         </div>
 
         {hasRcd && (
-          <aside className="purchase-order__rcd">
+          <aside className="order-document__callout">
             <h3>RC Deposit</h3>
             <dl>
               <div>
@@ -237,7 +241,7 @@ export const PurchaseOrderDocument = ({
         )}
 
         {purchase.notes && (
-          <section className="purchase-order__notes">
+          <section className="order-document__notes">
             <h3>Notes</h3>
             <p>{purchase.notes}</p>
           </section>
@@ -262,7 +266,7 @@ export const PurchaseOrderDocument = ({
           ) : undefined
         }
       >
-        <dl className="purchase-order-modal__summary">
+        <dl className="order-document-modal__summary">
           <div>
             <dt>Paid</dt>
             <dd>
@@ -275,14 +279,16 @@ export const PurchaseOrderDocument = ({
               <Money value={purchase.pendingAmount} />
             </dd>
           </div>
-          <div>
-            <dt>Status</dt>
-            <dd>
-              <Badge tone={paymentTone(purchase.paymentStatus)}>
-                {purchase.paymentStatus ?? "PENDING"}
-              </Badge>
-            </dd>
-          </div>
+          {!purchase.returned && (
+            <div>
+              <dt>Status</dt>
+              <dd>
+                <Badge tone={paymentTone(purchase.paymentStatus)}>
+                  {purchase.paymentStatus ?? "PENDING"}
+                </Badge>
+              </dd>
+            </div>
+          )}
         </dl>
         <DataTable
           caption="Purchase payments"
@@ -354,7 +360,7 @@ export const PurchaseOrderDocument = ({
           ) : undefined
         }
       >
-        <dl className="purchase-order-modal__summary">
+        <dl className="order-document-modal__summary">
           <div>
             <dt>RCD amount</dt>
             <dd>

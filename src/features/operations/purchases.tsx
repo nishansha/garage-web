@@ -59,6 +59,7 @@ import {
 } from "./common";
 import { ApiError } from "../../lib/api";
 import { PurchaseOrderDocument } from "./PurchaseOrderDocument";
+import { PurchaseReturnDocument } from "./PurchaseReturnDocument";
 
 const optionalId = (value: number | null | undefined) =>
   typeof value === "number" && Number.isFinite(value) && value > 0
@@ -340,21 +341,24 @@ export const PurchasesListRoute = () => {
     {
       key: "status",
       header: "Payment",
-      cell: (row) => (
-        <Badge
-          tone={
-            row.exchange
-              ? "info"
-              : row.paymentStatus === "PAID"
-                ? "success"
-                : row.paymentStatus === "PARTIAL"
-                  ? "warning"
-                  : "danger"
-          }
-        >
-          {row.exchange ? "Trade-in" : (row.paymentStatus ?? "UNPAID")}
-        </Badge>
-      ),
+      cell: (row) =>
+        row.returned ? (
+          "—"
+        ) : (
+          <Badge
+            tone={
+              row.exchange
+                ? "info"
+                : row.paymentStatus === "PAID"
+                  ? "success"
+                  : row.paymentStatus === "PARTIAL"
+                    ? "warning"
+                    : "danger"
+            }
+          >
+            {row.exchange ? "Trade-in" : (row.paymentStatus ?? "UNPAID")}
+          </Badge>
+        ),
     },
   ];
   return (
@@ -1291,7 +1295,7 @@ export const PurchaseDetailRoute = () => {
                     </Link>
                   </Can>
                 )}
-              {purchase.editable !== false && (
+              {!purchase.sold && purchase.editable !== false && (
                 <Can resource="PURCHASE_ORDER" privilege="UPDATE">
                   <Link
                     className="button button--secondary"
@@ -1301,13 +1305,15 @@ export const PurchaseDetailRoute = () => {
                   </Link>
                 </Can>
               )}
-              {purchase.paymentStatus === "PENDING" && (
-                <Can resource="PURCHASE_ORDER" privilege="DELETE">
-                  <Button variant="danger" onClick={() => setConfirm(true)}>
-                    Delete
-                  </Button>
-                </Can>
-              )}
+              {!purchase.sold &&
+                purchase.editable !== false &&
+                purchase.paymentStatus === "PENDING" && (
+                  <Can resource="PURCHASE_ORDER" privilege="DELETE">
+                    <Button variant="danger" onClick={() => setConfirm(true)}>
+                      Delete
+                    </Button>
+                  </Can>
+                )}
             </>
           )
         }
@@ -1600,6 +1606,12 @@ export const PurchaseReturnDetailRoute = () => {
     <>
       <PageHeader
         title={item?.vehicleNo ?? "Purchase return"}
+        description={
+          item
+            ? `${item.brandName ?? ""} ${item.modelName ?? ""} ${item.variantName ?? ""}`.trim() ||
+              undefined
+            : undefined
+        }
         actions={
           item && (
             <>
@@ -1621,102 +1633,7 @@ export const PurchaseReturnDetailRoute = () => {
         }
       />
       <QueryBoundary pending={query.isPending} error={query.error}>
-        {item && (
-          <>
-            <Section title="Return details">
-              <DetailGrid>
-                <Detail label="UIN" value={item.uin} />
-                <Detail
-                  label="Purchase reference"
-                  value={item.purchaseReferenceNo}
-                />
-                <Detail
-                  label="Return date"
-                  value={<DateValue value={item.returnDate} />}
-                />
-                <Detail label="Vendor" value={item.vendorName} />
-                <Detail label="Reason" value={item.reason} />
-                <Detail label="Notes" value={item.notes} />
-                <Detail
-                  label="Landed cost"
-                  value={<Money value={item.inventoryLandedCost} />}
-                />
-                <Detail
-                  label="Vendor invoice"
-                  value={<Money value={item.vendorInvoiceAmount} />}
-                />
-                <Detail
-                  label="Paid to vendor"
-                  value={<Money value={item.paidToVendor} />}
-                />
-                <Detail
-                  label="Outstanding AP"
-                  value={<Money value={item.outstandingAp} />}
-                />
-                <Detail
-                  label="Refund expected"
-                  value={<Money value={item.refundAmount} />}
-                />
-                <Detail
-                  label="Loss on return"
-                  value={<Money value={item.lossOnReturn} />}
-                />
-                <Detail
-                  label="Received"
-                  value={<Money value={item.totalReceived} />}
-                />
-                <Detail
-                  label="Remaining"
-                  value={<Money value={item.remainingReceivable} />}
-                />
-                <Detail label="Status" value={item.status} />
-              </DetailGrid>
-            </Section>
-            <Section title="Receipts">
-              <DataTable
-                caption="Return receipts"
-                rows={item.receipts}
-                emptyMessage="No receipts recorded"
-                emptyDescription="Refunds received for this return will appear here."
-                rowKey={(row) => String(row.id)}
-                columns={[
-                  {
-                    key: "date",
-                    header: "Date",
-                    cell: (row) => formatDate(row.paymentDate),
-                  },
-                  {
-                    key: "reference",
-                    header: "Reference",
-                    cell: (row) => row.referenceNo ?? "—",
-                  },
-                  {
-                    key: "amount",
-                    header: "Amount",
-                    align: "right",
-                    cell: (row) => formatCurrency(row.amount),
-                  },
-                  {
-                    key: "action",
-                    header: "",
-                    cell: (row) => (
-                      <span className="operations-inline-actions">
-                        <AuditHistoryButton
-                          entityType="purchase-return-receipt"
-                          entityId={row.id}
-                          variant="ghost"
-                        />
-                        <Link to={`${RETURNS}/${id}/receipts/${row.id}/edit`}>
-                          Edit
-                        </Link>
-                      </span>
-                    ),
-                  },
-                ]}
-              />
-            </Section>
-          </>
-        )}
+        {item && <PurchaseReturnDocument item={item} returnId={id} />}
       </QueryBoundary>
     </>
   );
