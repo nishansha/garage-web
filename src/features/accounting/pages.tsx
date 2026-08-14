@@ -2481,22 +2481,32 @@ const ReportSection = ({
   title,
   lines,
   total,
+  extraLines,
 }: {
   title: string;
   lines: ReportAccountLine[];
   total: number;
+  extraLines?: Array<{ label: string; balance: number }>;
 }) => (
   <Card className="report-section">
     <h2>{title}</h2>
-    {lines.length ? (
-      lines.map((line) => (
-        <div className="report-row" key={line.accountId}>
-          <span>
-            {line.code} — {line.label}
-          </span>
-          <strong>{money(line.balance)}</strong>
-        </div>
-      ))
+    {lines.length || extraLines?.length ? (
+      <>
+        {lines.map((line) => (
+          <div className="report-row" key={line.accountId}>
+            <span>
+              {line.code} — {line.label}
+            </span>
+            <strong>{money(line.balance)}</strong>
+          </div>
+        ))}
+        {extraLines?.map((line) => (
+          <div className="report-row" key={line.label}>
+            <span>{line.label}</span>
+            <strong>{money(line.balance)}</strong>
+          </div>
+        ))}
+      </>
     ) : (
       <p className="muted">No balances.</p>
     )}
@@ -2579,6 +2589,12 @@ const BalanceSheetView = ({ report }: { report: BalanceSheet }) => (
       <ReportSection
         title="Equity"
         lines={report.equity.accounts}
+        extraLines={[
+          {
+            label: "Current year earnings",
+            balance: report.equity.currentYearEarnings ?? 0,
+          },
+        ]}
         total={report.equity.total}
       />
     </div>
