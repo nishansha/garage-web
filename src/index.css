@@ -539,6 +539,15 @@ select.control option:disabled {
   background: var(--surface-raised);
   box-shadow: var(--shadow);
 }
+.modal--wide {
+  width: min(760px, 100%);
+  max-height: min(90vh, 820px);
+  display: flex;
+  flex-direction: column;
+}
+.modal--wide .modal__body {
+  overflow: auto;
+}
 .modal > header,
 .modal > footer {
   padding: 17px 20px;
