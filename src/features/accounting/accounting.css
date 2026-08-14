@@ -377,35 +377,51 @@
   color: #183d31;
 }
 
-.pl-period {
+.pl-page .page-header {
   margin-bottom: 1rem;
-  padding: 1rem 1.15rem 1.1rem;
+  align-items: center;
 }
 
-.pl-period__head {
-  margin-bottom: 0.85rem;
+.pl-toolbar {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.7rem;
 }
 
-.pl-period__head span {
+.pl-months {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.18rem;
+  padding: 0.2rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-raised);
+}
+
+.pl-months button {
+  min-width: 2.55rem;
+  min-height: 32px;
+  padding: 0.3rem 0.5rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
   color: var(--text-muted);
   font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-weight: 650;
+  cursor: pointer;
 }
 
-.pl-period__head strong {
+.pl-months button:hover:not(.is-active) {
   color: var(--text);
-  font-size: 0.95rem;
+  background: var(--surface-hover);
 }
 
-.pl-period .month-selector {
-  margin: 0;
-  padding: 0;
+.pl-months button.is-active {
+  background: var(--primary);
+  color: #06110d;
 }
 
 .pl-report {
@@ -1005,12 +1021,22 @@
     padding: 0.65rem;
   }
 
-  .pl-period .month-selector {
-    padding: 0;
-  }
-
   .month-chip {
     padding-inline: 0.4rem;
+  }
+
+  .pl-toolbar {
+    width: 100%;
+  }
+
+  .pl-months {
+    width: 100%;
+    justify-content: space-between;
+    border-radius: var(--radius);
+  }
+
+  .pl-months button {
+    flex: 1;
   }
 
   .pl-columns,
@@ -1027,8 +1053,7 @@
   }
 
   .pl-hero,
-  .pl-panel,
-  .pl-period {
+  .pl-panel {
     padding: 1rem;
   }
 }

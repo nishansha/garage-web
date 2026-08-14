@@ -2708,56 +2708,43 @@ export const ProfitLossReportPage = () => {
         `${current.getFullYear()}-${String(index + 1).padStart(2, "0")}`,
     );
   }, []);
-  const selectedMonthLabel = useMemo(
-    () =>
-      new Date(`${month}-01T00:00:00`).toLocaleDateString("en-IN", {
-        month: "long",
-        year: "numeric",
-      }),
-    [month],
-  );
   const query = useQuery({
     queryKey: ["accounting", "pl", month],
     queryFn: () => accountingApi.profitLoss(month),
   });
   return (
-    <>
+    <div className="pl-page">
       <PageHeader
         title="Monthly Report"
         description={
           query.data?.period
-            ? `Operational performance summary for ${query.data.period}, covering sales, purchases, expenses, and profitability.`
-            : "Operational performance summary for the selected month."
+            ? `Sales, purchases, expenses, and profitability · ${query.data.period}`
+            : "Sales, purchases, expenses, and profitability for the selected month."
         }
         actions={
-          <DownloadButton run={() => accountingApi.downloadProfitLoss(month)} />
+          <div className="pl-toolbar">
+            <div className="pl-months" role="group" aria-label="Report month">
+              {allowedMonths.map((value) => {
+                const date = new Date(`${value}-01T00:00:00`);
+                return (
+                  <button
+                    className={month === value ? "is-active" : undefined}
+                    key={value}
+                    type="button"
+                    aria-pressed={month === value}
+                    onClick={() => setMonth(value)}
+                  >
+                    {date.toLocaleDateString("en-IN", { month: "short" })}
+                  </button>
+                );
+              })}
+            </div>
+            <DownloadButton
+              run={() => accountingApi.downloadProfitLoss(month)}
+            />
+          </div>
         }
       />
-      <Card className="pl-period">
-        <div className="pl-period__head">
-          <span>Reporting month</span>
-          <strong>{selectedMonthLabel}</strong>
-        </div>
-        <div className="month-selector" role="group" aria-label="Report month">
-          {allowedMonths.map((value) => {
-            const date = new Date(`${value}-01T00:00:00`);
-            return (
-              <button
-                className={`month-chip${month === value ? " is-active" : ""}`}
-                key={value}
-                type="button"
-                aria-pressed={month === value}
-                onClick={() => setMonth(value)}
-              >
-                <span>
-                  {date.toLocaleDateString("en-IN", { month: "short" })}
-                </span>
-                <small>'{String(date.getFullYear()).slice(-2)}</small>
-              </button>
-            );
-          })}
-        </div>
-      </Card>
       {query.isLoading ? (
         <LoadingState />
       ) : query.isError ? (
@@ -2765,7 +2752,7 @@ export const ProfitLossReportPage = () => {
       ) : query.data ? (
         <ProfitLossView key={month} report={query.data} />
       ) : null}
-    </>
+    </div>
   );
 };
 
