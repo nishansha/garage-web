@@ -2733,7 +2733,6 @@ export const ProfitLossReportPage = () => {
   );
 };
 
-type SalesFilter = "sold" | "returned" | "all";
 type DirectEntryGroup = "INCOME" | "EXPENSE" | "OTHER";
 
 const directEntryGroup = (classification: string): DirectEntryGroup => {
@@ -2742,18 +2741,10 @@ const directEntryGroup = (classification: string): DirectEntryGroup => {
 };
 
 const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
-  const [salesFilter, setSalesFilter] = useState<SalesFilter>("sold");
   const sales = report.sales ?? [];
   const purchases = report.purchases ?? [];
   const expenses = report.expenses ?? [];
   const directEntries = report.directEntries ?? [];
-  const filteredSales = sales.filter((sale) =>
-    salesFilter === "all"
-      ? true
-      : salesFilter === "returned"
-        ? sale.returned
-        : !sale.returned,
-  );
   const groupedEntries = directEntries.reduce<
     Record<DirectEntryGroup, typeof directEntries>
   >(
@@ -2781,11 +2772,6 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
     report.exchangeGain !== 0 ||
     report.exchangeReturnLoss !== 0 ||
     report.purchaseReturnLoss !== 0;
-  const salesCounts: Record<SalesFilter, number> = {
-    sold: report.salesTotals.count,
-    returned: report.salesTotals.returnCount,
-    all: report.salesTotals.count + report.salesTotals.returnCount,
-  };
   const profitable = report.netProfit >= 0;
   const flowMax = Math.max(
     report.totalRevenue,
@@ -2942,58 +2928,42 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
               </span>
             </div>
           </div>
-          <div className="pl-pills" role="group" aria-label="Filter sales">
-            {(["sold", "returned", "all"] as const).map((filter) => (
-              <button
-                key={filter}
-                type="button"
-                className={`pl-pill${salesFilter === filter ? " is-active" : ""}`}
-                aria-pressed={salesFilter === filter}
-                onClick={() => setSalesFilter(filter)}
-              >
-                {humanize(filter)}
-                <span className="pl-pill__count">{salesCounts[filter]}</span>
-              </button>
-            ))}
-          </div>
           <div className="pl-scroll">
-            {filteredSales.length ? (
+            {sales.length ? (
               <div className="pl-list">
-                {filteredSales.map((sale) => (
+                {sales.map((sale) => (
                   <article
                     className={`pl-item${sale.returned ? " is-muted" : ""}`}
                     key={sale.saleId}
                   >
-                    <div className="pl-item__top">
+                    <div className="pl-item__main">
                       <strong>{sale.vehicleNo}</strong>
+                      <span className="pl-item__meta">
+                        {sale.customerName?.trim() || "Walk-in"}
+                        {sale.returned ? " · Returned" : ""}
+                        {sale.pendingAmount > 0 ? (
+                          <>
+                            {" · "}
+                            <span className="pl-item__due">
+                              {money(sale.pendingAmount)} due
+                            </span>
+                          </>
+                        ) : null}
+                      </span>
+                    </div>
+                    <div className="pl-item__end">
+                      <span className={`pl-item__side ${positive(sale.profit)}`}>
+                        {money(sale.profit)}
+                      </span>
                       <strong className="pl-item__amount">
                         {money(sale.saleRate)}
                       </strong>
-                    </div>
-                    <span className="pl-item__meta">
-                      {sale.customerName?.trim() || "Walk-in"}
-                    </span>
-                    <div className="pl-item__foot">
-                      <span className={positive(sale.profit)}>
-                        Profit {money(sale.profit)}
-                      </span>
-                      <span className="pl-item__badges">
-                        {sale.returned && <Badge>Returned</Badge>}
-                        {sale.pendingAmount > 0 && (
-                          <Badge tone="warning">
-                            {money(sale.pendingAmount)} due
-                          </Badge>
-                        )}
-                      </span>
                     </div>
                   </article>
                 ))}
               </div>
             ) : (
-              <p className="pl-empty">
-                No {salesFilter === "all" ? "" : `${salesFilter} `}sales this
-                month.
-              </p>
+              <p className="pl-empty">No sales this month.</p>
             )}
           </div>
         </Card>
@@ -3021,15 +2991,15 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
                     className="pl-item"
                     key={`${expense.date}-${expense.expenseName}-${index}`}
                   >
-                    <div className="pl-item__top">
+                    <div className="pl-item__main">
                       <strong>{expense.expenseName}</strong>
-                      <strong className="pl-item__amount amount-out">
-                        {money(expense.amount)}
-                      </strong>
+                      <span className="pl-item__meta">
+                        {formatDate(expense.date)}
+                      </span>
                     </div>
-                    <span className="pl-item__meta">
-                      {formatDate(expense.date)} · {expense.accountName}
-                    </span>
+                    <strong className="pl-item__amount amount-out">
+                      {money(expense.amount)}
+                    </strong>
                   </article>
                 ))}
               </div>
@@ -3092,24 +3062,22 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
                         className={`pl-item${group === "OTHER" ? " is-muted" : ""}`}
                         key={`${entry.date}-${entry.name}-${index}`}
                       >
-                        <div className="pl-item__top">
+                        <div className="pl-item__main">
                           <strong>{entry.name}</strong>
-                          <strong
-                            className={`pl-item__amount${
-                              group === "OTHER"
-                                ? " muted"
-                                : entry.direction === "OUT"
-                                  ? " amount-out"
-                                  : " amount-in"
-                            }`}
-                          >
-                            {entry.direction === "OUT" ? "−" : ""}
-                            {money(entry.amount)}
-                          </strong>
+                          <span className="pl-item__meta">{entry.category}</span>
                         </div>
-                        <span className="pl-item__meta">
-                          {entry.category} · {entry.accountName}
-                        </span>
+                        <strong
+                          className={`pl-item__amount${
+                            group === "OTHER"
+                              ? " muted"
+                              : entry.direction === "OUT"
+                                ? " amount-out"
+                                : " amount-in"
+                          }`}
+                        >
+                          {entry.direction === "OUT" ? "−" : ""}
+                          {money(entry.amount)}
+                        </strong>
                       </article>
                     ))}
                   </section>
@@ -3203,20 +3171,16 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
                     className={`pl-item${purchase.returned ? " is-muted" : ""}`}
                     key={purchase.purchaseId}
                   >
-                    <div className="pl-item__top">
+                    <div className="pl-item__main">
                       <strong>{purchase.vehicleNo}</strong>
-                      <strong className="pl-item__amount">
-                        {money(purchase.landedCost)}
-                      </strong>
+                      <span className="pl-item__meta">
+                        {purchase.vendorName}
+                        {purchase.returned ? " · Returned" : ""}
+                      </span>
                     </div>
-                    <span className="pl-item__meta">
-                      {purchase.vendorName} · {formatDate(purchase.purchaseDate)}
-                    </span>
-                    {purchase.returned && (
-                      <div className="pl-item__foot">
-                        <Badge>Returned</Badge>
-                      </div>
-                    )}
+                    <strong className="pl-item__amount">
+                      {money(purchase.landedCost)}
+                    </strong>
                   </article>
                 ))}
               </div>
