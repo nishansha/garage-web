@@ -278,6 +278,7 @@ export interface Stock {
   productId: number;
   vendorName?: string | null;
   vendorMobileNo?: string | null;
+  vendorAddress?: string | null;
   purchaseDate: string;
   productCode: string;
   brandName: string;
@@ -298,6 +299,7 @@ export interface Stock {
   soldDate?: string | null;
   customerName?: string | null;
   customerMobileNo?: string | null;
+  customerAddress?: string | null;
   expenses?: PurchaseExpenseInput[] | null;
 }
 export interface Expense {
