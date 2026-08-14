@@ -58,6 +58,8 @@ import {
   today,
   useNumericParam,
 } from "./common";
+import { SaleInvoiceDocument } from "./SaleInvoiceDocument";
+import { SaleReturnDocument } from "./SaleReturnDocument";
 
 const SALES = "/sales/sales";
 const RETURNS = "/sales/returns";
@@ -1406,128 +1408,24 @@ export const SaleDetailRoute = () => {
                   </Button>
                 </Can>
               ) : (
-                <Can resource="SALE_RETURN" privilege="CREATE">
-                  <Link
-                    className="button button--secondary"
-                    to={`${SALES}/${id}/return`}
-                  >
-                    Create return
-                  </Link>
-                </Can>
+                !sale.financed &&
+                sale.paymentStatus !== "REFUND" && (
+                  <Can resource="SALE_RETURN" privilege="CREATE">
+                    <Link
+                      className="button button--secondary"
+                      to={`${SALES}/${id}/return`}
+                    >
+                      Create return
+                    </Link>
+                  </Can>
+                )
               )}
             </>
           )
         }
       />
       <QueryBoundary pending={query.isPending} error={query.error}>
-        {sale && (
-          <>
-            <Section title="Sale details">
-              <DetailGrid>
-                <Detail label="Date" value={formatDate(sale.date)} />
-                <Detail label="Customer" value={sale.customerName} />
-                <Detail label="Mobile" value={sale.customerMobileNo} />
-                <Detail label="Address" value={sale.customerAddress} />
-                <Detail
-                  label="Sale rate"
-                  value={<Money value={sale.saleRate} />}
-                />
-                <Detail label="Profit" value={<Money value={sale.profit} />} />
-                <Detail label="Exchange" value={sale.exchange ? "Yes" : "No"} />
-                <Detail
-                  label="Exchange amount"
-                  value={<Money value={sale.exchangeAmount} />}
-                />
-                <Detail label="Financed" value={sale.financed ? "Yes" : "No"} />
-                <Detail label="Finance company" value={sale.financeCompany} />
-                <Detail
-                  label="Finance amount"
-                  value={<Money value={sale.financeAmount} />}
-                />
-                <Detail label="EMI" value={<Money value={sale.emiAmount} />} />
-                <Detail
-                  label="Customer pending"
-                  value={<Money value={sale.pendingCustomerAmount} />}
-                />
-                <Detail
-                  label="Net sale amount"
-                  value={<Money value={sale.netSaleAmount} />}
-                />
-                <Detail
-                  label="Finance pending"
-                  value={<Money value={sale.pendingFinanceAmount} />}
-                />
-                <Detail label="Payment status" value={sale.paymentStatus} />
-              </DetailGrid>
-            </Section>
-            <Section title="Amount splits">
-              <DataTable
-                caption="Sale amount splits"
-                rows={sale.amountSplits ?? []}
-                rowKey={(row) => String(row.id)}
-                columns={[
-                  {
-                    key: "type",
-                    header: "Type",
-                    cell: (row) => row.typeDesc ?? String(row.typeId),
-                  },
-                  {
-                    key: "amount",
-                    header: "Amount",
-                    align: "right",
-                    cell: (row) => formatCurrency(row.amount),
-                  },
-                ]}
-              />
-            </Section>
-            <Section title="Payments">
-              <DataTable
-                caption="Sale payments"
-                rows={sale.payments ?? []}
-                rowKey={(row) => String(row.id)}
-                columns={[
-                  {
-                    key: "date",
-                    header: "Date",
-                    cell: (row) => formatDate(row.paymentDate),
-                  },
-                  {
-                    key: "payer",
-                    header: "Payer",
-                    cell: (row) => row.payerType ?? "CUSTOMER",
-                  },
-                  {
-                    key: "method",
-                    header: "Method",
-                    cell: (row) => row.paymentMethod ?? "—",
-                  },
-                  {
-                    key: "amount",
-                    header: "Amount",
-                    align: "right",
-                    cell: (row) => formatCurrency(row.amount),
-                  },
-                  {
-                    key: "action",
-                    header: "",
-                    cell: (row) => (
-                      <span className="operations-inline-actions">
-                        <AuditHistoryButton
-                          entityType="sale-payment"
-                          entityId={row.id}
-                          variant="ghost"
-                        />
-                        <Link to={`${SALES}/${id}/payments/${row.id}/edit`}>
-                          Edit
-                        </Link>
-                      </span>
-                    ),
-                  },
-                ]}
-              />
-            </Section>
-          </>
-        )}
+        {sale && <SaleInvoiceDocument sale={sale} saleId={id} />}
       </QueryBoundary>
       <ConfirmDialog
         open={confirm}
@@ -1768,14 +1666,20 @@ export const SaleReturnDetailRoute = () => {
   return (
     <>
       <PageHeader
-        title={item?.invoiceNo ?? "Sale return"}
+        title={item?.productNo ?? item?.invoiceNo ?? "Sale return"}
+        description={
+          item
+            ? `${item.brandName ?? ""} ${item.modelName ?? ""} ${item.variantName ?? ""}`.trim() ||
+              undefined
+            : undefined
+        }
         actions={
           item && (
             <>
               <AuditHistoryButton
                 entityType="sale-return"
                 entityId={id}
-                recordLabel={item.invoiceNo}
+                recordLabel={item.productNo ?? item.invoiceNo}
               />
               {item.status !== "COMPLETED" && item.remainingRefund > 0 && (
                 <Link
@@ -1791,135 +1695,11 @@ export const SaleReturnDetailRoute = () => {
       />
       <QueryBoundary pending={query.isPending} error={query.error}>
         {item && (
-          <>
-            <Section title="Return details">
-              <DetailGrid>
-                <Detail label="Date" value={formatDate(item.returnDate)} />
-                <Detail label="Reason" value={item.reason} />
-                <Detail label="Notes" value={item.notes} />
-                <Detail
-                  label="Customer paid"
-                  value={<Money value={item.customerPaidAmount} />}
-                />
-                <Detail
-                  label="Exchange handling"
-                  value={item.exchangeHandling.replaceAll("_", " ")}
-                />
-                <Detail
-                  label="Exchange buyback"
-                  value={<Money value={item.exchangeBuybackAmount} />}
-                />
-                <Detail
-                  label="Sold vehicle deductions"
-                  value={<Money value={item.soldVehicleDeductionAmount} />}
-                />
-                <Detail
-                  label="Exchange deductions"
-                  value={<Money value={item.exchangeVehicleDeductionAmount} />}
-                />
-                <Detail
-                  label="Refund due"
-                  value={<Money value={item.refundAmount} />}
-                />
-                <Detail
-                  label="Refunded"
-                  value={<Money value={item.totalRefunded} />}
-                />
-                <Detail
-                  label="Remaining"
-                  value={<Money value={item.remainingRefund} />}
-                />
-                <Detail label="Status" value={item.status} />
-              </DetailGrid>
-            </Section>
-            <Section title="Deductions">
-              <DataTable
-                caption="Return deductions"
-                rows={item.deductions ?? []}
-                rowKey={(row) => String(row.id)}
-                columns={[
-                  {
-                    key: "context",
-                    header: "Vehicle",
-                    cell: (row) => row.vehicleContext,
-                  },
-                  {
-                    key: "description",
-                    header: "Description",
-                    cell: (row) => row.description,
-                  },
-                  {
-                    key: "amount",
-                    header: "Amount",
-                    align: "right",
-                    cell: (row) => formatCurrency(row.amount),
-                  },
-                  {
-                    key: "history",
-                    header: "",
-                    cell: (row) => (
-                      <AuditHistoryButton
-                        entityType="sale-return-deduction"
-                        entityId={row.id}
-                        variant="ghost"
-                      />
-                    ),
-                  },
-                ]}
-              />
-            </Section>
-            <Section title="Refunds">
-              <DataTable
-                caption="Return refunds"
-                rows={item.refunds ?? []}
-                rowKey={(row) => String(row.id)}
-                columns={[
-                  {
-                    key: "date",
-                    header: "Date",
-                    cell: (row) => formatDate(row.paymentDate),
-                  },
-                  {
-                    key: "reference",
-                    header: "Reference",
-                    cell: (row) => row.referenceNo ?? "—",
-                  },
-                  {
-                    key: "amount",
-                    header: "Amount",
-                    align: "right",
-                    cell: (row) => formatCurrency(row.amount),
-                  },
-                  {
-                    key: "actions",
-                    header: "",
-                    cell: (row) => (
-                      <span className="operations-inline-actions">
-                        <AuditHistoryButton
-                          entityType="sale-refund-payment"
-                          entityId={row.id}
-                          variant="ghost"
-                        />
-                        <Can resource="SALE_RETURN" privilege="UPDATE">
-                          <Link to={`${RETURNS}/${id}/refunds/${row.id}/edit`}>
-                            Edit
-                          </Link>
-                        </Can>
-                        <Can resource="SALE_RETURN" privilege="DELETE">
-                          <Button
-                            variant="ghost"
-                            onClick={() => setDeleteId(row.id)}
-                          >
-                            Delete
-                          </Button>
-                        </Can>
-                      </span>
-                    ),
-                  },
-                ]}
-              />
-            </Section>
-          </>
+          <SaleReturnDocument
+            item={item}
+            returnId={id}
+            onDeleteRefund={setDeleteId}
+          />
         )}
       </QueryBoundary>
       <ConfirmDialog
