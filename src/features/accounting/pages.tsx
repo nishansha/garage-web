@@ -2804,120 +2804,123 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
   return (
     <div className="pl-report">
       <Card className={`pl-hero ${profitable ? "is-positive" : "is-negative"}`}>
-        <div className="pl-hero__main">
-          <div className="pl-hero__copy">
-            <span className="pl-hero__icon" aria-hidden="true">
-              {profitable ? (
-                <TrendingUp size={20} />
-              ) : (
-                <TrendingDown size={20} />
-              )}
-            </span>
-            <div>
-              <span className="pl-hero__label">
-                {profitable ? "Net Profit" : "Net Loss"}
-              </span>
-              <strong className="pl-hero__value">
-                {money(report.netProfit)}
-              </strong>
+        <div className="pl-hero__layout">
+          <div className="pl-hero__primary">
+            <div className="pl-hero__main">
+              <div className="pl-hero__copy">
+                <span className="pl-hero__icon" aria-hidden="true">
+                  {profitable ? (
+                    <TrendingUp size={20} />
+                  ) : (
+                    <TrendingDown size={20} />
+                  )}
+                </span>
+                <div>
+                  <span className="pl-hero__label">
+                    {profitable ? "Net Profit" : "Net Loss"}
+                  </span>
+                  <strong className="pl-hero__value">
+                    {money(report.netProfit)}
+                  </strong>
+                </div>
+              </div>
+              <Badge tone={profitable ? "success" : "danger"}>
+                {report.netMarginPct.toFixed(1)}% margin
+              </Badge>
+            </div>
+            <div className="pl-mix" aria-label="Revenue and expenses">
+              <div className="pl-mix__row">
+                <div className="pl-mix__head">
+                  <span>Revenue</span>
+                  <strong>{money(report.totalRevenue)}</strong>
+                </div>
+                <span className="pl-mix__track">
+                  <span
+                    className="pl-mix__fill is-in"
+                    style={{
+                      width: `${(report.totalRevenue / flowMax) * 100}%`,
+                    }}
+                  />
+                </span>
+              </div>
+              <div className="pl-mix__row">
+                <div className="pl-mix__head">
+                  <span>Expenses</span>
+                  <strong>{money(report.totalOperatingExpenses)}</strong>
+                </div>
+                <span className="pl-mix__track">
+                  <span
+                    className="pl-mix__fill is-out"
+                    style={{
+                      width: `${(report.totalOperatingExpenses / flowMax) * 100}%`,
+                    }}
+                  />
+                </span>
+              </div>
             </div>
           </div>
-          <Badge tone={profitable ? "success" : "danger"}>
-            {report.netMarginPct.toFixed(1)}% margin
-          </Badge>
-        </div>
-        <div className="pl-mix" aria-label="Revenue and expenses">
-          <div className="pl-mix__row">
-            <span>Revenue</span>
-            <span className="pl-mix__track">
-              <span
-                className="pl-mix__fill is-in"
-                style={{ width: `${(report.totalRevenue / flowMax) * 100}%` }}
-              />
-            </span>
-            <strong>{money(report.totalRevenue)}</strong>
-          </div>
-          <div className="pl-mix__row">
-            <span>Expenses</span>
-            <span className="pl-mix__track">
-              <span
-                className="pl-mix__fill is-out"
-                style={{
-                  width: `${(report.totalOperatingExpenses / flowMax) * 100}%`,
-                }}
-              />
-            </span>
-            <strong>{money(report.totalOperatingExpenses)}</strong>
-          </div>
-        </div>
-        <details className="pl-fold pl-fold--hero">
-          <summary>View {profitable ? "profit" : "loss"} breakdown</summary>
-          <div className="pl-statement">
-            <div className="pl-statement__row">
-              <span>Sales profit</span>
-              <strong>{money(report.salesTotals.profit)}</strong>
-            </div>
-            <div className="pl-statement__row">
-              <span>Other income</span>
-              <strong>{money(report.directEntryTotals.incomeAmount)}</strong>
-            </div>
-            {report.returnDeductionIncome !== 0 && (
-              <div className="pl-statement__row">
-                <span>Return deduction income</span>
-                <strong className="amount-in">
-                  +{money(report.returnDeductionIncome)}
+          <div className="pl-breakdown" aria-label="Profit breakdown">
+            <p className="pl-breakdown__label">Breakdown</p>
+            <div className="pl-breakdown__grid">
+              <div className="pl-chip">
+                <span>Sales profit</span>
+                <strong className={positive(report.salesTotals.profit)}>
+                  {money(report.salesTotals.profit)}
                 </strong>
               </div>
-            )}
-            {hasGainLoss && (
-              <details className="pl-fold pl-fold--nested">
-                <summary>Gain & loss adjustments</summary>
-                {report.exchangeGain !== 0 && (
-                  <div className="pl-statement__row">
-                    <span>Exchange gain</span>
-                    <strong className="amount-in">
-                      +{money(report.exchangeGain)}
-                    </strong>
-                  </div>
-                )}
-                {report.exchangeReturnLoss !== 0 && (
-                  <div className="pl-statement__row">
-                    <span>Exchange return loss</span>
-                    <strong className="amount-out">
-                      −{money(report.exchangeReturnLoss)}
-                    </strong>
-                  </div>
-                )}
-                {report.purchaseReturnLoss !== 0 && (
-                  <div className="pl-statement__row">
-                    <span>Purchase return loss</span>
-                    <strong className="amount-out">
-                      −{money(report.purchaseReturnLoss)}
-                    </strong>
-                  </div>
-                )}
-              </details>
-            )}
-            <div className="pl-statement__row">
-              <span>Adjustments</span>
-              <strong>
-                {report.directEntryTotals.expenseAmount ? "−" : ""}
-                {money(report.directEntryTotals.expenseAmount)}
-              </strong>
-            </div>
-            <div className="pl-statement__row">
-              <span>General expenses</span>
-              <strong>
-                {report.expenseTotals.amount ? "−" : ""}
-                {money(report.expenseTotals.amount)}
-              </strong>
-            </div>
-            <div className="pl-statement__row pl-statement__total">
-              <span>Net profit</span>
-              <strong>{money(report.netProfit)}</strong>
+              <div className="pl-chip">
+                <span>Other income</span>
+                <strong>{money(report.directEntryTotals.incomeAmount)}</strong>
+              </div>
+              {report.returnDeductionIncome !== 0 && (
+                <div className="pl-chip">
+                  <span>Return deduction</span>
+                  <strong className="amount-in">
+                    +{money(report.returnDeductionIncome)}
+                  </strong>
+                </div>
+              )}
+              {hasGainLoss && report.exchangeGain !== 0 && (
+                <div className="pl-chip">
+                  <span>Exchange gain</span>
+                  <strong className="amount-in">
+                    +{money(report.exchangeGain)}
+                  </strong>
+                </div>
+              )}
+              {hasGainLoss && report.exchangeReturnLoss !== 0 && (
+                <div className="pl-chip">
+                  <span>Exchange return loss</span>
+                  <strong className="amount-out">
+                    −{money(report.exchangeReturnLoss)}
+                  </strong>
+                </div>
+              )}
+              {hasGainLoss && report.purchaseReturnLoss !== 0 && (
+                <div className="pl-chip">
+                  <span>Purchase return loss</span>
+                  <strong className="amount-out">
+                    −{money(report.purchaseReturnLoss)}
+                  </strong>
+                </div>
+              )}
+              <div className="pl-chip">
+                <span>Adjustments</span>
+                <strong>
+                  {report.directEntryTotals.expenseAmount ? "−" : ""}
+                  {money(report.directEntryTotals.expenseAmount)}
+                </strong>
+              </div>
+              <div className="pl-chip">
+                <span>General expenses</span>
+                <strong>
+                  {report.expenseTotals.amount ? "−" : ""}
+                  {money(report.expenseTotals.amount)}
+                </strong>
+              </div>
             </div>
           </div>
-        </details>
+        </div>
       </Card>
 
       <div className="pl-columns">
@@ -3040,22 +3043,22 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
         </Card>
       </div>
 
-      <Card className="pl-panel pl-panel--income">
-        <details className="pl-fold">
-          <summary>
-            <span className="pl-panel__heading">
+      <div className="pl-columns">
+        <Card className="pl-panel pl-panel--income">
+          <div className="pl-panel__header">
+            <div className="pl-panel__heading">
               <span className="pl-panel__icon" aria-hidden="true">
                 <Banknote size={18} />
               </span>
-              <span>
-                <strong>Other income & adjustments</strong>
-                <small>
+              <div>
+                <h2>Other income & adjustments</h2>
+                <p>
                   Money in {money(report.directEntryTotals.inAmount)} · Money
                   out {money(report.directEntryTotals.outAmount)}
-                </small>
-              </span>
-            </span>
-          </summary>
+                </p>
+              </div>
+            </div>
+          </div>
           {directEntries.length ? (
             (["INCOME", "EXPENSE", "OTHER"] as const).map((group) => {
               const total = groupTotals[group];
@@ -3117,40 +3120,8 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
           ) : (
             <p className="pl-empty">No direct entries this month.</p>
           )}
-        </details>
-      </Card>
-
-      <div className="pl-snapshot">
-        <Card className="pl-panel pl-panel--outstanding">
-          <div className="pl-panel__heading">
-            <span className="pl-panel__icon" aria-hidden="true">
-              <Wallet size={18} />
-            </span>
-            <h2>Outstanding</h2>
-          </div>
-          <div className="pl-metrics">
-            <div className="pl-metric is-in">
-              <span>Receivables</span>
-              <strong className="amount-in">
-                {money(report.totalReceivables)}
-              </strong>
-              <small>Till date</small>
-              <strong className="amount-in">
-                {money(report.totalReceivablesTillDate)}
-              </strong>
-            </div>
-            <div className="pl-metric is-out">
-              <span>Payables</span>
-              <strong className="amount-out">
-                {money(report.totalPayables)}
-              </strong>
-              <small>Till date</small>
-              <strong className="amount-out">
-                {money(report.totalPayablesTillDate)}
-              </strong>
-            </div>
-          </div>
         </Card>
+
         <Card className="pl-panel pl-panel--cash">
           <div className="pl-panel__heading">
             <span className="pl-panel__icon" aria-hidden="true">
@@ -3177,6 +3148,37 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
           </div>
         </Card>
       </div>
+
+      <Card className="pl-panel pl-panel--outstanding">
+        <div className="pl-panel__heading">
+          <span className="pl-panel__icon" aria-hidden="true">
+            <Wallet size={18} />
+          </span>
+          <h2>Outstanding</h2>
+        </div>
+        <div className="pl-metrics">
+          <div className="pl-metric is-in">
+            <span>Receivables</span>
+            <strong className="amount-in">
+              {money(report.totalReceivables)}
+            </strong>
+            <small>Till date</small>
+            <strong className="amount-in">
+              {money(report.totalReceivablesTillDate)}
+            </strong>
+          </div>
+          <div className="pl-metric is-out">
+            <span>Payables</span>
+            <strong className="amount-out">
+              {money(report.totalPayables)}
+            </strong>
+            <small>Till date</small>
+            <strong className="amount-out">
+              {money(report.totalPayablesTillDate)}
+            </strong>
+          </div>
+        </div>
+      </Card>
 
       <Card className="pl-panel pl-panel--purchases">
         <details className="pl-fold">
