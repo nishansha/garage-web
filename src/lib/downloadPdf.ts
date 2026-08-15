@@ -1,6 +1,7 @@
 const PAGE_WIDTH_MM = 210;
 const PAGE_HEIGHT_MM = 297;
 const MARGIN_MM = 12;
+const POWERED_BY = "Powered by Triasoft";
 
 export const toPdfFilename = (name: string): string => {
   const base = name
@@ -14,11 +15,37 @@ export const toPdfFilename = (name: string): string => {
   return `${base || "document"}.pdf`;
 };
 
+const applyPoweredByWatermark = (
+  pdf: InstanceType<(typeof import("jspdf"))["jsPDF"]>,
+  GState: (typeof import("jspdf"))["GState"],
+) => {
+  const pageCount = pdf.getNumberOfPages();
+  for (let page = 1; page <= pageCount; page += 1) {
+    pdf.setPage(page);
+    pdf.saveGraphicsState();
+    pdf.setGState(new GState({ opacity: 0.03 }));
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(36);
+    pdf.setTextColor(110);
+    pdf.text(POWERED_BY, PAGE_WIDTH_MM / 2, PAGE_HEIGHT_MM / 2, {
+      align: "center",
+      angle: 32,
+    });
+    pdf.restoreGraphicsState();
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.setTextColor(150);
+    pdf.text(POWERED_BY, PAGE_WIDTH_MM / 2, PAGE_HEIGHT_MM - 6, {
+      align: "center",
+    });
+  }
+};
+
 export const downloadElementAsPdf = async (
   element: HTMLElement,
   filename: string,
 ): Promise<void> => {
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+  const [{ default: html2canvas }, { GState, jsPDF }] = await Promise.all([
     import("html2canvas"),
     import("jspdf"),
   ]);
@@ -75,5 +102,6 @@ export const downloadElementAsPdf = async (
     remaining -= printableHeight;
   }
 
+  applyPoweredByWatermark(pdf, GState);
   pdf.save(toPdfFilename(filename));
 };
