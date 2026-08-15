@@ -528,6 +528,7 @@ export interface DashboardSummary {
   expensesDelta: number;
   totalProfit: string;
   profitDelta: number;
+  totalCogs: string;
 }
 export interface DashboardMonth {
   month: string;

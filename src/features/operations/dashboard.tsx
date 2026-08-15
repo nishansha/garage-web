@@ -139,9 +139,9 @@ export const DashboardRoute = () => {
     [chart.data],
   );
   const sales = number(summary.data?.totalSales);
-  const purchases = number(summary.data?.totalPurchase);
   const expenses = number(summary.data?.totalExpenses);
   const profit = number(summary.data?.totalProfit);
+  const cogs = number(summary.data?.totalCogs);
 
   return (
     <div className="dashboard">
@@ -355,9 +355,9 @@ export const DashboardRoute = () => {
               detail="Operating expenses against sales"
             />
             <MetricRow
-              label="Purchase ratio"
-              value={ratio(purchases, sales)}
-              detail="Purchases against sales"
+              label="COGS ratio"
+              value={ratio(cogs, sales)}
+              detail="Cost of goods sold against sales"
             />
             <Link
               className="dashboard-report-link"
