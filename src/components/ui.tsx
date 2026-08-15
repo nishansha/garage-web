@@ -153,6 +153,7 @@ export function DataTable<T>({
   rowKey,
   caption,
   emptyMessage = "No records found",
+  emptyDescription,
   onRowClick,
 }: {
   columns: ReadonlyArray<DataColumn<T>>;
@@ -160,6 +161,7 @@ export function DataTable<T>({
   rowKey: (row: T) => string;
   caption: string;
   emptyMessage?: string;
+  emptyDescription?: string;
   onRowClick?: (row: T) => void;
 }) {
   const isInteractiveTarget = (target: EventTarget | null) =>
@@ -209,7 +211,10 @@ export function DataTable<T>({
           {!rows.length && (
             <tr>
               <td className="table-empty" colSpan={columns.length}>
-                {emptyMessage}
+                <div>{emptyMessage}</div>
+                {emptyDescription ? (
+                  <p className="table-empty__description">{emptyDescription}</p>
+                ) : null}
               </td>
             </tr>
           )}
