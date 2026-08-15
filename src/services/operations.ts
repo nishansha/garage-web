@@ -153,7 +153,7 @@ export interface PurchaseInput {
   fuelTypeId: number;
   transmissionTypeId: number;
   segmentId: number;
-  warehouseId: number;
+  warehouseId?: number;
   makeYear: string;
   odometer: string;
   purchaseRate: number;
@@ -771,9 +771,9 @@ export const operationsApi = {
         `v1/sales/${id}/payments/${paymentId}`,
         cleanPayment(value),
       ),
-    receivables: () => api.get<SalesReceivables>("v1/sales/receivables"),
+    receivables: () => api.get<Outstandings>("v1/sales/receivables"),
     financeReceivables: () =>
-      api.get<FinanceReceivables>("v1/reports/finance-receivables"),
+      api.get<Outstandings>("v1/reports/finance-receivables"),
   },
   saleReturns: {
     list: (page = 0, size = 20, filters?: SearchInput) =>
