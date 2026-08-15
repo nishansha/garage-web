@@ -21,6 +21,7 @@ import {
 } from "../../components/ui";
 import { Can } from "../../components/Can";
 import { AuditHistoryButton } from "../audit/AuditHistory";
+import { DownloadDocumentButton } from "./OrderDocument";
 import { formatCurrency, formatDate } from "../../lib/utils";
 import {
   applyFieldValidationErrors,
@@ -39,6 +40,7 @@ import {
   type RcDueReceipt,
   type SearchInput,
 } from "../../services/operations";
+import { warehouseApi } from "../../services/warehouse";
 import {
   DateValue,
   Detail,
@@ -57,11 +59,17 @@ import {
   useNumericParam,
 } from "./common";
 import { ApiError } from "../../lib/api";
+import { PurchaseOrderDocument } from "./PurchaseOrderDocument";
+import { PurchaseReturnDocument } from "./PurchaseReturnDocument";
+
+const optionalId = (value: number | null | undefined) =>
+  typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : undefined;
 
 const PURCHASES = "/purchase/purchases";
 const RETURNS = "/purchase/returns";
-const RC_DUE_MAXIMUM_MESSAGE =
-  "Receipt amount cannot exceed the remaining RCD";
+const RC_DUE_MAXIMUM_MESSAGE = "Receipt amount cannot exceed the remaining RCD";
 
 const rcDueReceiptAsPayment = (receipt?: RcDueReceipt): Payment | undefined =>
   receipt
@@ -334,21 +342,24 @@ export const PurchasesListRoute = () => {
     {
       key: "status",
       header: "Payment",
-      cell: (row) => (
-        <Badge
-          tone={
-            row.exchange
-              ? "info"
-              : row.paymentStatus === "PAID"
-              ? "success"
-              : row.paymentStatus === "PARTIAL"
-                ? "warning"
-                : "danger"
-          }
-        >
-          {row.exchange ? "Trade-in" : (row.paymentStatus ?? "UNPAID")}
-        </Badge>
-      ),
+      cell: (row) =>
+        row.returned ? (
+          "—"
+        ) : (
+          <Badge
+            tone={
+              row.exchange
+                ? "info"
+                : row.paymentStatus === "PAID"
+                  ? "success"
+                  : row.paymentStatus === "PARTIAL"
+                    ? "warning"
+                    : "danger"
+            }
+          >
+            {row.exchange ? "Trade-in" : (row.paymentStatus ?? "UNPAID")}
+          </Badge>
+        ),
     },
   ];
   return (
@@ -382,6 +393,8 @@ export const PurchasesListRoute = () => {
           rows={rows}
           rowKey={(row) => String(row.id)}
           caption="Purchases"
+          emptyMessage="No purchases yet"
+          emptyDescription="New purchases will appear here once they are recorded."
           onRowClick={(row) => navigate(`${PURCHASES}/${row.id}`)}
         />
         <Pagination
@@ -452,7 +465,7 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
       fuelTypeId: purchase?.fuelTypeId ?? 0,
       transmissionTypeId: purchase?.transmissionTypeId ?? 0,
       segmentId: purchase?.segmentId ?? 0,
-      warehouseId: purchase?.warehouseId ?? 1,
+      warehouseId: purchase?.warehouseId ?? undefined,
       makeYear: String(purchase?.makeYear ?? ""),
       odometer: String(purchase?.odometer ?? ""),
       purchaseRate: purchase?.purchaseRate ?? 0,
@@ -508,15 +521,24 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
     queryKey: ["operations", "payment-accounts"],
     queryFn: operationsApi.paymentAccounts,
   });
+  const warehouses = useQuery({
+    queryKey: ["warehouses"],
+    queryFn: warehouseApi.list,
+  });
   const watchedExpenses = watch("expenses");
   const mutation = useMutation<unknown, Error, PurchaseInput>({
-    mutationFn: (value: PurchaseInput) =>
-      purchase
+    mutationFn: (value: PurchaseInput) => {
+      const payload: PurchaseInput = {
+        ...value,
+        warehouseId: optionalId(value.warehouseId),
+      };
+      return purchase
         ? operationsApi.purchases.update(purchase.id, {
-            ...value,
+            ...payload,
             version: purchase.version,
           })
-        : operationsApi.purchases.create(value),
+        : operationsApi.purchases.create(payload);
+    },
     onSuccess: async () => {
       const invalidations = [
         client.invalidateQueries({ queryKey: ["operations", "purchases"] }),
@@ -776,22 +798,18 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
             purchase?.transmissionTypeId,
           )}
           {select("segmentId", "Segment", purchase?.segmentId)}
-          <FormField
-            label="Warehouse"
-            required
-            error={fieldError(errors.warehouseId)}
-          >
+          <FormField label="Warehouse" error={fieldError(errors.warehouseId)}>
             <Select
               {...register("warehouseId", {
-                required: purchaseValidationMessage("warehouseId", "REQUIRED"),
-                min: {
-                  value: 1,
-                  message: purchaseValidationMessage("warehouseId", "REQUIRED"),
-                },
-                valueAsNumber: true,
+                setValueAs: (raw) => optionalId(Number(raw)),
               })}
             >
-              <option value="1">Future Cars</option>
+              <option value="">Select warehouse</option>
+              {warehouses.data?.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
             </Select>
           </FormField>
           <FormField
@@ -904,9 +922,6 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
               })}
             />
           </FormField>
-          <FormField label="Notes" error={fieldError(errors.notes)}>
-            <Textarea {...register("notes")} />
-          </FormField>
         </div>
       </Section>
       <Section title="Vendor and pickup">
@@ -944,10 +959,7 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
           >
             <Input
               {...register("ownerAddress", {
-                required: purchaseValidationMessage(
-                  "ownerAddress",
-                  "REQUIRED",
-                ),
+                required: purchaseValidationMessage("ownerAddress", "REQUIRED"),
               })}
             />
           </FormField>
@@ -1142,6 +1154,11 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
           </fieldset>
         ))}
       </Section>
+      <Section title="Notes">
+        <FormField label="Additional details" error={fieldError(errors.notes)}>
+          <Textarea {...register("notes")} />
+        </FormField>
+      </Section>
       <FormActions
         cancelTo={purchase ? `${PURCHASES}/${purchase.id}` : PURCHASES}
         pending={mutation.isPending}
@@ -1197,7 +1214,9 @@ export const PurchaseDetailRoute = () => {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["operations", "purchases"] });
       void client.invalidateQueries({ queryKey: ["operations", "stock"] });
-      void client.invalidateQueries({ queryKey: ["operations", "stock-detail"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "stock-detail"],
+      });
       void client.invalidateQueries({
         queryKey: ["operations", "stock-products"],
       });
@@ -1234,6 +1253,7 @@ export const PurchaseDetailRoute = () => {
         actions={
           purchase && (
             <>
+              <DownloadDocumentButton />
               <AuditHistoryButton
                 entityType="purchase"
                 entityId={id}
@@ -1274,7 +1294,7 @@ export const PurchaseDetailRoute = () => {
                     </Link>
                   </Can>
                 )}
-              {purchase.editable !== false && (
+              {!purchase.sold && purchase.editable !== false && (
                 <Can resource="PURCHASE_ORDER" privilege="UPDATE">
                   <Link
                     className="button button--secondary"
@@ -1284,13 +1304,15 @@ export const PurchaseDetailRoute = () => {
                   </Link>
                 </Can>
               )}
-              {purchase.paymentStatus === "PENDING" && (
-                <Can resource="PURCHASE_ORDER" privilege="DELETE">
-                  <Button variant="danger" onClick={() => setConfirm(true)}>
-                    Delete
-                  </Button>
-                </Can>
-              )}
+              {!purchase.sold &&
+                purchase.editable !== false &&
+                purchase.paymentStatus === "PENDING" && (
+                  <Can resource="PURCHASE_ORDER" privilege="DELETE">
+                    <Button variant="danger" onClick={() => setConfirm(true)}>
+                      Delete
+                    </Button>
+                  </Can>
+                )}
             </>
           )
         }
@@ -1301,245 +1323,11 @@ export const PurchaseDetailRoute = () => {
         retry={() => void query.refetch()}
       >
         {purchase && (
-          <>
-            <Section title="Purchase details">
-              <DetailGrid>
-                <Detail
-                  label="Purchase date"
-                  value={<DateValue value={purchase.date} />}
-                />
-                <Detail
-                  label="Delivered date"
-                  value={<DateValue value={purchase.deliveredDate} />}
-                />
-                <Detail label="Code" value={purchase.code} />
-                <Detail label="Color" value={purchase.colorName} />
-                <Detail label="Fuel" value={purchase.fuelType} />
-                <Detail
-                  label="Transmission"
-                  value={purchase.transmissionType}
-                />
-                <Detail label="Segment" value={purchase.segmentName} />
-                <Detail label="Warehouse" value={purchase.warehouseName} />
-                <Detail label="Make year" value={purchase.makeYear} />
-                <Detail label="Odometer" value={purchase.odometer} />
-                <Detail
-                  label="Ownership serial"
-                  value={purchase.ownerShipSerialNo}
-                />
-                <Detail label="Vendor" value={purchase.ownerName} />
-                <Detail label="Mobile" value={purchase.ownerMobileNo} />
-                <Detail label="Address" value={purchase.ownerAddress} />
-                <Detail label="Pickup staff" value={purchase.pickupStaff} />
-                <Detail
-                  label="Pickup location"
-                  value={purchase.pickupLocation}
-                />
-                <Detail label="Notes" value={purchase.notes} />
-              </DetailGrid>
-            </Section>
-            <Section title="Amounts">
-              <DetailGrid>
-                <Detail
-                  label="Purchase rate"
-                  value={<Money value={purchase.purchaseRate} />}
-                />
-                <Detail
-                  label="Total Amount"
-                  value={<Money value={purchase.totalCost} />}
-                />
-                <Detail
-                  label="Paid"
-                  value={<Money value={purchase.paidAmount} />}
-                />
-                <Detail
-                  label="Pending"
-                  value={<Money value={purchase.pendingAmount} />}
-                />
-                <Detail label="Status" value={purchase.paymentStatus} />
-              </DetailGrid>
-            </Section>
-            <Section title="Expenses">
-              <DataTable
-                caption="Purchase expenses"
-                rows={purchase.expenses ?? []}
-                rowKey={(row) => String(row.id)}
-                columns={[
-                  {
-                    key: "date",
-                    header: "Date",
-                    cell: (row) => formatDate(row.date),
-                  },
-                  {
-                    key: "desc",
-                    header: "Description",
-                    cell: (row) => row.description,
-                  },
-                  {
-                    key: "amount",
-                    header: "Amount",
-                    align: "right",
-                    cell: (row) => formatCurrency(row.amount),
-                  },
-                  {
-                    key: "history",
-                    header: "",
-                    cell: (row) =>
-                      row.id ? (
-                        <AuditHistoryButton
-                          entityType="expense"
-                          entityId={row.id}
-                          variant="ghost"
-                        />
-                      ) : null,
-                  },
-                ]}
-              />
-            </Section>
-            <Section title="Payments">
-              <DataTable
-                caption="Purchase payments"
-                rows={purchase.payments ?? []}
-                rowKey={(row) => String(row.id)}
-                columns={[
-                  {
-                    key: "date",
-                    header: "Date",
-                    cell: (row) => formatDate(row.paymentDate),
-                  },
-                  {
-                    key: "method",
-                    header: "Method",
-                    cell: (row) => row.paymentMethod ?? "—",
-                  },
-                  {
-                    key: "reference",
-                    header: "Reference",
-                    cell: (row) => row.referenceNo ?? "—",
-                  },
-                  {
-                    key: "amount",
-                    header: "Amount",
-                    align: "right",
-                    cell: (row) => formatCurrency(row.amount),
-                  },
-                  {
-                    key: "action",
-                    header: "",
-                    cell: (row: Payment) => (
-                      <span className="operations-inline-actions">
-                        <AuditHistoryButton
-                          entityType="purchase-payment"
-                          entityId={row.id}
-                          variant="ghost"
-                        />
-                        {purchase.editable !== false && (
-                          <Link
-                            to={`${PURCHASES}/${id}/payments/${row.id}/edit`}
-                          >
-                            Edit
-                          </Link>
-                        )}
-                      </span>
-                    ),
-                  },
-                ]}
-              />
-            </Section>
-            {(purchase.rcDueAmount ?? 0) > 0 && (
-              <>
-                <Section title="RCD">
-                  <DetailGrid>
-                    <Detail
-                      label="RCD amount"
-                      value={<Money value={purchase.rcDueAmount} />}
-                    />
-                    <Detail
-                      label="Received"
-                      value={<Money value={purchase.paidRcDueAmount} />}
-                    />
-                    <Detail
-                      label="Pending"
-                      value={<Money value={purchase.pendingRcDueAmount} />}
-                    />
-                  </DetailGrid>
-                </Section>
-                <Section
-                  title="RCD receipts"
-                  actions={
-                    (purchase.pendingRcDueAmount ?? 0) > 0 ? (
-                      <Can resource="PURCHASE_PAYMENT" privilege="CREATE">
-                        <Link
-                          className="button button--secondary"
-                          to={`${PURCHASES}/${id}/rc-due-receipts/new`}
-                        >
-                          Record RCD Receipt
-                        </Link>
-                      </Can>
-                    ) : undefined
-                  }
-                >
-                  <DataTable
-                    caption="RCD receipts"
-                    rows={purchase.rcDueReceipts ?? []}
-                    rowKey={(row) => String(row.id)}
-                    emptyMessage="No RCD receipts recorded"
-                    columns={[
-                      {
-                        key: "date",
-                        header: "Date",
-                        cell: (row) => formatDate(row.receiptDate),
-                      },
-                      {
-                        key: "method",
-                        header: "Method",
-                        cell: (row) => row.paymentMethod,
-                      },
-                      {
-                        key: "account",
-                        header: "Account",
-                        cell: (row) => row.paymentAccountName,
-                      },
-                      {
-                        key: "reference",
-                        header: "Reference",
-                        cell: (row) => row.referenceNo ?? "—",
-                      },
-                      {
-                        key: "amount",
-                        header: "Amount",
-                        align: "right",
-                        cell: (row) => formatCurrency(row.amount),
-                      },
-                      {
-                        key: "actions",
-                        header: "",
-                        cell: (row) => (
-                          <span className="operations-inline-actions">
-                            <Can resource="PURCHASE_PAYMENT" privilege="UPDATE">
-                              <Link
-                                to={`${PURCHASES}/${id}/rc-due-receipts/${row.id}/edit`}
-                              >
-                                Edit
-                              </Link>
-                            </Can>
-                            <Can resource="PURCHASE_PAYMENT" privilege="DELETE">
-                              <Button
-                                variant="ghost"
-                                onClick={() => setDeleteRcDueReceiptId(row.id)}
-                              >
-                                Delete
-                              </Button>
-                            </Can>
-                          </span>
-                        ),
-                      },
-                    ]}
-                  />
-                </Section>
-              </>
-            )}
-          </>
+          <PurchaseOrderDocument
+            purchase={purchase}
+            purchaseId={id}
+            onDeleteRcDueReceipt={setDeleteRcDueReceiptId}
+          />
         )}
       </QueryBoundary>
       <ConfirmDialog
@@ -1674,9 +1462,7 @@ export const PurchaseRcDueReceiptRoute = () => {
         client.invalidateQueries({ queryKey: ["operations", "purchases"] }),
         invalidateOutstanding(client, "purchase-rc-due"),
       ]);
-      toast.success(
-        receiptId ? "RCD receipt updated" : "RCD receipt recorded",
-      );
+      toast.success(receiptId ? "RCD receipt updated" : "RCD receipt recorded");
       navigate(`${PURCHASES}/${id}`);
     },
     onError: async (error) => {
@@ -1751,6 +1537,8 @@ export const PurchaseReturnsListRoute = () => {
         <DataTable
           caption="Purchase returns"
           rows={rows}
+          emptyMessage="No purchase returns yet"
+          emptyDescription="Returned purchases will appear here once they are recorded."
           rowKey={(row) => String(row.id)}
           onRowClick={(row) => navigate(`${RETURNS}/${row.id}`)}
           columns={[
@@ -1817,9 +1605,16 @@ export const PurchaseReturnDetailRoute = () => {
     <>
       <PageHeader
         title={item?.vehicleNo ?? "Purchase return"}
+        description={
+          item
+            ? `${item.brandName ?? ""} ${item.modelName ?? ""} ${item.variantName ?? ""}`.trim() ||
+              undefined
+            : undefined
+        }
         actions={
           item && (
             <>
+              <DownloadDocumentButton />
               <AuditHistoryButton
                 entityType="purchase-return"
                 entityId={id}
@@ -1838,100 +1633,7 @@ export const PurchaseReturnDetailRoute = () => {
         }
       />
       <QueryBoundary pending={query.isPending} error={query.error}>
-        {item && (
-          <>
-            <Section title="Return details">
-              <DetailGrid>
-                <Detail label="UIN" value={item.uin} />
-                <Detail
-                  label="Purchase reference"
-                  value={item.purchaseReferenceNo}
-                />
-                <Detail
-                  label="Return date"
-                  value={<DateValue value={item.returnDate} />}
-                />
-                <Detail label="Vendor" value={item.vendorName} />
-                <Detail label="Reason" value={item.reason} />
-                <Detail label="Notes" value={item.notes} />
-                <Detail
-                  label="Landed cost"
-                  value={<Money value={item.inventoryLandedCost} />}
-                />
-                <Detail
-                  label="Vendor invoice"
-                  value={<Money value={item.vendorInvoiceAmount} />}
-                />
-                <Detail
-                  label="Paid to vendor"
-                  value={<Money value={item.paidToVendor} />}
-                />
-                <Detail
-                  label="Outstanding AP"
-                  value={<Money value={item.outstandingAp} />}
-                />
-                <Detail
-                  label="Refund expected"
-                  value={<Money value={item.refundAmount} />}
-                />
-                <Detail
-                  label="Loss on return"
-                  value={<Money value={item.lossOnReturn} />}
-                />
-                <Detail
-                  label="Received"
-                  value={<Money value={item.totalReceived} />}
-                />
-                <Detail
-                  label="Remaining"
-                  value={<Money value={item.remainingReceivable} />}
-                />
-                <Detail label="Status" value={item.status} />
-              </DetailGrid>
-            </Section>
-            <Section title="Receipts">
-              <DataTable
-                caption="Return receipts"
-                rows={item.receipts}
-                rowKey={(row) => String(row.id)}
-                columns={[
-                  {
-                    key: "date",
-                    header: "Date",
-                    cell: (row) => formatDate(row.paymentDate),
-                  },
-                  {
-                    key: "reference",
-                    header: "Reference",
-                    cell: (row) => row.referenceNo ?? "—",
-                  },
-                  {
-                    key: "amount",
-                    header: "Amount",
-                    align: "right",
-                    cell: (row) => formatCurrency(row.amount),
-                  },
-                  {
-                    key: "action",
-                    header: "",
-                    cell: (row) => (
-                      <span className="operations-inline-actions">
-                        <AuditHistoryButton
-                          entityType="purchase-return-receipt"
-                          entityId={row.id}
-                          variant="ghost"
-                        />
-                        <Link to={`${RETURNS}/${id}/receipts/${row.id}/edit`}>
-                          Edit
-                        </Link>
-                      </span>
-                    ),
-                  },
-                ]}
-              />
-            </Section>
-          </>
-        )}
+        {item && <PurchaseReturnDocument item={item} returnId={id} />}
       </QueryBoundary>
     </>
   );
@@ -1966,7 +1668,9 @@ export const PurchaseReturnCreateRoute = () => {
     }) => operationsApi.purchaseReturns.create(inventoryId!, value),
     onSuccess: (response) => {
       void client.invalidateQueries({ queryKey: ["operations", "stock"] });
-      void client.invalidateQueries({ queryKey: ["operations", "stock-detail"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "stock-detail"],
+      });
       void client.invalidateQueries({
         queryKey: ["operations", "stock-products"],
       });

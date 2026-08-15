@@ -19,14 +19,11 @@ import {
   type Stock,
 } from "../../services/operations";
 import {
-  Detail,
-  DetailGrid,
   InvalidRoute,
-  Money,
   QueryBoundary,
-  Section,
   useNumericParam,
 } from "./common";
+import { InventoryProductView } from "./InventoryProductView";
 
 const optionalFilterId = (raw: string): number | undefined => {
   const id = Number(raw);
@@ -352,101 +349,7 @@ export const InventoryDetailRoute = () => {
         }
       />
       <QueryBoundary pending={query.isPending} error={query.error}>
-        {item && (
-          <>
-            <Section title="Vehicle">
-              {(item.soldDate ||
-                item.saleRate != null ||
-                item.profit != null) && (
-                <div className="operations-inventory-metrics">
-                  <div>
-                    <span>Landed cost</span>
-                    <strong>
-                      <Money value={item.landedCost} />
-                    </strong>
-                  </div>
-                  <div>
-                    <span>Sale rate</span>
-                    <strong>
-                      <Money value={item.saleRate} />
-                    </strong>
-                  </div>
-                  <div
-                    className={
-                      (item.profit ?? 0) >= 0 ? "is-positive" : "is-negative"
-                    }
-                  >
-                    <span>Profit</span>
-                    <strong>
-                      <Money value={item.profit} />
-                    </strong>
-                  </div>
-                </div>
-              )}
-              <DetailGrid>
-                <Detail
-                  label="Status"
-                  value={item.status?.replaceAll("_", " ")}
-                />
-                <Detail
-                  label="Purchase date"
-                  value={formatDate(item.purchaseDate)}
-                />
-                <Detail label="Vendor" value={item.vendorName} />
-                <Detail label="Vendor mobile" value={item.vendorMobileNo} />
-                <Detail label="Color" value={item.color} />
-                <Detail label="Fuel type" value={item.fuelType} />
-                <Detail label="Odometer" value={item.odometer} />
-                <Detail
-                  label="Purchased amount"
-                  value={<Money value={item.purchasedAmount} />}
-                />
-                <Detail
-                  label="Purchase expenses"
-                  value={<Money value={item.purchaseExpense} />}
-                />
-                {!(
-                  item.soldDate ||
-                  item.saleRate != null ||
-                  item.profit != null
-                ) && (
-                  <Detail
-                    label="Landed cost"
-                    value={<Money value={item.landedCost} />}
-                  />
-                )}
-                <Detail label="Sold date" value={formatDate(item.soldDate)} />
-                <Detail label="Customer" value={item.customerName} />
-                <Detail label="Customer mobile" value={item.customerMobileNo} />
-              </DetailGrid>
-            </Section>
-            <Section title="Expenses">
-              <DataTable
-                caption="Inventory expenses"
-                rows={item.expenses ?? []}
-                rowKey={(row) => String(row.id)}
-                columns={[
-                  {
-                    key: "date",
-                    header: "Date",
-                    cell: (row) => formatDate(row.date),
-                  },
-                  {
-                    key: "description",
-                    header: "Description",
-                    cell: (row) => row.description,
-                  },
-                  {
-                    key: "amount",
-                    header: "Amount",
-                    align: "right",
-                    cell: (row) => formatCurrency(row.amount),
-                  },
-                ]}
-              />
-            </Section>
-          </>
-        )}
+        {item && <InventoryProductView item={item} />}
       </QueryBoundary>
     </>
   );

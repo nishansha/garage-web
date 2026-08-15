@@ -461,12 +461,14 @@ export const Modal = ({
   title,
   children,
   footer,
+  className,
   onClose,
 }: {
   open: boolean;
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  className?: string;
   onClose: () => void;
 }) => {
   const titleId = useId();
@@ -482,7 +484,7 @@ export const Modal = ({
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <section
-        className="modal"
+        className={cx("modal", className)}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

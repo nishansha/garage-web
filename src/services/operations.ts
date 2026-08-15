@@ -122,7 +122,7 @@ export interface Purchase {
   purchaseRate: number;
   totalCost: number;
   pickupStaffId: number | null;
-  pickupStaff: string | null;
+  pickupStaffName: string | null;
   pickupLocation: string | null;
   ownerName: string | null;
   ownerMobileNo: string | null;
@@ -278,6 +278,7 @@ export interface Stock {
   productId: number;
   vendorName?: string | null;
   vendorMobileNo?: string | null;
+  vendorAddress?: string | null;
   purchaseDate: string;
   productCode: string;
   brandName: string;
@@ -298,6 +299,7 @@ export interface Stock {
   soldDate?: string | null;
   customerName?: string | null;
   customerMobileNo?: string | null;
+  customerAddress?: string | null;
   expenses?: PurchaseExpenseInput[] | null;
 }
 export interface Expense {
@@ -343,6 +345,9 @@ export interface PurchaseReturn {
   inventoryId: number;
   uin: string;
   vehicleNo?: string | null;
+  brandName?: string | null;
+  modelName?: string | null;
+  variantName?: string | null;
   vendorName?: string | null;
   returnDate: string;
   reason: string;
@@ -352,6 +357,7 @@ export interface PurchaseReturn {
   paidToVendor?: number | null;
   outstandingAp?: number | null;
   refundAmount: number;
+  unwindAmount?: number | null;
   lossOnReturn: number;
   status: ReturnStatus;
   receipts: Payment[];
@@ -382,6 +388,10 @@ export interface SaleReturn {
   id: number;
   version: number;
   saleId: number;
+  productNo?: string | null;
+  brandName?: string | null;
+  modelName?: string | null;
+  variantName?: string | null;
   invoiceNo: string;
   returnDate: string;
   reason: string;
@@ -761,7 +771,9 @@ export const operationsApi = {
         `v1/sales/${id}/payments/${paymentId}`,
         cleanPayment(value),
       ),
-    receivables: () => api.get<Outstandings>("v1/sales/receivables"),
+    receivables: () => api.get<SalesReceivables>("v1/sales/receivables"),
+    financeReceivables: () =>
+      api.get<FinanceReceivables>("v1/reports/finance-receivables"),
   },
   saleReturns: {
     list: (page = 0, size = 20, filters?: SearchInput) =>
