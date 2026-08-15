@@ -718,20 +718,101 @@
   }
 }
 
-.order-document {
+.order-document-wrap {
   max-width: 920px;
   margin: 0 auto 2rem;
+}
+
+.order-document {
   padding: 1.75rem 1.85rem 1.5rem;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--primary) 6%, var(--surface-raised)) 0 4px,
-      var(--surface-raised) 4px
-    );
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--primary) 6%, var(--surface-raised)) 0 4px,
+    var(--surface-raised) 4px
+  );
   box-shadow: var(--shadow);
+}
+
+.order-document.is-pdf-export {
+  overflow: visible;
+  border: none;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+  color: #111;
+}
+
+.order-document.is-pdf-export .order-document__tabs {
+  display: none;
+}
+
+.order-document.is-pdf-export .order-document__kicker,
+.order-document.is-pdf-export h3,
+.order-document.is-pdf-export dt,
+.order-document.is-pdf-export .order-document__lines th,
+.order-document.is-pdf-export .order-document__lines td small,
+.order-document.is-pdf-export .order-document__parties p,
+.order-document.is-pdf-export .order-document__notes p,
+.order-document.is-pdf-export .order-document__callout p,
+.order-document.is-pdf-export .order-document__subtitle {
+  color: #555;
+}
+
+.order-document.is-pdf-export .order-document__masthead h2,
+.order-document.is-pdf-export .order-document__code,
+.order-document.is-pdf-export .order-document__brand strong,
+.order-document.is-pdf-export dd,
+.order-document.is-pdf-export .order-document__parties strong,
+.order-document.is-pdf-export .order-document__vehicle p,
+.order-document.is-pdf-export .order-document__lines td strong,
+.order-document.is-pdf-export .order-document__total dt,
+.order-document.is-pdf-export .order-document__total dd {
+  color: #111;
+}
+
+.order-document.is-pdf-export .order-document__pdf-hide {
+  display: none;
+}
+
+.order-document.is-pdf-export .order-document__masthead,
+.order-document.is-pdf-export .order-document__lines th,
+.order-document.is-pdf-export .order-document__lines td,
+.order-document.is-pdf-export .order-document__notes {
+  border-color: #ddd;
+}
+
+.order-document.is-pdf-export .order-document__vehicle,
+.order-document.is-pdf-export .order-document__callout {
+  background: #f7f7f7;
+  border-color: #ddd;
+}
+
+.order-document.is-pdf-export .badge--neutral {
+  color: #334155;
+  background: #e2e8f0;
+}
+
+.order-document.is-pdf-export .badge--success {
+  color: #0f766e;
+  background: #ccfbf1;
+}
+
+.order-document.is-pdf-export .badge--warning {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.order-document.is-pdf-export .badge--danger {
+  color: #9f1239;
+  background: #ffe4e6;
+}
+
+.order-document.is-pdf-export .badge--info {
+  color: #1d4ed8;
+  background: #dbeafe;
 }
 
 .order-document__masthead {
@@ -741,6 +822,28 @@
   gap: 1.5rem;
   padding-bottom: 1.25rem;
   border-bottom: 1px solid var(--border);
+}
+
+.order-document__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.order-document__brand .brand-mark {
+  box-shadow: none;
+}
+
+.order-document__brand strong {
+  display: block;
+  color: var(--text);
+  font-size: 1.2rem;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.order-document__brand .order-document__kicker {
+  margin: 0.2rem 0 0;
 }
 
 .order-document__kicker {
@@ -1056,6 +1159,7 @@
     background: #fff;
   }
 
+  .order-document-wrap,
   .order-document {
     max-width: none;
     margin: 0;
@@ -1080,10 +1184,16 @@
 
   .order-document__masthead h2,
   .order-document__code,
+  .order-document__brand strong,
   .order-document dd,
   .order-document__parties strong,
+  .order-document__vehicle p,
   .order-document__lines td strong {
     color: #111;
+  }
+
+  .order-document__pdf-hide {
+    display: none;
   }
 
   .order-document__vehicle,

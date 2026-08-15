@@ -20,6 +20,7 @@ import {
 } from "../../components/ui";
 import { Can } from "../../components/Can";
 import { AuditHistoryButton } from "../audit/AuditHistory";
+import { DownloadDocumentButton } from "./OrderDocument";
 import { formatCurrency, formatDate } from "../../lib/utils";
 import {
   extractFieldErrors,
@@ -1378,6 +1379,7 @@ export const SaleDetailRoute = () => {
         actions={
           sale && (
             <>
+              <DownloadDocumentButton />
               <AuditHistoryButton
                 entityType="sale"
                 entityId={id}
@@ -1676,6 +1678,7 @@ export const SaleReturnDetailRoute = () => {
         actions={
           item && (
             <>
+              <DownloadDocumentButton />
               <AuditHistoryButton
                 entityType="sale-return"
                 entityId={id}

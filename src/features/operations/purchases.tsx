@@ -21,6 +21,7 @@ import {
 } from "../../components/ui";
 import { Can } from "../../components/Can";
 import { AuditHistoryButton } from "../audit/AuditHistory";
+import { DownloadDocumentButton } from "./OrderDocument";
 import { formatCurrency, formatDate } from "../../lib/utils";
 import {
   applyFieldValidationErrors,
@@ -39,6 +40,7 @@ import {
   type RcDueReceipt,
   type SearchInput,
 } from "../../services/operations";
+import { warehouseApi } from "../../services/warehouse";
 import {
   DateValue,
   Detail,
@@ -67,8 +69,7 @@ const optionalId = (value: number | null | undefined) =>
 
 const PURCHASES = "/purchase/purchases";
 const RETURNS = "/purchase/returns";
-const RC_DUE_MAXIMUM_MESSAGE =
-  "Receipt amount cannot exceed the remaining RCD";
+const RC_DUE_MAXIMUM_MESSAGE = "Receipt amount cannot exceed the remaining RCD";
 
 const rcDueReceiptAsPayment = (receipt?: RcDueReceipt): Payment | undefined =>
   receipt
@@ -392,6 +393,8 @@ export const PurchasesListRoute = () => {
           rows={rows}
           rowKey={(row) => String(row.id)}
           caption="Purchases"
+          emptyMessage="No purchases yet"
+          emptyDescription="New purchases will appear here once they are recorded."
           onRowClick={(row) => navigate(`${PURCHASES}/${row.id}`)}
         />
         <Pagination
@@ -462,7 +465,7 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
       fuelTypeId: purchase?.fuelTypeId ?? 0,
       transmissionTypeId: purchase?.transmissionTypeId ?? 0,
       segmentId: purchase?.segmentId ?? 0,
-      warehouseId: purchase?.warehouseId ?? 1,
+      warehouseId: purchase?.warehouseId ?? undefined,
       makeYear: String(purchase?.makeYear ?? ""),
       odometer: String(purchase?.odometer ?? ""),
       purchaseRate: purchase?.purchaseRate ?? 0,
@@ -518,15 +521,24 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
     queryKey: ["operations", "payment-accounts"],
     queryFn: operationsApi.paymentAccounts,
   });
+  const warehouses = useQuery({
+    queryKey: ["warehouses"],
+    queryFn: warehouseApi.list,
+  });
   const watchedExpenses = watch("expenses");
   const mutation = useMutation<unknown, Error, PurchaseInput>({
-    mutationFn: (value: PurchaseInput) =>
-      purchase
+    mutationFn: (value: PurchaseInput) => {
+      const payload: PurchaseInput = {
+        ...value,
+        warehouseId: optionalId(value.warehouseId),
+      };
+      return purchase
         ? operationsApi.purchases.update(purchase.id, {
-            ...value,
+            ...payload,
             version: purchase.version,
           })
-        : operationsApi.purchases.create(value),
+        : operationsApi.purchases.create(payload);
+    },
     onSuccess: async () => {
       const invalidations = [
         client.invalidateQueries({ queryKey: ["operations", "purchases"] }),
@@ -786,22 +798,18 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
             purchase?.transmissionTypeId,
           )}
           {select("segmentId", "Segment", purchase?.segmentId)}
-          <FormField
-            label="Warehouse"
-            required
-            error={fieldError(errors.warehouseId)}
-          >
+          <FormField label="Warehouse" error={fieldError(errors.warehouseId)}>
             <Select
               {...register("warehouseId", {
-                required: purchaseValidationMessage("warehouseId", "REQUIRED"),
-                min: {
-                  value: 1,
-                  message: purchaseValidationMessage("warehouseId", "REQUIRED"),
-                },
-                valueAsNumber: true,
+                setValueAs: (raw) => optionalId(Number(raw)),
               })}
             >
-              <option value="1">Future Cars</option>
+              <option value="">Select warehouse</option>
+              {warehouses.data?.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
             </Select>
           </FormField>
           <FormField
@@ -914,9 +922,6 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
               })}
             />
           </FormField>
-          <FormField label="Notes" error={fieldError(errors.notes)}>
-            <Textarea {...register("notes")} />
-          </FormField>
         </div>
       </Section>
       <Section title="Vendor and pickup">
@@ -954,10 +959,7 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
           >
             <Input
               {...register("ownerAddress", {
-                required: purchaseValidationMessage(
-                  "ownerAddress",
-                  "REQUIRED",
-                ),
+                required: purchaseValidationMessage("ownerAddress", "REQUIRED"),
               })}
             />
           </FormField>
@@ -1152,6 +1154,11 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
           </fieldset>
         ))}
       </Section>
+      <Section title="Notes">
+        <FormField label="Additional details" error={fieldError(errors.notes)}>
+          <Textarea {...register("notes")} />
+        </FormField>
+      </Section>
       <FormActions
         cancelTo={purchase ? `${PURCHASES}/${purchase.id}` : PURCHASES}
         pending={mutation.isPending}
@@ -1207,7 +1214,9 @@ export const PurchaseDetailRoute = () => {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["operations", "purchases"] });
       void client.invalidateQueries({ queryKey: ["operations", "stock"] });
-      void client.invalidateQueries({ queryKey: ["operations", "stock-detail"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "stock-detail"],
+      });
       void client.invalidateQueries({
         queryKey: ["operations", "stock-products"],
       });
@@ -1244,6 +1253,7 @@ export const PurchaseDetailRoute = () => {
         actions={
           purchase && (
             <>
+              <DownloadDocumentButton />
               <AuditHistoryButton
                 entityType="purchase"
                 entityId={id}
@@ -1452,9 +1462,7 @@ export const PurchaseRcDueReceiptRoute = () => {
         client.invalidateQueries({ queryKey: ["operations", "purchases"] }),
         invalidateOutstanding(client, "purchase-rc-due"),
       ]);
-      toast.success(
-        receiptId ? "RCD receipt updated" : "RCD receipt recorded",
-      );
+      toast.success(receiptId ? "RCD receipt updated" : "RCD receipt recorded");
       navigate(`${PURCHASES}/${id}`);
     },
     onError: async (error) => {
@@ -1529,6 +1537,8 @@ export const PurchaseReturnsListRoute = () => {
         <DataTable
           caption="Purchase returns"
           rows={rows}
+          emptyMessage="No purchase returns yet"
+          emptyDescription="Returned purchases will appear here once they are recorded."
           rowKey={(row) => String(row.id)}
           onRowClick={(row) => navigate(`${RETURNS}/${row.id}`)}
           columns={[
@@ -1604,6 +1614,7 @@ export const PurchaseReturnDetailRoute = () => {
         actions={
           item && (
             <>
+              <DownloadDocumentButton />
               <AuditHistoryButton
                 entityType="purchase-return"
                 entityId={id}
@@ -1657,7 +1668,9 @@ export const PurchaseReturnCreateRoute = () => {
     }) => operationsApi.purchaseReturns.create(inventoryId!, value),
     onSuccess: (response) => {
       void client.invalidateQueries({ queryKey: ["operations", "stock"] });
-      void client.invalidateQueries({ queryKey: ["operations", "stock-detail"] });
+      void client.invalidateQueries({
+        queryKey: ["operations", "stock-detail"],
+      });
       void client.invalidateQueries({
         queryKey: ["operations", "stock-products"],
       });

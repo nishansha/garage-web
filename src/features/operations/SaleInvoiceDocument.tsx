@@ -10,6 +10,7 @@ import type {
   SalePaymentStatus,
 } from "../../services/operations";
 import { Money } from "./common";
+import { OrderDocument, OrderDocumentBrand } from "./OrderDocument";
 
 const SALES = "/sales/sales";
 
@@ -45,15 +46,9 @@ export const SaleInvoiceDocument = ({
 
   return (
     <>
-      <article className="order-document">
+      <OrderDocument filename={`SO-${sale.id}-${sale.vehicleNo}`}>
         <header className="order-document__masthead">
-          <div>
-            <p className="order-document__kicker">Sale invoice</p>
-            <h2>{sale.vehicleNo}</h2>
-            <p className="order-document__subtitle">
-              {joinMeta([sale.brandName, sale.modelName, sale.variantName])}
-            </p>
-          </div>
+          <OrderDocumentBrand documentTitle="Sale invoice" />
           <div className="order-document__meta">
             <strong className="order-document__code">#SO-{sale.id}</strong>
             <Badge tone={paymentTone(sale.paymentStatus)}>
@@ -182,7 +177,7 @@ export const SaleInvoiceDocument = ({
                 <Money value={sale.pendingAmount} />
               </dd>
             </div>
-            <div>
+            <div className="order-document__pdf-hide">
               <dt>Profit</dt>
               <dd>
                 <Money value={sale.profit} />
@@ -233,9 +228,7 @@ export const SaleInvoiceDocument = ({
                 exchange?.vehicleNo,
                 exchange?.code,
                 exchange?.makeYear,
-                exchange?.odometer != null
-                  ? `${exchange.odometer} km`
-                  : null,
+                exchange?.odometer != null ? `${exchange.odometer} km` : null,
                 exchange?.ownerShipSerialNo
                   ? `Serial ${exchange.ownerShipSerialNo}`
                   : null,
@@ -268,7 +261,7 @@ export const SaleInvoiceDocument = ({
             </dl>
           </aside>
         )}
-      </article>
+      </OrderDocument>
 
       <Modal
         open={paymentsOpen}
