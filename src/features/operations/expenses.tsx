@@ -35,11 +35,8 @@ import {
   type SearchInput,
 } from "../../services/operations";
 import {
-  Detail,
-  DetailGrid,
   FormActions,
   InvalidRoute,
-  Money,
   QueryBoundary,
   RouteFormPage,
   Section,
@@ -47,6 +44,8 @@ import {
   today,
   useNumericParam,
 } from "./common";
+import { DownloadDocumentButton } from "./OrderDocument";
+import { GeneralExpenseDocument } from "./GeneralExpenseDocument";
 
 const GENERAL = "/expenses/general";
 const PURCHASE = "/expenses/purchase";
@@ -574,6 +573,7 @@ export const GeneralExpenseDetailRoute = () => {
         actions={
           query.data && (
             <>
+              <DownloadDocumentButton />
               <AuditHistoryButton
                 entityType="expense"
                 entityId={id}
@@ -597,26 +597,7 @@ export const GeneralExpenseDetailRoute = () => {
         }
       />
       <QueryBoundary pending={query.isPending} error={query.error}>
-        {query.data && (
-          <Section title="Expense details">
-            <DetailGrid>
-              <Detail label="Date" value={formatDate(query.data.date)} />
-              <Detail
-                label="Type"
-                value={
-                  query.data.typeDesc ??
-                  query.data.type ??
-                  query.data.expenseType
-                }
-              />
-              <Detail label="Description" value={query.data.description} />
-              <Detail
-                label="Amount"
-                value={<Money value={query.data.amount} />}
-              />
-            </DetailGrid>
-          </Section>
-        )}
+        {query.data && <GeneralExpenseDocument expense={query.data} />}
       </QueryBoundary>
       <ConfirmDialog
         open={confirm}
