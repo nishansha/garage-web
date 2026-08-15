@@ -25,7 +25,7 @@ export const OrderDocumentBrand = ({
 }) => (
   <div className="order-document__brand">
     <span className="brand-mark brand-mark--small">
-      <img src="/logo.png" alt="" width={39} height={39} />
+      <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" width={39} height={39} />
     </span>
     <div>
       <strong>Garage</strong>
