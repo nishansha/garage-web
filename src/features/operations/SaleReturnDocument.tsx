@@ -11,6 +11,7 @@ import type {
   SaleReturn,
 } from "../../services/operations";
 import { Money } from "./common";
+import { OrderDocument, OrderDocumentBrand } from "./OrderDocument";
 
 const RETURNS = "/sales/returns";
 
@@ -53,15 +54,11 @@ export const SaleReturnDocument = ({
 
   return (
     <>
-      <article className="order-document">
+      <OrderDocument
+        filename={`SR-${item.id}-${item.productNo ?? item.invoiceNo}`}
+      >
         <header className="order-document__masthead">
-          <div>
-            <p className="order-document__kicker">Sale return</p>
-            <h2>{item.productNo ?? item.invoiceNo}</h2>
-            <p className="order-document__subtitle">
-              {joinMeta([item.brandName, item.modelName, item.variantName])}
-            </p>
-          </div>
+          <OrderDocumentBrand documentTitle="Sale return" />
           <div className="order-document__meta">
             <strong className="order-document__code">
               #{item.invoiceNo.replace(/^#/, "")}
@@ -216,7 +213,7 @@ export const SaleReturnDocument = ({
             <p>{item.notes}</p>
           </section>
         )}
-      </article>
+      </OrderDocument>
 
       <Modal
         open={refundsOpen}

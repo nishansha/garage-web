@@ -9,6 +9,7 @@ import type {
   ReturnStatus,
 } from "../../services/operations";
 import { Money } from "./common";
+import { OrderDocument, OrderDocumentBrand } from "./OrderDocument";
 
 const PURCHASES = "/purchase/purchases";
 const RETURNS = "/purchase/returns";
@@ -38,21 +39,18 @@ export const PurchaseReturnDocument = ({
   const [receiptsOpen, setReceiptsOpen] = useState(false);
   const receipts = item.receipts ?? [];
   const canRecordReceipt = item.status === "PENDING";
-  const documentCode = (
-    item.purchaseReferenceNo ?? `PR-${item.id}`
-  ).replace(/^#/, "");
+  const documentCode = (item.purchaseReferenceNo ?? `PR-${item.id}`).replace(
+    /^#/,
+    "",
+  );
 
   return (
     <>
-      <article className="order-document">
+      <OrderDocument
+        filename={`PR-${item.id}-${item.vehicleNo ?? item.uin ?? item.id}`}
+      >
         <header className="order-document__masthead">
-          <div>
-            <p className="order-document__kicker">Purchase return</p>
-            <h2>{item.vehicleNo ?? item.uin}</h2>
-            <p className="order-document__subtitle">
-              {joinMeta([item.brandName, item.modelName, item.variantName])}
-            </p>
-          </div>
+          <OrderDocumentBrand documentTitle="Purchase return" />
           <div className="order-document__meta">
             <strong className="order-document__code">#{documentCode}</strong>
             <Badge tone={statusTone(item.status)}>{item.status}</Badge>
@@ -215,7 +213,7 @@ export const PurchaseReturnDocument = ({
             <p>{item.notes}</p>
           </section>
         )}
-      </article>
+      </OrderDocument>
 
       <Modal
         open={receiptsOpen}

@@ -10,6 +10,7 @@ import type {
   Purchase,
 } from "../../services/operations";
 import { Money } from "./common";
+import { OrderDocument, OrderDocumentBrand } from "./OrderDocument";
 
 const PURCHASES = "/purchase/purchases";
 
@@ -64,22 +65,14 @@ export const PurchaseOrderDocument = ({
 
   return (
     <>
-      <article className="order-document">
+      <OrderDocument filename={`PO-${purchase.id}-${purchase.vehicleNo}`}>
         <header className="order-document__masthead">
-          <div>
-            <p className="order-document__kicker">Purchase order</p>
-            <h2>{purchase.vehicleNo}</h2>
-            <p className="order-document__subtitle">
-              {joinMeta([
-                purchase.brandName,
-                purchase.modelName,
-                purchase.variantName,
-              ])}
-            </p>
-          </div>
+          <OrderDocumentBrand documentTitle="Purchase order" />
           <div className="order-document__meta">
             {purchase.code && (
-              <strong className="order-document__code">#PO-{purchase.id}</strong>
+              <strong className="order-document__code">
+                #PO-{purchase.id}
+              </strong>
             )}
             {purchase.returned ? (
               <Badge tone="warning">Returned</Badge>
@@ -155,10 +148,15 @@ export const PurchaseOrderDocument = ({
                   ])}
                 </small>
               </td>
-              <td>{formatCurrency(purchase.purchaseRate)}
-              <small>RCD: {formatCurrency(purchase?.rcDueAmount ?? 0)}</small>
+              <td>
+                {formatCurrency(purchase.purchaseRate)}
+                <small>RCD: {formatCurrency(purchase?.rcDueAmount ?? 0)}</small>
               </td>
-              <td>{formatCurrency(purchase.purchaseRate + (purchase?.rcDueAmount ?? 0))}</td>
+              <td>
+                {formatCurrency(
+                  purchase.purchaseRate + (purchase?.rcDueAmount ?? 0),
+                )}
+              </td>
             </tr>
             {expenses.map((expense, index) => (
               <tr key={expense.id ?? `expense-${index}`}>
@@ -246,7 +244,7 @@ export const PurchaseOrderDocument = ({
             <p>{purchase.notes}</p>
           </section>
         )}
-      </article>
+      </OrderDocument>
 
       <Modal
         open={modal === "payments"}

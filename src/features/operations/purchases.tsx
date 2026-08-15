@@ -21,6 +21,7 @@ import {
 } from "../../components/ui";
 import { Can } from "../../components/Can";
 import { AuditHistoryButton } from "../audit/AuditHistory";
+import { DownloadDocumentButton } from "./OrderDocument";
 import { formatCurrency, formatDate } from "../../lib/utils";
 import {
   applyFieldValidationErrors,
@@ -1154,10 +1155,7 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
         ))}
       </Section>
       <Section title="Notes">
-        <FormField
-          label="Additional details"
-          error={fieldError(errors.notes)}
-        >
+        <FormField label="Additional details" error={fieldError(errors.notes)}>
           <Textarea {...register("notes")} />
         </FormField>
       </Section>
@@ -1255,6 +1253,7 @@ export const PurchaseDetailRoute = () => {
         actions={
           purchase && (
             <>
+              <DownloadDocumentButton />
               <AuditHistoryButton
                 entityType="purchase"
                 entityId={id}
@@ -1615,6 +1614,7 @@ export const PurchaseReturnDetailRoute = () => {
         actions={
           item && (
             <>
+              <DownloadDocumentButton />
               <AuditHistoryButton
                 entityType="purchase-return"
                 entityId={id}
