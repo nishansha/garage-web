@@ -13,13 +13,19 @@ import {
   LoadingState,
   Modal,
   PageHeader,
+  Select,
   Textarea,
   type DataColumn,
 } from "../../components/ui";
 import { Can } from "../../components/Can";
 import { ApiError } from "../../lib/api";
+import { companyApi, type Company } from "../../services/company";
+import { companyLabel } from "../../hooks/useCompanyScope";
 import {
+  BUSINESS_LINE_LABELS,
+  BUSINESS_LINES,
   warehouseApi,
+  type BusinessLine,
   type Warehouse,
   type WarehouseInput,
 } from "../../services/warehouse";
@@ -34,6 +40,8 @@ const errorMessage = (error: unknown, fallback: string) =>
   error instanceof ApiError ? error.message : fallback;
 
 type WarehouseFormValues = {
+  companyId: number | "";
+  businessLines: BusinessLine[];
   code: string;
   name: string;
   address: string;
@@ -41,6 +49,8 @@ type WarehouseFormValues = {
 };
 
 const emptyForm: WarehouseFormValues = {
+  companyId: "",
+  businessLines: ["VEHICLE_SALES"],
   code: "",
   name: "",
   address: "",
@@ -48,11 +58,17 @@ const emptyForm: WarehouseFormValues = {
 };
 
 const toPayload = (form: WarehouseFormValues): WarehouseInput => ({
+  companyId: Number(form.companyId),
+  businessLines: form.businessLines,
   code: form.code.trim().toUpperCase(),
   name: form.name.trim(),
   ...(form.address.trim() ? { address: form.address.trim() } : {}),
   ...(form.location.trim() ? { location: form.location.trim() } : {}),
 });
+
+const companyName = (companies: Company[] | undefined, companyId: number) =>
+  companies?.find((item) => item.id === companyId)?.name ??
+  `Company ${companyId}`;
 
 export const WarehousesManagementPage = () => {
   const queryClient = useQueryClient();
@@ -66,6 +82,10 @@ export const WarehousesManagementPage = () => {
   const warehousesQuery = useQuery({
     queryKey: ["warehouses"],
     queryFn: warehouseApi.list,
+  });
+  const companiesQuery = useQuery({
+    queryKey: ["companies"],
+    queryFn: companyApi.list,
   });
 
   const saveWarehouse = useMutation({
@@ -128,13 +148,19 @@ export const WarehousesManagementPage = () => {
   });
 
   const openCreate = () => {
-    setForm(emptyForm);
+    const companies = companiesQuery.data ?? [];
+    setForm({
+      ...emptyForm,
+      companyId: companies.length === 1 ? companies[0].id : "",
+    });
     setFieldErrors({});
     setEditing(null);
   };
 
   const openEdit = (warehouse: Warehouse) => {
     setForm({
+      companyId: warehouse.companyId,
+      businessLines: warehouse.businessLines ?? [],
       code: warehouse.code,
       name: warehouse.name,
       address: warehouse.address ?? "",
@@ -146,6 +172,9 @@ export const WarehousesManagementPage = () => {
 
   const validateAndSave = () => {
     const nextErrors: Partial<Record<keyof WarehouseFormValues, string>> = {};
+    if (!form.companyId) nextErrors.companyId = "Company is required";
+    if (form.businessLines.length === 0)
+      nextErrors.businessLines = "Select at least one business line";
     if (!form.code.trim()) nextErrors.code = "Code is required";
     if (!form.name.trim()) nextErrors.name = "Name is required";
     setFieldErrors(nextErrors);
@@ -160,6 +189,19 @@ export const WarehousesManagementPage = () => {
       cell: (row) => <code>{row.code}</code>,
     },
     { key: "name", header: "Name", cell: (row) => row.name },
+    {
+      key: "company",
+      header: "Company",
+      cell: (row) => companyName(companiesQuery.data, row.companyId),
+    },
+    {
+      key: "businessLines",
+      header: "Business lines",
+      cell: (row) =>
+        (row.businessLines ?? [])
+          .map((line) => BUSINESS_LINE_LABELS[line] ?? line)
+          .join(", ") || "—",
+    },
     {
       key: "address",
       header: "Address",
@@ -243,6 +285,68 @@ export const WarehousesManagementPage = () => {
         }
       >
         <div className="admin-form">
+          <FormField label="Company" required error={fieldErrors.companyId}>
+            <Select
+              value={form.companyId}
+              disabled={Boolean(editing)}
+              onChange={(event) => {
+                const id = Number(event.target.value);
+                setForm((current) => ({
+                  ...current,
+                  companyId: Number.isInteger(id) && id > 0 ? id : "",
+                }));
+                setFieldErrors((current) => ({
+                  ...current,
+                  companyId: undefined,
+                }));
+              }}
+            >
+              <option value="">Select company</option>
+              {(companiesQuery.data ?? []).map((company) => (
+                <option key={company.id} value={company.id}>
+                  {companyLabel(company)}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField
+            label="Business lines"
+            required
+            error={fieldErrors.businessLines}
+          >
+            <fieldset className="account-type-options">
+              <legend className="sr-only">Business lines</legend>
+              {BUSINESS_LINES.map((line) => {
+                const checked = form.businessLines.includes(line);
+                return (
+                  <label
+                    key={line}
+                    className={checked ? "is-selected" : undefined}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => {
+                        setForm((current) => ({
+                          ...current,
+                          businessLines: checked
+                            ? current.businessLines.filter(
+                                (item) => item !== line,
+                              )
+                            : [...current.businessLines, line],
+                        }));
+                        setFieldErrors((current) => ({
+                          ...current,
+                          businessLines: undefined,
+                        }));
+                      }}
+                    />
+                    {BUSINESS_LINE_LABELS[line]}
+                  </label>
+                );
+              })}
+            </fieldset>
+          </FormField>
           <FormField label="Code" required error={fieldErrors.code}>
             <Input
               value={form.code}

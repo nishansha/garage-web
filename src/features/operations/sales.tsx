@@ -26,6 +26,7 @@ import {
   extractFieldErrors,
   getFieldValidationMessage,
   normalizeFieldPath,
+  paymentAccountCompanyMismatchMessage,
   tryApplyManualFieldValidationErrors,
 } from "../../lib/validation";
 import {
@@ -42,7 +43,7 @@ import {
   type SaleInput,
   type SearchInput,
 } from "../../services/operations";
-import { warehouseApi } from "../../services/warehouse";
+import { warehouseApi, warehousesFor } from "../../services/warehouse";
 import {
   Detail,
   DetailGrid,
@@ -58,6 +59,7 @@ import {
   numberValue,
   optionalText,
   today,
+  useCompanyIdFromRecord,
   useNumericParam,
 } from "./common";
 import { SaleInvoiceDocument } from "./SaleInvoiceDocument";
@@ -169,6 +171,11 @@ const applyServerErrors = (
       ];
     }),
   );
+  const mismatch = paymentAccountCompanyMismatchMessage(error);
+  if (mismatch) {
+    setErrors({ form: mismatch });
+    return;
+  }
   if (
     !tryApplyManualFieldValidationErrors(error, setErrors, moduleName, fieldMap)
   ) {
@@ -471,13 +478,29 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
       operationsApi.catalog.variants(exchangeBrandId, exchangeModelId),
     enabled: exchangeBrandId > 0 && exchangeModelId > 0,
   });
-  const accounts = useQuery({
-    queryKey: ["operations", "payment-accounts"],
-    queryFn: operationsApi.paymentAccounts,
-  });
   const warehouses = useQuery({
     queryKey: ["warehouses"],
     queryFn: warehouseApi.list,
+  });
+  const vehicleWarehouseCompanies = warehousesFor(
+    warehouses.data,
+    "VEHICLE_SALES",
+  );
+  const uniqueWarehouseCompanyId =
+    vehicleWarehouseCompanies.length > 0 &&
+    vehicleWarehouseCompanies.every(
+      (item) => item.companyId === vehicleWarehouseCompanies[0].companyId,
+    )
+      ? vehicleWarehouseCompanies[0].companyId
+      : undefined;
+  const accountsCompanyId = useCompanyIdFromRecord({
+    companyId: sale?.companyId ?? uniqueWarehouseCompanyId,
+    warehouseId: sale?.warehouseId,
+  });
+  const accounts = useQuery({
+    queryKey: ["operations", "payment-accounts", accountsCompanyId],
+    queryFn: () => operationsApi.paymentAccounts(accountsCompanyId),
+    enabled: accountsCompanyId != null,
   });
   const mutation = useMutation<unknown, Error, SaleInput>({
     mutationFn: async (value: SaleInput) => {
@@ -794,6 +817,11 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
     : "";
   return (
     <form className="operations-form" noValidate onSubmit={submit}>
+      {errors.form && (
+        <div className="form-validation-summary" role="alert">
+          {errors.form}
+        </div>
+      )}
       <Section title={sale ? undefined : "Sale and customer"}>
         {sale && (
           <>
@@ -1077,11 +1105,13 @@ const SaleEditor = ({ sale }: { sale?: Sale }) => {
                   }
                 >
                   <option value="">Select warehouse</option>
-                  {warehouses.data?.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
+                  {warehousesFor(warehouses.data, "VEHICLE_SALES").map(
+                    (item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ),
+                  )}
                 </Select>
               </FormField>
               <FormField
@@ -1474,6 +1504,10 @@ export const SalePaymentRoute = () => {
     enabled: !!id,
   });
   const payment = query.data?.payments?.find((item) => item.id === paymentId);
+  const companyId = useCompanyIdFromRecord({
+    companyId: query.data?.companyId,
+    warehouseId: query.data?.warehouseId,
+  });
   const [payer, setPayer] = useState<PayerType>(
     payment?.payerType ??
       (query.data?.financed && (query.data.pendingFinanceAmount ?? 0) > 0
@@ -1553,6 +1587,7 @@ export const SalePaymentRoute = () => {
             key={`${paymentId ?? "new"}-${payer}-${maximum ?? 0}`}
             payment={payment}
             payer={payer}
+            companyId={companyId}
             defaultAmount={paymentId ? undefined : (maximum ?? undefined)}
             maximum={paymentId ? undefined : (maximum ?? undefined)}
             pending={mutation.isPending}
@@ -2204,6 +2239,10 @@ export const SaleReturnRefundRoute = () => {
     enabled: !!id,
   });
   const refund = query.data?.refunds?.find((item) => item.id === refundId);
+  const companyId = useCompanyIdFromRecord({
+    companyId: query.data?.companyId,
+    warehouseId: query.data?.warehouseId,
+  });
   const maximumRefund =
     query.data &&
     (refundId && refund
@@ -2242,6 +2281,7 @@ export const SaleReturnRefundRoute = () => {
           <PaymentForm
             key={`${refundId ?? "new"}-${maximumRefund ?? 0}`}
             payment={refund}
+            companyId={companyId}
             enforceAccountBalance
             maximum={maximumRefund}
             maximumMessage={

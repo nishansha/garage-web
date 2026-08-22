@@ -24,6 +24,7 @@ import { formatCurrency, formatDate } from "../../lib/utils";
 import {
   applyFieldValidationErrors,
   getFieldValidationMessage,
+  paymentAccountCompanyMismatchMessage,
 } from "../../lib/validation";
 import {
   operationsApi,
@@ -31,11 +32,17 @@ import {
   type PaymentInput,
   type PayerType,
 } from "../../services/operations";
+import {
+  companyIdForWarehouse,
+  warehouseApi,
+} from "../../services/warehouse";
+import { useCompanyScope } from "../../hooks/useCompanyScope";
 
 export type OutstandingQueryKind =
   | "purchase-payables"
   | "purchase-return-receivables"
   | "sales-receivables"
+  | "service-receivables"
   | "purchase-rc-due"
   | "sale-return-payables";
 
@@ -69,6 +76,26 @@ export const useNumericParam = (name: string) => {
   const value = useParams()[name];
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+};
+
+export const useCompanyIdFromRecord = ({
+  companyId,
+  warehouseId,
+}: {
+  companyId?: number;
+  warehouseId?: number | null;
+} = {}) => {
+  const { companyId: soleCompanyId, multi } = useCompanyScope();
+  const warehouses = useQuery({
+    queryKey: ["warehouses"],
+    queryFn: warehouseApi.list,
+    enabled: companyId == null && warehouseId != null && warehouseId > 0,
+  });
+  return (
+    companyId ??
+    companyIdForWarehouse(warehouses.data, warehouseId) ??
+    (multi ? undefined : soleCompanyId)
+  );
 };
 
 export const DetailGrid = ({ children }: { children: ReactNode }) => (
@@ -223,6 +250,7 @@ export const PaymentForm = ({
   pending,
   cancelTo,
   submitLabel,
+  companyId,
   onSubmit,
 }: {
   payment?: Payment;
@@ -234,11 +262,16 @@ export const PaymentForm = ({
   pending: boolean;
   cancelTo: string;
   submitLabel: string;
+  companyId?: number;
   onSubmit: (value: PaymentInput) => void;
 }) => {
+  const { companyId: soleCompanyId, multi } = useCompanyScope();
+  const resolvedCompanyId =
+    companyId ?? (multi ? undefined : soleCompanyId);
   const accounts = useQuery({
-    queryKey: ["operations", "payment-accounts"],
-    queryFn: operationsApi.paymentAccounts,
+    queryKey: ["operations", "payment-accounts", resolvedCompanyId],
+    queryFn: () => operationsApi.paymentAccounts(resolvedCompanyId),
+    enabled: resolvedCompanyId != null,
   });
   const {
     clearErrors,
@@ -305,8 +338,13 @@ export const PaymentForm = ({
     setValue,
   ]);
   useEffect(() => {
-    const handleFieldErrors = (error: unknown) =>
-      applyFieldValidationErrors(error, setError, "payment", {
+    const handleFieldErrors = (error: unknown) => {
+      const mismatch = paymentAccountCompanyMismatchMessage(error);
+      if (mismatch) {
+        setError("root", { type: "server", message: mismatch });
+        return true;
+      }
+      return applyFieldValidationErrors(error, setError, "payment", {
         amount: "amount",
         paymentDate: "paymentDate",
         date: "paymentDate",
@@ -316,6 +354,7 @@ export const PaymentForm = ({
         referenceNo: "referenceNo",
         notes: "notes",
       });
+    };
     fieldErrorHandlers.add(handleFieldErrors);
     return () => {
       fieldErrorHandlers.delete(handleFieldErrors);
@@ -350,6 +389,11 @@ export const PaymentForm = ({
       noValidate
       onSubmit={handleSubmit(submit)}
     >
+      {errors.root?.message && (
+        <div className="form-validation-summary" role="alert">
+          {errors.root.message}
+        </div>
+      )}
       <Section title="Payment details">
         <div className="operations-form-grid">
           <FormField label="Amount" required error={errors.amount?.message}>

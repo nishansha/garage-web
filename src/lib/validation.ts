@@ -7,6 +7,17 @@ import {
 } from "./validation-messages";
 
 export const FIELD_VALIDATION_RESPONSE_CODE = "FLD_102";
+export const PAYMENT_ACCOUNT_COMPANY_MISMATCH_CODE = "BUS_234";
+export const PAYMENT_ACCOUNT_COMPANY_MISMATCH_MESSAGE =
+  "This payment account doesn't belong to the selected company";
+
+export const paymentAccountCompanyMismatchMessage = (
+  error: unknown,
+): string | null =>
+  error instanceof ApiError &&
+  error.code === PAYMENT_ACCOUNT_COMPANY_MISMATCH_CODE
+    ? PAYMENT_ACCOUNT_COMPANY_MISMATCH_MESSAGE
+    : null;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;

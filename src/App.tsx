@@ -50,10 +50,17 @@ const loadAudit = () => import("./features/audit/RecycleBinPage");
 const loadAdminPages = () => import("./features/admin/AdminPages");
 const loadRolePages = () => import("./features/admin/RolePages");
 const loadWarehousePages = () => import("./features/admin/WarehousePages");
+const loadCompanyPages = () => import("./features/admin/CompanyPages");
+const loadServiceOfferingPages = () =>
+  import("./features/admin/ServiceOfferingPages");
+const loadPayrollPages = () => import("./features/admin/PayrollPages");
 const loadWarehouseComparison = () =>
   import("./features/accounting/WarehouseComparisonPage");
+const loadCompanyComparison = () =>
+  import("./features/accounting/CompanyComparisonPage");
 const loadProductManagement = () =>
   import("./features/admin/ProductManagementPage");
+const loadServiceSales = () => import("./features/operations/serviceSales");
 
 const DashboardRoute = lazyNamed(loadDashboard, "DashboardRoute");
 const PurchasesListRoute = lazyNamed(loadPurchases, "PurchasesListRoute");
@@ -102,10 +109,34 @@ const SalesReceivablesRoute = lazyNamed(
   loadOutstandings,
   "SalesReceivablesRoute",
 );
+const ServiceReceivablesRoute = lazyNamed(
+  loadOutstandings,
+  "ServiceReceivablesRoute",
+);
 const PurchaseRcDueRoute = lazyNamed(loadOutstandings, "PurchaseRcDueRoute");
 const SaleReturnPayablesRoute = lazyNamed(
   loadOutstandings,
   "SaleReturnPayablesRoute",
+);
+const ServiceSalesListRoute = lazyNamed(
+  loadServiceSales,
+  "ServiceSalesListRoute",
+);
+const ServiceSaleCreateRoute = lazyNamed(
+  loadServiceSales,
+  "ServiceSaleCreateRoute",
+);
+const ServiceSaleDetailRoute = lazyNamed(
+  loadServiceSales,
+  "ServiceSaleDetailRoute",
+);
+const ServiceSaleEditRoute = lazyNamed(
+  loadServiceSales,
+  "ServiceSaleEditRoute",
+);
+const ServiceSalePaymentRoute = lazyNamed(
+  loadServiceSales,
+  "ServiceSalePaymentRoute",
 );
 const InventoryStockRoute = lazyNamed(loadInventory, "InventoryStockRoute");
 const InventorySoldRoute = lazyNamed(loadInventory, "InventorySoldRoute");
@@ -184,11 +215,25 @@ const WarehouseComparisonPage = lazyNamed(
   loadWarehouseComparison,
   "WarehouseComparisonPage",
 );
+const CompanyComparisonPage = lazyNamed(
+  loadCompanyComparison,
+  "CompanyComparisonPage",
+);
 const ClearDataPage = lazyNamed(loadAdminPages, "ClearDataPage");
 const ProductManagementPage = lazyNamed(
   loadProductManagement,
   "ProductManagementPage",
 );
+const CompaniesManagementPage = lazyNamed(
+  loadCompanyPages,
+  "CompaniesManagementPage",
+);
+const ServiceOfferingsPage = lazyNamed(
+  loadServiceOfferingPages,
+  "ServiceOfferingsPage",
+);
+const EmployeesPage = lazyNamed(loadPayrollPages, "EmployeesPage");
+const SalaryPaymentsPage = lazyNamed(loadPayrollPages, "SalaryPaymentsPage");
 
 interface FeatureRoute {
   path: string;
@@ -256,6 +301,17 @@ const operationsRoutes: readonly FeatureRoute[] = [
     Page: SalePaymentRoute,
   },
   { path: "/sales/sales/:saleId/return", Page: SaleReturnCreateRoute },
+  { path: "/sales/service-sales", Page: ServiceSalesListRoute },
+  { path: "/sales/service-sales/new", Page: ServiceSaleCreateRoute },
+  { path: "/sales/service-sales/:serviceSaleId", Page: ServiceSaleDetailRoute },
+  {
+    path: "/sales/service-sales/:serviceSaleId/edit",
+    Page: ServiceSaleEditRoute,
+  },
+  {
+    path: "/sales/service-sales/:serviceSaleId/payment",
+    Page: ServiceSalePaymentRoute,
+  },
   { path: "/sales/returns", Page: SaleReturnsListRoute },
   { path: "/sales/returns/:returnId", Page: SaleReturnDetailRoute },
   {
@@ -269,6 +325,10 @@ const operationsRoutes: readonly FeatureRoute[] = [
   {
     path: "/sales/outstandings/receivables",
     Page: SalesReceivablesRoute,
+  },
+  {
+    path: "/sales/outstandings/service-receivables",
+    Page: ServiceReceivablesRoute,
   },
   {
     path: "/sales/outstandings/return-payables",
@@ -298,6 +358,8 @@ const operationsRoutes: readonly FeatureRoute[] = [
     path: "/expenses/purchase/:purchaseId/:expenseId/edit",
     Page: ExpenseEditRoute,
   },
+  { path: "/payroll/employees", Page: EmployeesPage },
+  { path: "/payroll/salary-payments", Page: SalaryPaymentsPage },
 ];
 
 const accountingRoutes: readonly FeatureRoute[] = [
@@ -368,6 +430,7 @@ const accountingRoutes: readonly FeatureRoute[] = [
   },
   { path: "/accounting/profit-and-loss", Page: ProfitLossReportPage },
   { path: "/accounting/warehouse-comparison", Page: WarehouseComparisonPage },
+  { path: "/accounting/company-comparison", Page: CompanyComparisonPage },
   { path: "/accounting/monthly-overview", Page: MonthlyOverviewPage },
   {
     path: "/accounting/chart-of-accounts",
@@ -395,6 +458,8 @@ const adminRoutes: readonly FeatureRoute[] = [
     Page: ProductManagementPage,
   },
   { path: "/more/warehouses", Page: WarehousesManagementPage },
+  { path: "/more/companies", Page: CompaniesManagementPage },
+  { path: "/more/services", Page: ServiceOfferingsPage },
   { path: "/more/clear-data", Page: ClearDataPage },
 ];
 

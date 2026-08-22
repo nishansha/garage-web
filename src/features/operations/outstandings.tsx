@@ -11,14 +11,18 @@ import {
   PageHeader,
   StatCard,
 } from "../../components/ui";
+import { CompanyFilterSelect } from "../../components/CompanyFilterSelect";
 import { formatCurrency, formatDate } from "../../lib/utils";
+import { useCompanyScope } from "../../hooks/useCompanyScope";
 import {
   operationsApi,
   type FinanceReceivableCompany,
   type OutstandingItem,
   type Outstandings,
+  type PaymentStatus,
   type SalePaymentStatus,
 } from "../../services/operations";
+import { serviceSaleApi } from "../../services/serviceSales";
 import { QueryBoundary } from "./common";
 
 type Kind =
@@ -26,7 +30,7 @@ type Kind =
 type ReceivablesTab = "customers" | "finance";
 
 const paymentTone = (
-  status?: SalePaymentStatus | null,
+  status?: SalePaymentStatus | PaymentStatus | string | null,
 ): "success" | "warning" | "info" => {
   if (status === "PAID") return "success";
   if (status === "FINANCE_PENDING") return "info";
@@ -39,7 +43,7 @@ const config: Record<
     description: string;
     emptyTitle: string;
     emptyDescription: string;
-    query: () => Promise<Outstandings>;
+    query: (companyId?: number) => Promise<Outstandings>;
     detail: (item: OutstandingItem) => string;
   }
 > = {
@@ -49,7 +53,7 @@ const config: Record<
     emptyTitle: "No purchase payables",
     emptyDescription:
       "Settled vendor balances will drop off this list automatically.",
-    query: operationsApi.purchases.payables,
+    query: (companyId) => operationsApi.purchases.payables(companyId),
     detail: (item) => `/purchase/purchases/${item.purchaseId}`,
   },
   "purchase-return-receivables": {
@@ -58,7 +62,7 @@ const config: Record<
     emptyTitle: "No purchase-return receivables",
     emptyDescription:
       "Settled vendor refunds will drop off this list automatically.",
-    query: operationsApi.purchaseReturns.receivables,
+    query: () => operationsApi.purchaseReturns.receivables(),
     detail: (item) => `/purchase/returns/${item.purchaseReturnId}`,
   },
   "sale-return-payables": {
@@ -67,7 +71,7 @@ const config: Record<
     emptyTitle: "No sale-return payables",
     emptyDescription:
       "Settled customer refunds will drop off this list automatically.",
-    query: operationsApi.saleReturns.payables,
+    query: () => operationsApi.saleReturns.payables(),
     detail: (item) => `/sales/returns/${item.saleReturnId}`,
   },
 };
@@ -75,9 +79,24 @@ const config: Record<
 const OutstandingRoute = ({ kind }: { kind: Kind }) => {
   const navigate = useNavigate();
   const itemConfig = config[kind];
+  const needsCompany = kind === "purchase-payables";
+  const {
+    companies,
+    multi,
+    reportCompanyId,
+    selectedId,
+    setSelectedId,
+    ready,
+  } = useCompanyScope();
   const query = useQuery({
-    queryKey: ["operations", "outstanding", kind],
-    queryFn: itemConfig.query,
+    queryKey: [
+      "operations",
+      "outstanding",
+      kind,
+      needsCompany ? reportCompanyId : undefined,
+    ],
+    queryFn: () => itemConfig.query(needsCompany ? reportCompanyId : undefined),
+    enabled: !needsCompany || (ready && (!multi || reportCompanyId != null)),
   });
   return (
     <>
@@ -85,6 +104,15 @@ const OutstandingRoute = ({ kind }: { kind: Kind }) => {
         title={itemConfig.title}
         description={itemConfig.description}
       />
+      {needsCompany && multi && (
+        <Card className="report-filters">
+          <CompanyFilterSelect
+            companies={companies}
+            selectedId={selectedId}
+            onChange={setSelectedId}
+          />
+        </Card>
+      )}
       <QueryBoundary
         pending={query.isPending}
         error={query.error}
@@ -181,13 +209,34 @@ export const PurchaseReturnReceivablesRoute = () => (
 export const SalesReceivablesRoute = () => {
   const navigate = useNavigate();
   const [tab, setTab] = useState<ReceivablesTab>("customers");
+  const {
+    companies,
+    multi,
+    reportCompanyId,
+    selectedId,
+    setSelectedId,
+    ready,
+  } = useCompanyScope();
   const customers = useQuery({
-    queryKey: ["operations", "outstanding", "sales-receivables"],
-    queryFn: operationsApi.sales.receivables,
+    queryKey: [
+      "operations",
+      "outstanding",
+      "sales-receivables",
+      reportCompanyId,
+    ],
+    queryFn: () => operationsApi.sales.receivables(reportCompanyId),
+    enabled: ready && (!multi || reportCompanyId != null),
   });
   const finance = useQuery({
-    queryKey: ["operations", "outstanding", "sales-receivables", "finance"],
-    queryFn: operationsApi.sales.financeReceivables,
+    queryKey: [
+      "operations",
+      "outstanding",
+      "sales-receivables",
+      "finance",
+      reportCompanyId,
+    ],
+    queryFn: () => operationsApi.sales.financeReceivables(reportCompanyId),
+    enabled: ready && (!multi || reportCompanyId != null),
   });
   return (
     <>
@@ -195,6 +244,15 @@ export const SalesReceivablesRoute = () => {
         title="Sales receivables"
         description="Follow up with customers and finance companies separately — a financed sale can leave a balance on either side."
       />
+      {multi && (
+        <Card className="report-filters">
+          <CompanyFilterSelect
+            companies={companies}
+            selectedId={selectedId}
+            onChange={setSelectedId}
+          />
+        </Card>
+      )}
       <QueryBoundary
         pending={customers.isPending}
         error={customers.error}
@@ -311,6 +369,118 @@ export const SalesReceivablesRoute = () => {
             <FinanceCompaniesTable items={finance.data?.items ?? []} />
           </QueryBoundary>
         )}
+      </QueryBoundary>
+    </>
+  );
+};
+
+export const ServiceReceivablesRoute = () => {
+  const navigate = useNavigate();
+  const {
+    companies,
+    multi,
+    reportCompanyId,
+    selectedId,
+    setSelectedId,
+    ready,
+  } = useCompanyScope();
+  const query = useQuery({
+    queryKey: [
+      "operations",
+      "outstanding",
+      "service-receivables",
+      reportCompanyId,
+    ],
+    queryFn: () => serviceSaleApi.receivables(reportCompanyId),
+    enabled: ready && (!multi || reportCompanyId != null),
+  });
+  return (
+    <>
+      <PageHeader
+        title="Service receivables"
+        description="Follow up on unpaid service sale invoices."
+      />
+      {multi && (
+        <Card className="report-filters">
+          <CompanyFilterSelect
+            companies={companies}
+            selectedId={selectedId}
+            onChange={setSelectedId}
+          />
+        </Card>
+      )}
+      <QueryBoundary
+        pending={query.isPending}
+        error={query.error}
+        retry={() => void query.refetch()}
+      >
+        <div className="operations-kpis">
+          <StatCard label="Open invoices" value={query.data?.totalCount ?? 0} />
+          <StatCard
+            label="Total outstanding"
+            value={formatCurrency(query.data?.totalPendingAmount)}
+          />
+        </div>
+        <Card>
+          <DataTable
+            caption="Service receivables"
+            rows={query.data?.items ?? []}
+            emptyMessage="No service receivables"
+            emptyDescription="Settled service invoices will drop off this list automatically."
+            onRowClick={(row) =>
+              navigate(`/sales/service-sales/${row.serviceSaleId}`)
+            }
+            rowKey={(row) => String(row.serviceSaleId)}
+            columns={[
+              {
+                key: "reference",
+                header: "Invoice",
+                cell: (row) => <strong>{row.invoiceNo ?? "View"}</strong>,
+              },
+              {
+                key: "party",
+                header: "Customer",
+                cell: (row) => row.customerName ?? "—",
+              },
+              {
+                key: "mobile",
+                header: "Mobile",
+                cell: (row) => row.customerMobile ?? "—",
+              },
+              {
+                key: "date",
+                header: "Sale date",
+                cell: (row) => formatDate(row.saleDate),
+              },
+              {
+                key: "status",
+                header: "Payment",
+                cell: (row) => (
+                  <Badge tone={paymentTone(row.paymentStatus)}>
+                    {row.paymentStatus ?? "PENDING"}
+                  </Badge>
+                ),
+              },
+              {
+                key: "amount",
+                header: "Amount",
+                align: "right",
+                cell: (row) => formatCurrency(row.amount),
+              },
+              {
+                key: "last",
+                header: "Last payment",
+                cell: (row) => formatDate(row.lastPaymentDate),
+              },
+              {
+                key: "pending",
+                header: "Pending",
+                align: "right",
+                cell: (row) => formatCurrency(row.pendingAmount),
+              },
+            ]}
+          />
+        </Card>
       </QueryBoundary>
     </>
   );
@@ -454,9 +624,18 @@ const FinanceCompaniesTable = ({
 };
 export const PurchaseRcDueRoute = () => {
   const navigate = useNavigate();
+  const {
+    companies,
+    multi,
+    reportCompanyId,
+    selectedId,
+    setSelectedId,
+    ready,
+  } = useCompanyScope();
   const query = useQuery({
-    queryKey: ["operations", "outstanding", "purchase-rc-due"],
-    queryFn: operationsApi.purchases.rcDueSummary,
+    queryKey: ["operations", "outstanding", "purchase-rc-due", reportCompanyId],
+    queryFn: () => operationsApi.purchases.rcDueSummary(reportCompanyId),
+    enabled: ready && (!multi || reportCompanyId != null),
   });
   return (
     <>
@@ -464,6 +643,15 @@ export const PurchaseRcDueRoute = () => {
         title="Pending RCD"
         description="Track RCD amounts still due from purchase vendors."
       />
+      {multi && (
+        <Card className="report-filters">
+          <CompanyFilterSelect
+            companies={companies}
+            selectedId={selectedId}
+            onChange={setSelectedId}
+          />
+        </Card>
+      )}
       <QueryBoundary
         pending={query.isPending}
         error={query.error}

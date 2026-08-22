@@ -18,3 +18,5 @@ export {
   ProfitLossReportPage,
   TrialBalancePage,
 } from "./pages";
+export { WarehouseComparisonPage } from "./WarehouseComparisonPage";
+export { CompanyComparisonPage } from "./CompanyComparisonPage";

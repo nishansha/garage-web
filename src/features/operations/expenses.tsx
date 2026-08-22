@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
@@ -25,7 +25,10 @@ import { formatCurrency, formatDate } from "../../lib/utils";
 import {
   applyFieldValidationErrors,
   getFieldValidationMessage,
+  paymentAccountCompanyMismatchMessage,
 } from "../../lib/validation";
+import { companyApi } from "../../services/company";
+import { companyLabel } from "../../hooks/useCompanyScope";
 import {
   operationsApi,
   type Expense,
@@ -34,6 +37,7 @@ import {
   type PurchaseExpenseSummary,
   type SearchInput,
 } from "../../services/operations";
+import { warehouseApi } from "../../services/warehouse";
 import {
   FormActions,
   InvalidRoute,
@@ -42,6 +46,7 @@ import {
   Section,
   notifyError,
   today,
+  useCompanyIdFromRecord,
   useNumericParam,
 } from "./common";
 import { DownloadDocumentButton } from "./OrderDocument";
@@ -326,13 +331,65 @@ const ExpenseEditor = ({
 }) => {
   const navigate = useNavigate();
   const client = useQueryClient();
+  const [pickerCompanyId, setPickerCompanyId] = useState<number | "">(
+    expense?.companyId ?? "",
+  );
+  const [pickerWarehouseId, setPickerWarehouseId] = useState<number | "">(
+    expense?.warehouseId ?? "",
+  );
   const types = useQuery({
     queryKey: ["operations", "catalog", "expense-accounts"],
     queryFn: operationsApi.catalog.expenseAccounts,
   });
+  const companiesQuery = useQuery({
+    queryKey: ["companies"],
+    queryFn: companyApi.list,
+    enabled: purchaseId == null,
+  });
+  const companies = useMemo(
+    () => (companiesQuery.data ?? []).filter((item) => item.active !== false),
+    [companiesQuery.data],
+  );
+  const warehousesQuery = useQuery({
+    queryKey: ["warehouses"],
+    queryFn: warehouseApi.list,
+    enabled: purchaseId == null && !expense,
+  });
+  const companyWarehouses = useMemo(() => {
+    const companyId =
+      typeof pickerCompanyId === "number" ? pickerCompanyId : undefined;
+    if (companyId == null) return [];
+    return (warehousesQuery.data ?? []).filter(
+      (item) => item.companyId === companyId,
+    );
+  }, [pickerCompanyId, warehousesQuery.data]);
+  const purchase = useQuery({
+    queryKey: ["operations", "purchase", purchaseId],
+    queryFn: () => operationsApi.purchases.detail(purchaseId!),
+    enabled: purchaseId != null,
+  });
+  const purchaseCompanyId = useCompanyIdFromRecord({
+    companyId: purchase.data?.companyId,
+    warehouseId: purchase.data?.warehouseId,
+  });
+  useEffect(() => {
+    if (purchaseId || pickerCompanyId) return;
+    if (expense?.companyId) {
+      setPickerCompanyId(expense.companyId);
+      return;
+    }
+    if (companies.length === 1) setPickerCompanyId(companies[0].id);
+  }, [companies, expense?.companyId, pickerCompanyId, purchaseId]);
+  const resolvedCompanyId =
+    purchaseId != null
+      ? purchaseCompanyId
+      : typeof pickerCompanyId === "number"
+        ? pickerCompanyId
+        : undefined;
   const accounts = useQuery({
-    queryKey: ["operations", "payment-accounts"],
-    queryFn: operationsApi.paymentAccounts,
+    queryKey: ["operations", "payment-accounts", resolvedCompanyId],
+    queryFn: () => operationsApi.paymentAccounts(resolvedCompanyId),
+    enabled: resolvedCompanyId != null || expense != null,
   });
   const returnTo = purchaseId ? `${PURCHASE}/${purchaseId}` : GENERAL;
   const {
@@ -340,6 +397,7 @@ const ExpenseEditor = ({
     handleSubmit,
     clearErrors,
     setError,
+    setValue,
     watch,
     formState: { errors },
   } = useForm<ExpenseFormValues>({
@@ -398,6 +456,11 @@ const ExpenseEditor = ({
       navigate(returnTo);
     },
     onError: (error) => {
+      const mismatch = paymentAccountCompanyMismatchMessage(error);
+      if (mismatch) {
+        setError("root", { type: "server", message: mismatch });
+        return;
+      }
       const applied = applyFieldValidationErrors(error, setError, "expense", {
         date: "date",
         typeId: "typeId",
@@ -426,6 +489,9 @@ const ExpenseEditor = ({
       typeId: data.typeId,
       paymentAccountId: data.paymentAccountId,
       purchaseId,
+      ...(purchaseId == null && typeof pickerWarehouseId === "number"
+        ? { warehouseId: pickerWarehouseId }
+        : {}),
     };
     mutation.mutate(value);
   };
@@ -435,8 +501,58 @@ const ExpenseEditor = ({
       noValidate
       onSubmit={handleSubmit(submit)}
     >
+      {errors.root?.message && (
+        <div className="form-validation-summary" role="alert">
+          {errors.root.message}
+        </div>
+      )}
       <Section title="Expense details">
         <div className="operations-form-grid">
+          {purchaseId == null && !expense && (
+            <>
+              <FormField label="Company" required>
+                <Select
+                  value={pickerCompanyId}
+                  onChange={(event) => {
+                    const id = Number(event.target.value);
+                    setPickerCompanyId(
+                      Number.isInteger(id) && id > 0 ? id : "",
+                    );
+                    setPickerWarehouseId("");
+                    setValue("paymentAccountId", 0);
+                  }}
+                >
+                  <option value="">Select company</option>
+                  {companies.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {companyLabel(company)}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              {typeof pickerCompanyId === "number" && (
+                <FormField label="Warehouse">
+                  <Select
+                    value={pickerWarehouseId}
+                    disabled={warehousesQuery.isLoading}
+                    onChange={(event) => {
+                      const id = Number(event.target.value);
+                      setPickerWarehouseId(
+                        Number.isInteger(id) && id > 0 ? id : "",
+                      );
+                    }}
+                  >
+                    <option value="">Select warehouse</option>
+                    {companyWarehouses.map((warehouse) => (
+                      <option key={warehouse.id} value={warehouse.id}>
+                        {warehouse.name}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+              )}
+            </>
+          )}
           <FormField label="Date" required error={errors.date?.message}>
             <DateInput required {...register("date")} />
           </FormField>
@@ -478,6 +594,7 @@ const ExpenseEditor = ({
           >
             <Select
               required
+              disabled={resolvedCompanyId == null}
               {...register("paymentAccountId", {
                 valueAsNumber: true,
                 onChange: () => clearErrors(["paymentAccountId", "amount"]),

@@ -2,16 +2,15 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Card,
-  DataTable,
+  EmptyState,
   ErrorState,
   LoadingState,
   PageHeader,
   Select,
   StatCard,
-  type DataColumn,
 } from "../../components/ui";
 import { ApiError } from "../../lib/api";
-import { formatCurrency } from "../../lib/utils";
+import { cx, formatCurrency } from "../../lib/utils";
 import {
   warehouseApi,
   type WarehousePerformance,
@@ -28,12 +27,31 @@ const money = (value: number | null | undefined) =>
 const percent = (value: number | null | undefined) =>
   `${Number(value ?? 0).toFixed(1)}%`;
 
-const muted = (value: ReactNode) => <span className="muted">{value}</span>;
+const countLabel = (count: number, singular: string, plural = `${singular}s`) =>
+  `${count} ${count === 1 ? singular : plural}`;
 
 const displayName = (row: WarehousePerformance) =>
   row.warehouseId == null || row.warehouseCode === "UNASSIGNED"
     ? "Unassigned"
     : row.warehouseName;
+
+const Metric = ({
+  label,
+  value,
+  detail,
+  muted,
+}: {
+  label: string;
+  value: ReactNode;
+  detail?: ReactNode;
+  muted?: boolean;
+}) => (
+  <div className={cx("warehouse-compare-metric", muted && "is-muted")}>
+    <span>{label}</span>
+    <strong>{value}</strong>
+    {detail != null ? <small>{detail}</small> : null}
+  </div>
+);
 
 export const WarehouseComparisonPage = () => {
   const [month, setMonth] = useState(thisMonth());
@@ -69,6 +87,9 @@ export const WarehouseComparisonPage = () => {
         salesCount: acc.salesCount + Number(row.salesCount ?? 0),
         salesRevenue: acc.salesRevenue + Number(row.salesRevenue ?? 0),
         grossProfit: acc.grossProfit + Number(row.grossProfit ?? 0),
+        serviceSalesCount:
+          acc.serviceSalesCount + Number(row.serviceSalesCount ?? 0),
+        serviceRevenue: acc.serviceRevenue + Number(row.serviceRevenue ?? 0),
         purchaseCount: acc.purchaseCount + Number(row.purchaseCount ?? 0),
         purchaseCost: acc.purchaseCost + Number(row.purchaseCost ?? 0),
         landedCost: acc.landedCost + Number(row.landedCost ?? 0),
@@ -76,6 +97,8 @@ export const WarehouseComparisonPage = () => {
           acc.purchaseExpenses + Number(row.purchaseExpenses ?? 0),
         payablesCount: acc.payablesCount + Number(row.payablesCount ?? 0),
         totalPayables: acc.totalPayables + Number(row.totalPayables ?? 0),
+        generalExpenses:
+          acc.generalExpenses + Number(row.generalExpenses ?? 0),
       }),
       {
         stockCount: 0,
@@ -83,12 +106,15 @@ export const WarehouseComparisonPage = () => {
         salesCount: 0,
         salesRevenue: 0,
         grossProfit: 0,
+        serviceSalesCount: 0,
+        serviceRevenue: 0,
         purchaseCount: 0,
         purchaseCost: 0,
         landedCost: 0,
         purchaseExpenses: 0,
         payablesCount: 0,
         totalPayables: 0,
+        generalExpenses: 0,
       },
     );
   }, [rows]);
@@ -98,120 +124,21 @@ export const WarehouseComparisonPage = () => {
       ? (totals.grossProfit / totals.salesRevenue) * 100
       : 0;
 
-  const columns: readonly DataColumn<WarehousePerformance>[] = [
-    {
-      key: "warehouse",
-      header: "Warehouse",
-      cell: (row) => (
-        <span>
-          <strong>{displayName(row)}</strong>
-          <small className="cell-subtitle">{row.warehouseCode}</small>
-        </span>
-      ),
-    },
-    {
-      key: "stockCount",
-      header: "Stock",
-      align: "right",
-      cell: (row) => row.stockCount,
-    },
-    {
-      key: "stockValue",
-      header: "Stock value",
-      align: "right",
-      cell: (row) => money(row.stockValue),
-    },
-    {
-      key: "salesCount",
-      header: "Sales",
-      align: "right",
-      cell: (row) => row.salesCount,
-    },
-    {
-      key: "salesRevenue",
-      header: "Revenue",
-      align: "right",
-      cell: (row) => money(row.salesRevenue),
-    },
-    {
-      key: "grossProfit",
-      header: "Gross profit",
-      align: "right",
-      cell: (row) => money(row.grossProfit),
-    },
-    {
-      key: "margin",
-      header: "Margin",
-      align: "right",
-      cell: (row) => percent(row.grossMarginPct),
-    },
-    {
-      key: "purchaseCount",
-      header: muted("Purchases"),
-      align: "right",
-      cell: (row) => muted(row.purchaseCount ?? 0),
-    },
-    {
-      key: "purchaseCost",
-      header: muted("Purchase cost"),
-      align: "right",
-      cell: (row) => muted(money(row.purchaseCost)),
-    },
-    {
-      key: "landedCost",
-      header: muted("Landed cost"),
-      align: "right",
-      cell: (row) => muted(money(row.landedCost)),
-    },
-    {
-      key: "purchaseExpenses",
-      header: muted("Purchase exp."),
-      align: "right",
-      cell: (row) => muted(money(row.purchaseExpenses)),
-    },
-    {
-      key: "payablesCount",
-      header: muted("Payables #"),
-      align: "right",
-      cell: (row) => muted(row.payablesCount ?? 0),
-    },
-    {
-      key: "totalPayables",
-      header: muted("Payables"),
-      align: "right",
-      cell: (row) => muted(money(row.totalPayables)),
-    },
-  ];
+  const selectWarehouse = (row: WarehousePerformance) => {
+    if (row.warehouseId == null) {
+      setSelectedWarehouseId("all");
+      return;
+    }
+    setSelectedWarehouseId(row.warehouseId);
+  };
 
   return (
     <>
       <PageHeader
         title="Warehouse Comparison"
-        description="Compare stock, sales, purchasing, and payables across warehouses. Gross profit already reflects sold vehicles; purchasing figures are separate period activity."
+        description="Compare stock, vehicle sales, service sales, purchasing, expenses, and payables across warehouses. Gross profit already reflects sold vehicles; purchasing figures are separate period activity."
       />
-      <Card className="month-selector" aria-label="Report month">
-        {allowedMonths.map((value) => {
-          const date = new Date(`${value}-01T00:00:00`);
-          return (
-            <button
-              className={`month-chip${month === value ? " is-active" : ""}`}
-              key={value}
-              type="button"
-              aria-pressed={month === value}
-              onClick={() => {
-                setMonth(value);
-                setSelectedWarehouseId("all");
-              }}
-            >
-              <span>
-                {date.toLocaleDateString("en-IN", { month: "short" })}
-              </span>
-              <small>'{String(date.getFullYear()).slice(-2)}</small>
-            </button>
-          );
-        })}
-      </Card>
-      <Card className="report-filters">
+      <Card className="report-filters compare-filters">
         <Select
           aria-label="Warehouse"
           value={
@@ -231,6 +158,25 @@ export const WarehouseComparisonPage = () => {
               </option>
             ))}
         </Select>
+        <div className="pl-months" role="group" aria-label="Report month">
+          {allowedMonths.map((value) => {
+            const date = new Date(`${value}-01T00:00:00`);
+            return (
+              <button
+                className={month === value ? "is-active" : undefined}
+                key={value}
+                type="button"
+                aria-pressed={month === value}
+                onClick={() => {
+                  setMonth(value);
+                  setSelectedWarehouseId("all");
+                }}
+              >
+                {date.toLocaleDateString("en-IN", { month: "short" })}
+              </button>
+            );
+          })}
+        </div>
       </Card>
       {query.isLoading ? (
         <LoadingState />
@@ -245,53 +191,124 @@ export const WarehouseComparisonPage = () => {
         />
       ) : (
         <>
-          <div className="accounting-stats">
-            <StatCard label="Stock units" value={totals.stockCount} />
-            <StatCard label="Stock value" value={money(totals.stockValue)} />
-            <StatCard label="Sales" value={totals.salesCount} />
-            <StatCard label="Revenue" value={money(totals.salesRevenue)} />
+          <div className="accounting-stats accounting-stats--compact">
+            <StatCard
+              label="Stock"
+              value={money(totals.stockValue)}
+              trend={countLabel(totals.stockCount, "unit")}
+            />
+            <StatCard
+              label="Vehicle sales"
+              value={money(totals.salesRevenue)}
+              trend={`${countLabel(totals.salesCount, "sale")} · ${percent(marginPct)} margin`}
+            />
             <StatCard label="Gross profit" value={money(totals.grossProfit)} />
-            <StatCard label="Gross margin" value={percent(marginPct)} />
+            <StatCard
+              label="Service sales"
+              value={money(totals.serviceRevenue)}
+              trend={countLabel(totals.serviceSalesCount, "invoice")}
+            />
+            <div className="warehouse-comparison-secondary-stats warehouse-comparison-secondary-stats--inline">
+              <StatCard
+                label="Purchasing"
+                value={money(totals.purchaseCost)}
+                trend={`${countLabel(totals.purchaseCount, "purchase")} · Landed ${money(totals.landedCost)} · Exp. ${money(totals.purchaseExpenses)}`}
+              />
+              <StatCard
+                label="Payables"
+                value={money(totals.totalPayables)}
+                trend={countLabel(
+                  totals.payablesCount,
+                  "open bill",
+                  "open bills",
+                )}
+              />
+              <StatCard
+                label="Expenses"
+                value={money(totals.generalExpenses)}
+              />
+            </div>
           </div>
-          <div className="accounting-stats warehouse-comparison-secondary-stats">
-            <StatCard
-              label="Purchases this period"
-              value={totals.purchaseCount}
+          {rows.length === 0 ? (
+            <EmptyState
+              title="No warehouse performance data for this month"
+              description="Warehouse results will appear here once there is activity in the selected month."
             />
-            <StatCard
-              label="Purchase cost"
-              value={money(totals.purchaseCost)}
-            />
-            <StatCard label="Landed cost" value={money(totals.landedCost)} />
-            <StatCard
-              label="Purchase expenses"
-              value={money(totals.purchaseExpenses)}
-            />
-            <StatCard label="Open payables" value={totals.payablesCount} />
-            <StatCard
-              label="Total payables"
-              value={money(totals.totalPayables)}
-            />
-          </div>
-          <Card>
-            <DataTable
-              caption={`Warehouse performance for ${query.data?.month ?? month}`}
-              columns={columns}
-              rows={rows}
-              rowKey={(row) =>
-                row.warehouseId == null ? "unassigned" : String(row.warehouseId)
-              }
-              emptyMessage="No warehouse performance data for this month"
-              emptyDescription="Warehouse results will appear here once there is activity in the selected month."
-              onRowClick={(row) => {
-                if (row.warehouseId == null) {
-                  setSelectedWarehouseId("all");
-                  return;
-                }
-                setSelectedWarehouseId(row.warehouseId);
-              }}
-            />
-          </Card>
+          ) : (
+            <div
+              className="warehouse-compare-grid"
+              aria-label={`Warehouse performance for ${query.data?.month ?? month}`}
+            >
+              {rows.map((row) => {
+                const isUnassigned = row.warehouseId == null;
+                const isSelected =
+                  !isUnassigned && selectedWarehouseId === row.warehouseId;
+                return (
+                  <article
+                    key={isUnassigned ? "unassigned" : String(row.warehouseId)}
+                    className={cx(
+                      "card warehouse-compare-card",
+                      isSelected && "is-selected",
+                      isUnassigned && "is-unassigned",
+                    )}
+                    tabIndex={0}
+                    aria-pressed={isSelected}
+                    onClick={() => selectWarehouse(row)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        selectWarehouse(row);
+                      }
+                    }}
+                  >
+                    <header className="warehouse-compare-card__header">
+                      <div>
+                        <h2>{displayName(row)}</h2>
+                        <small>{row.warehouseCode}</small>
+                      </div>
+                    </header>
+                    <div className="warehouse-compare-card__metrics">
+                      <Metric
+                        label="Stock"
+                        value={money(row.stockValue)}
+                        detail={countLabel(row.stockCount ?? 0, "unit")}
+                      />
+                      <Metric
+                        label="Vehicle sales"
+                        value={money(row.salesRevenue)}
+                        detail={`${countLabel(row.salesCount ?? 0, "sale")} · GP ${money(row.grossProfit)} · ${percent(row.grossMarginPct)}`}
+                      />
+                      <Metric
+                        label="Service sales"
+                        value={money(row.serviceRevenue)}
+                        detail={countLabel(
+                          row.serviceSalesCount ?? 0,
+                          "invoice",
+                        )}
+                      />
+                      <Metric
+                        label="Payables"
+                        value={money(row.totalPayables)}
+                        detail={`${countLabel(row.payablesCount ?? 0, "open bill", "open bills")}`}
+                        muted
+                      />
+                      <Metric
+                        label="Purchasing"
+                        value={money(row.purchaseCost)}
+                        detail={`${countLabel(row.purchaseCount ?? 0, "purchase")} · Landed ${money(row.landedCost)} · Exp. ${money(row.purchaseExpenses)}`}
+                        muted
+                      />
+                      <Metric
+                        label="Expenses"
+                        value={money(row.generalExpenses)}
+                        muted
+                      />
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
           <Card className="warehouse-comparison-overhead">
             <div className="report-row">
               <span>

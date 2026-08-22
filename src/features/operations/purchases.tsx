@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -26,6 +26,7 @@ import { formatCurrency, formatDate } from "../../lib/utils";
 import {
   applyFieldValidationErrors,
   getFieldValidationMessage,
+  paymentAccountCompanyMismatchMessage,
 } from "../../lib/validation";
 import type { ValidationCode } from "../../lib/validation-messages";
 import {
@@ -40,9 +41,8 @@ import {
   type RcDueReceipt,
   type SearchInput,
 } from "../../services/operations";
-import { warehouseApi } from "../../services/warehouse";
+import { warehouseApi, warehousesFor } from "../../services/warehouse";
 import {
-  DateValue,
   Detail,
   DetailGrid,
   FormActions,
@@ -56,16 +56,12 @@ import {
   notifyError,
   optionalText,
   today,
+  useCompanyIdFromRecord,
   useNumericParam,
 } from "./common";
 import { ApiError } from "../../lib/api";
 import { PurchaseOrderDocument } from "./PurchaseOrderDocument";
 import { PurchaseReturnDocument } from "./PurchaseReturnDocument";
-
-const optionalId = (value: number | null | undefined) =>
-  typeof value === "number" && Number.isFinite(value) && value > 0
-    ? value
-    : undefined;
 
 const PURCHASES = "/purchase/purchases";
 const RETURNS = "/purchase/returns";
@@ -465,7 +461,7 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
       fuelTypeId: purchase?.fuelTypeId ?? 0,
       transmissionTypeId: purchase?.transmissionTypeId ?? 0,
       segmentId: purchase?.segmentId ?? 0,
-      warehouseId: purchase?.warehouseId ?? undefined,
+      warehouseId: purchase?.warehouseId ?? 0,
       makeYear: String(purchase?.makeYear ?? ""),
       odometer: String(purchase?.odometer ?? ""),
       purchaseRate: purchase?.purchaseRate ?? 0,
@@ -517,28 +513,49 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
     queryFn: () => operationsApi.catalog.variants(brandId, modelId),
     enabled: brandId > 0 && modelId > 0,
   });
-  const accounts = useQuery({
-    queryKey: ["operations", "payment-accounts"],
-    queryFn: operationsApi.paymentAccounts,
-  });
   const warehouses = useQuery({
     queryKey: ["warehouses"],
     queryFn: warehouseApi.list,
   });
+  const warehouseId = watch("warehouseId");
+  const accountsCompanyId = useCompanyIdFromRecord({
+    companyId: purchase?.companyId,
+    warehouseId,
+  });
+  const accounts = useQuery({
+    queryKey: ["operations", "payment-accounts", accountsCompanyId],
+    queryFn: () => operationsApi.paymentAccounts(accountsCompanyId),
+    enabled: accountsCompanyId != null,
+  });
+  const vehicleWarehouses = warehousesFor(warehouses.data, "VEHICLE_SALES");
+  const warehouseOptions =
+    purchase?.warehouseId &&
+    !vehicleWarehouses.some((item) => item.id === purchase.warehouseId)
+      ? [
+          ...(warehouses.data?.filter(
+            (item) => item.id === purchase.warehouseId,
+          ) ?? []),
+          ...vehicleWarehouses,
+        ]
+      : vehicleWarehouses;
   const watchedExpenses = watch("expenses");
+  useEffect(() => {
+    if (!accounts.data) return;
+    const ids = new Set(accounts.data.map((account) => account.id));
+    const expenses = watch("expenses") ?? [];
+    expenses.forEach((expense, index) => {
+      if (expense.paymentAccountId && !ids.has(Number(expense.paymentAccountId)))
+        setValue(`expenses.${index}.paymentAccountId`, 0);
+    });
+  }, [accounts.data, setValue, watch]);
   const mutation = useMutation<unknown, Error, PurchaseInput>({
-    mutationFn: (value: PurchaseInput) => {
-      const payload: PurchaseInput = {
-        ...value,
-        warehouseId: optionalId(value.warehouseId),
-      };
-      return purchase
+    mutationFn: (value: PurchaseInput) =>
+      purchase
         ? operationsApi.purchases.update(purchase.id, {
-            ...payload,
+            ...value,
             version: purchase.version,
           })
-        : operationsApi.purchases.create(payload);
-    },
+        : operationsApi.purchases.create(value),
     onSuccess: async () => {
       const invalidations = [
         client.invalidateQueries({ queryKey: ["operations", "purchases"] }),
@@ -561,6 +578,11 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
       navigate(purchase ? `${PURCHASES}/${purchase.id}` : PURCHASES);
     },
     onError: (error) => {
+      const mismatch = paymentAccountCompanyMismatchMessage(error);
+      if (mismatch) {
+        setError("root", { type: "server", message: mismatch });
+        return;
+      }
       if (!applyFieldValidationErrors(error, setError, "purchase"))
         notifyError(error);
     },
@@ -798,14 +820,23 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
             purchase?.transmissionTypeId,
           )}
           {select("segmentId", "Segment", purchase?.segmentId)}
-          <FormField label="Warehouse" error={fieldError(errors.warehouseId)}>
+          <FormField
+            label="Warehouse"
+            required
+            error={fieldError(errors.warehouseId)}
+          >
             <Select
               {...register("warehouseId", {
-                setValueAs: (raw) => optionalId(Number(raw)),
+                required: purchaseValidationMessage("warehouseId", "REQUIRED"),
+                min: {
+                  value: 1,
+                  message: purchaseValidationMessage("warehouseId", "REQUIRED"),
+                },
+                valueAsNumber: true,
               })}
             >
               <option value="">Select warehouse</option>
-              {warehouses.data?.map((item) => (
+              {warehouseOptions.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
                 </option>
@@ -1365,6 +1396,10 @@ export const PurchasePaymentRoute = () => {
   const payment = purchase.data?.payments?.find(
     (item) => item.id === paymentId,
   );
+  const companyId = useCompanyIdFromRecord({
+    companyId: purchase.data?.companyId,
+    warehouseId: purchase.data?.warehouseId,
+  });
   const mutation = useMutation({
     mutationFn: (value: PaymentInput) =>
       paymentId
@@ -1397,6 +1432,7 @@ export const PurchasePaymentRoute = () => {
         ) : (
           <PaymentForm
             payment={payment}
+            companyId={companyId}
             enforceAccountBalance
             defaultAmount={
               paymentId
@@ -1433,6 +1469,10 @@ export const PurchaseRcDueReceiptRoute = () => {
     (item) => item.id === receiptId,
   );
   const payment = rcDueReceiptAsPayment(receipt);
+  const companyId = useCompanyIdFromRecord({
+    companyId: query.data?.companyId,
+    warehouseId: query.data?.warehouseId,
+  });
   const maximum = receiptId
     ? (query.data?.pendingRcDueAmount ?? 0) + (receipt?.amount ?? 0)
     : query.data?.pendingRcDueAmount;
@@ -1481,6 +1521,7 @@ export const PurchaseRcDueReceiptRoute = () => {
           <PaymentForm
             key={`rc-due-${receiptId ?? "new"}-${maximum ?? 0}`}
             payment={payment}
+            companyId={companyId}
             defaultAmount={receiptId ? undefined : (maximum ?? undefined)}
             maximum={maximum ?? undefined}
             maximumMessage={RC_DUE_MAXIMUM_MESSAGE}
@@ -1810,6 +1851,10 @@ export const PurchaseReturnReceiptRoute = () => {
     enabled: !!id,
   });
   const receipt = query.data?.receipts.find((item) => item.id === receiptId);
+  const companyId = useCompanyIdFromRecord({
+    companyId: query.data?.companyId,
+    warehouseId: query.data?.warehouseId,
+  });
   const mutation = useMutation({
     mutationFn: (value: PaymentInput) =>
       receiptId
@@ -1844,6 +1889,7 @@ export const PurchaseReturnReceiptRoute = () => {
         ) : (
           <PaymentForm
             payment={receipt}
+            companyId={companyId}
             defaultAmount={
               receiptId ? undefined : query.data?.remainingReceivable
             }

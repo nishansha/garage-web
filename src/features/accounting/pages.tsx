@@ -42,6 +42,7 @@ import {
   type DataColumn,
 } from "../../components/ui";
 import { Can } from "../../components/Can";
+import { CompanyFilterSelect } from "../../components/CompanyFilterSelect";
 import { AuditHistoryButton } from "../audit/AuditHistory";
 import { ApiError } from "../../lib/api";
 import {
@@ -49,6 +50,7 @@ import {
   getFieldValidationMessage,
   getServerFieldValidationMessage,
   normalizeFieldPath,
+  paymentAccountCompanyMismatchMessage,
   tryApplyManualFieldValidationErrors,
 } from "../../lib/validation";
 import { formatDate } from "../../lib/utils";
@@ -75,6 +77,8 @@ import {
   type ProfitLoss,
   type ReportAccountLine,
 } from "../../services/accounting";
+import { companyApi, type Company } from "../../services/company";
+import { companyLabel, useCompanyScope } from "../../hooks/useCompanyScope";
 import "./accounting.css";
 
 const today = () => {
@@ -114,8 +118,24 @@ const applyServerFieldErrors = (
   setErrors: (errors: Record<string, string>) => void,
   moduleName: ValidationModule,
   fieldMap?: Record<string, string>,
-) =>
-  tryApplyManualFieldValidationErrors(error, setErrors, moduleName, fieldMap);
+) => {
+  const mismatch = paymentAccountCompanyMismatchMessage(error);
+  if (mismatch) {
+    setErrors({ form: mismatch });
+    return true;
+  }
+  return tryApplyManualFieldValidationErrors(
+    error,
+    setErrors,
+    moduleName,
+    fieldMap,
+  );
+};
+
+const companyName = (companies: Company[] | undefined, companyId: number) => {
+  const company = companies?.find((item) => item.id === companyId);
+  return company ? companyLabel(company) : `Company ${companyId}`;
+};
 
 const validationMessage = (
   moduleName: ValidationModule,
@@ -197,24 +217,29 @@ const AccountOptions = ({
 const PaymentOptions = ({
   value,
   onChange,
+  companyId,
   ...accessibility
 }: {
   value: string;
   onChange: (value: string) => void;
+  companyId?: number;
   "aria-describedby"?: string;
   "aria-invalid"?: boolean;
 }) => {
   const query = useQuery({
-    queryKey: ["accounting", "payment-accounts"],
-    queryFn: () => accountingApi.paymentAccounts(),
+    queryKey: ["accounting", "payment-accounts", companyId],
+    queryFn: () => accountingApi.paymentAccounts(true, companyId),
+    enabled: companyId != null && companyId > 0,
   });
   return (
     <Select
       {...accessibility}
       value={value}
-      disabled={query.isLoading}
+      disabled={query.isLoading || companyId == null}
       onChange={(event) => onChange(event.target.value)}
-      placeholder="Select payment account"
+      placeholder={
+        companyId == null ? "Select a company first" : "Select payment account"
+      }
       options={(query.data ?? [])
         .filter((account) => account.active)
         .map((account) => ({
@@ -227,11 +252,29 @@ const PaymentOptions = ({
 
 export const PaymentAccountsPage = () => {
   const navigate = useNavigate();
+  const { companies, multi } = useCompanyScope();
+  const [filterCompanyId, setFilterCompanyId] = useState<number | undefined>();
   const query = useQuery({
     queryKey: ["accounting", "payment-accounts"],
     queryFn: () => accountingApi.paymentAccounts(),
   });
-  const total = (query.data ?? []).reduce(
+  useEffect(() => {
+    if (
+      filterCompanyId != null &&
+      !companies.some((item) => item.id === filterCompanyId)
+    ) {
+      setFilterCompanyId(undefined);
+    }
+  }, [companies, filterCompanyId]);
+  const rows = useMemo(
+    () =>
+      (query.data ?? []).filter(
+        (account) =>
+          filterCompanyId == null || account.companyId === filterCompanyId,
+      ),
+    [filterCompanyId, query.data],
+  );
+  const total = rows.reduce(
     (sum, account) => sum + (account.currentBalance ?? account.openingBalance),
     0,
   );
@@ -245,6 +288,11 @@ export const PaymentAccountsPage = () => {
           <small className="cell-subtitle">{account.bankName}</small>
         </span>
       ),
+    },
+    {
+      key: "company",
+      header: "Company",
+      cell: (account) => companyName(companies, account.companyId),
     },
     {
       key: "type",
@@ -284,6 +332,16 @@ export const PaymentAccountsPage = () => {
           </Can>
         }
       />
+      {multi && (
+        <Card className="report-filters">
+          <CompanyFilterSelect
+            allowAll
+            companies={companies}
+            selectedId={filterCompanyId}
+            onChange={setFilterCompanyId}
+          />
+        </Card>
+      )}
       {query.isLoading ? (
         <LoadingState />
       ) : query.isError ? (
@@ -292,13 +350,13 @@ export const PaymentAccountsPage = () => {
         <>
           <div className="accounting-stats">
             <StatCard label="Total available balance" value={money(total)} />
-            <StatCard label="Active accounts" value={query.data?.length ?? 0} />
+            <StatCard label="Active accounts" value={rows.length} />
           </div>
           <Card>
             <DataTable
               caption="Payment accounts"
               columns={columns}
-              rows={query.data ?? []}
+              rows={rows}
               emptyMessage="No payment accounts"
               emptyDescription="Payment accounts will appear here once they are created."
               rowKey={(account) => String(account.id)}
@@ -313,13 +371,18 @@ export const PaymentAccountsPage = () => {
   );
 };
 
-type PaymentAccountFormState = Omit<PaymentAccountInput, "openingBalance"> & {
+type PaymentAccountFormState = Omit<
+  PaymentAccountInput,
+  "openingBalance" | "companyId"
+> & {
   openingBalance: number | "";
+  companyId: number | "";
 };
 
 const paymentInitial: PaymentAccountFormState = {
   name: "",
   accountType: "CASH",
+  companyId: "",
   openingBalance: 0,
 };
 
@@ -331,6 +394,14 @@ export const PaymentAccountFormPage = () => {
   const client = useQueryClient();
   const [form, setForm] = useState<PaymentAccountFormState>(paymentInitial);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const companiesQuery = useQuery({
+    queryKey: ["companies"],
+    queryFn: companyApi.list,
+  });
+  const companies = useMemo(
+    () => (companiesQuery.data ?? []).filter((item) => item.active !== false),
+    [companiesQuery.data],
+  );
   const detail = useQuery({
     queryKey: ["accounting", "payment-account", id],
     queryFn: () => accountingApi.paymentAccount(id as number),
@@ -341,6 +412,7 @@ export const PaymentAccountFormPage = () => {
       setForm({
         name: detail.data.name,
         accountType: detail.data.accountType,
+        companyId: detail.data.companyId,
         openingBalance: detail.data.openingBalance,
         openingDate: detail.data.openingDate ?? "",
         bankName: detail.data.bankName ?? "",
@@ -350,8 +422,17 @@ export const PaymentAccountFormPage = () => {
       });
     }
   }, [detail.data]);
+  useEffect(() => {
+    if (isEdit || form.companyId) return;
+    if (companies.length === 1) {
+      setForm((current) =>
+        current.companyId ? current : { ...current, companyId: companies[0].id },
+      );
+    }
+  }, [companies, form.companyId, isEdit]);
   const payload = (): PaymentAccountInput => ({
     ...form,
+    companyId: Number(form.companyId),
     openingBalance: Number(form.openingBalance),
     bankName: form.accountType === "BANK" ? form.bankName : undefined,
     accountNo: form.accountType === "BANK" ? form.accountNo : undefined,
@@ -390,6 +471,12 @@ export const PaymentAccountFormPage = () => {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const next: Record<string, string> = {};
+    if (!isEdit && !form.companyId)
+      next.companyId = validationMessage(
+        "paymentAccount",
+        "companyId",
+        "REQUIRED",
+      );
     if (!required(form.name))
       next.name = validationMessage("paymentAccount", "name", "REQUIRED");
     if (form.openingBalance === "" || !Number.isFinite(form.openingBalance))
@@ -444,6 +531,32 @@ export const PaymentAccountFormPage = () => {
       />
       <Card>
         <form className="accounting-form" noValidate onSubmit={submit}>
+          {errors.form && (
+            <div className="form-validation-summary" role="alert">
+              {errors.form}
+            </div>
+          )}
+          {!id && (
+            <FormField label="Company" required error={errors.companyId}>
+              <Select
+                value={form.companyId}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+                  setForm({
+                    ...form,
+                    companyId: Number.isInteger(value) && value > 0 ? value : "",
+                  });
+                }}
+              >
+                <option value="">Select company</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {companyLabel(company)}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          )}
           <FormField label="Account name" required error={errors.name}>
             <Input
               value={form.name}
@@ -690,6 +803,11 @@ const AdjustmentModal = ({
       }
     >
       <div className="accounting-form">
+        {errors.form && (
+          <div className="form-validation-summary" role="alert">
+            {errors.form}
+          </div>
+        )}
         <FormField label="Payment account" error={errors.paymentAccountId}>
           <Input value={account.name} disabled />
         </FormField>
@@ -1101,14 +1219,35 @@ export const DirectEntryFormPage = () => {
   const [form, setForm] = useState<DirectEntryInput>(directInitial);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirm, setConfirm] = useState(false);
+  const [companyId, setCompanyId] = useState<number | "">("");
+  const companiesQuery = useQuery({
+    queryKey: ["companies"],
+    queryFn: companyApi.list,
+  });
+  const companies = useMemo(
+    () => (companiesQuery.data ?? []).filter((item) => item.active !== false),
+    [companiesQuery.data],
+  );
   const detail = useQuery({
     queryKey: ["accounting", "direct-entry", id],
     queryFn: () => accountingApi.directEntry(id as number),
     enabled: id !== null,
   });
+  const existingAccount = useQuery({
+    queryKey: [
+      "accounting",
+      "payment-account",
+      detail.data?.paymentAccountId,
+    ],
+    queryFn: () => accountingApi.paymentAccount(detail.data!.paymentAccountId),
+    enabled: detail.data != null && detail.data.paymentAccountId > 0,
+  });
+  const resolvedCompanyId =
+    typeof companyId === "number" && companyId > 0 ? companyId : undefined;
   const paymentAccounts = useQuery({
-    queryKey: ["accounting", "payment-accounts"],
-    queryFn: () => accountingApi.paymentAccounts(),
+    queryKey: ["accounting", "payment-accounts", resolvedCompanyId],
+    queryFn: () => accountingApi.paymentAccounts(true, resolvedCompanyId),
+    enabled: resolvedCompanyId != null,
   });
   useEffect(() => {
     if (detail.data) {
@@ -1125,6 +1264,14 @@ export const DirectEntryFormPage = () => {
       });
     }
   }, [detail.data]);
+  useEffect(() => {
+    if (existingAccount.data?.companyId) {
+      setCompanyId(existingAccount.data.companyId);
+      return;
+    }
+    if (id || companyId) return;
+    if (companies.length === 1) setCompanyId(companies[0].id);
+  }, [companies, companyId, existingAccount.data, id]);
   const save = useMutation({
     mutationFn: () =>
       id
@@ -1165,6 +1312,7 @@ export const DirectEntryFormPage = () => {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const next: Record<string, string> = {};
+    if (!id && !companyId) next.companyId = "Company is required";
     if (!form.coaId)
       next.coaId = validationMessage("directEntry", "accountId", "REQUIRED");
     if (!form.paymentAccountId)
@@ -1203,8 +1351,7 @@ export const DirectEntryFormPage = () => {
     setErrors(next);
     if (!Object.keys(next).length) save.mutate();
   };
-  if ((id && detail.isLoading) || paymentAccounts.isLoading)
-    return <LoadingState />;
+  if (id && detail.isLoading) return <LoadingState />;
   return (
     <>
       <PageHeader
@@ -1224,6 +1371,32 @@ export const DirectEntryFormPage = () => {
       />
       <Card>
         <form className="accounting-form" noValidate onSubmit={submit}>
+          {errors.form && (
+            <div className="form-validation-summary" role="alert">
+              {errors.form}
+            </div>
+          )}
+          {!id && (
+            <FormField label="Company" required error={errors.companyId}>
+              <Select
+                value={companyId}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+                  setCompanyId(
+                    Number.isInteger(value) && value > 0 ? value : "",
+                  );
+                  setForm({ ...form, paymentAccountId: 0 });
+                }}
+              >
+                <option value="">Select company</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {companyLabel(company)}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          )}
           <FormField label="Direction" required error={errors.direction}>
             <Select
               value={form.direction}
@@ -1271,6 +1444,7 @@ export const DirectEntryFormPage = () => {
             error={errors.paymentAccountId}
           >
             <PaymentOptions
+              companyId={resolvedCompanyId}
               value={String(form.paymentAccountId || "")}
               onChange={(value) =>
                 setForm({ ...form, paymentAccountId: Number(value) })
@@ -1484,14 +1658,35 @@ export const OtherIncomeFormPage = () => {
   const [form, setForm] = useState<OtherIncomeInput>(otherIncomeInitial);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirm, setConfirm] = useState(false);
+  const [companyId, setCompanyId] = useState<number | "">("");
+  const companiesQuery = useQuery({
+    queryKey: ["companies"],
+    queryFn: companyApi.list,
+  });
+  const companies = useMemo(
+    () => (companiesQuery.data ?? []).filter((item) => item.active !== false),
+    [companiesQuery.data],
+  );
   const detail = useQuery({
     queryKey: ["accounting", "other-income", id],
     queryFn: () => accountingApi.otherIncome(id as number),
     enabled: id !== null,
   });
+  const existingAccount = useQuery({
+    queryKey: [
+      "accounting",
+      "payment-account",
+      detail.data?.paymentAccountId,
+    ],
+    queryFn: () => accountingApi.paymentAccount(detail.data!.paymentAccountId),
+    enabled: detail.data != null && detail.data.paymentAccountId > 0,
+  });
+  const resolvedCompanyId =
+    typeof companyId === "number" && companyId > 0 ? companyId : undefined;
   const paymentAccounts = useQuery({
-    queryKey: ["accounting", "payment-accounts"],
-    queryFn: () => accountingApi.paymentAccounts(),
+    queryKey: ["accounting", "payment-accounts", resolvedCompanyId],
+    queryFn: () => accountingApi.paymentAccounts(true, resolvedCompanyId),
+    enabled: resolvedCompanyId != null,
   });
   useEffect(() => {
     if (detail.data) {
@@ -1508,6 +1703,14 @@ export const OtherIncomeFormPage = () => {
       });
     }
   }, [detail.data]);
+  useEffect(() => {
+    if (existingAccount.data?.companyId) {
+      setCompanyId(existingAccount.data.companyId);
+      return;
+    }
+    if (id || companyId) return;
+    if (companies.length === 1) setCompanyId(companies[0].id);
+  }, [companies, companyId, existingAccount.data, id]);
   const save = useMutation({
     mutationFn: () =>
       id
@@ -1548,6 +1751,7 @@ export const OtherIncomeFormPage = () => {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const next: Record<string, string> = {};
+    if (!id && !companyId) next.companyId = "Company is required";
     if (!form.coaId)
       next.coaId = validationMessage("otherIncome", "accountId", "REQUIRED");
     if (!form.paymentAccountId)
@@ -1586,8 +1790,7 @@ export const OtherIncomeFormPage = () => {
     setErrors(next);
     if (!Object.keys(next).length) save.mutate();
   };
-  if ((id && detail.isLoading) || paymentAccounts.isLoading)
-    return <LoadingState />;
+  if (id && detail.isLoading) return <LoadingState />;
   return (
     <>
       <PageHeader
@@ -1607,6 +1810,32 @@ export const OtherIncomeFormPage = () => {
       />
       <Card>
         <form className="accounting-form" noValidate onSubmit={submit}>
+          {errors.form && (
+            <div className="form-validation-summary" role="alert">
+              {errors.form}
+            </div>
+          )}
+          {!id && (
+            <FormField label="Company" required error={errors.companyId}>
+              <Select
+                value={companyId}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+                  setCompanyId(
+                    Number.isInteger(value) && value > 0 ? value : "",
+                  );
+                  setForm({ ...form, paymentAccountId: 0 });
+                }}
+              >
+                <option value="">Select company</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {companyLabel(company)}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          )}
           <FormField label="Direction" required error={errors.direction}>
             <Select
               value={form.direction}
@@ -1655,6 +1884,7 @@ export const OtherIncomeFormPage = () => {
             error={errors.paymentAccountId}
           >
             <PaymentOptions
+              companyId={resolvedCompanyId}
               value={String(form.paymentAccountId || "")}
               onChange={(value) =>
                 setForm({ ...form, paymentAccountId: Number(value) })
@@ -2700,6 +2930,8 @@ const JournalProfitLossView = ({ report }: { report: JournalProfitLoss }) => (
 
 export const ProfitLossReportPage = () => {
   const [month, setMonth] = useState(thisMonth());
+  const { companies, multi, ready } = useCompanyScope();
+  const [filterCompanyId, setFilterCompanyId] = useState<number | undefined>();
   const allowedMonths = useMemo(() => {
     const current = new Date();
     return Array.from(
@@ -2708,9 +2940,18 @@ export const ProfitLossReportPage = () => {
         `${current.getFullYear()}-${String(index + 1).padStart(2, "0")}`,
     );
   }, []);
+  useEffect(() => {
+    if (
+      filterCompanyId != null &&
+      !companies.some((item) => item.id === filterCompanyId)
+    ) {
+      setFilterCompanyId(undefined);
+    }
+  }, [companies, filterCompanyId]);
   const query = useQuery({
-    queryKey: ["accounting", "pl", month],
-    queryFn: () => accountingApi.profitLoss(month),
+    queryKey: ["accounting", "pl", month, filterCompanyId],
+    queryFn: () => accountingApi.profitLoss(month, filterCompanyId),
+    enabled: ready,
   });
   return (
     <div className="pl-page">
@@ -2722,35 +2963,46 @@ export const ProfitLossReportPage = () => {
             : "Sales, purchases, expenses, and profitability for the selected month."
         }
         actions={
-          <div className="pl-toolbar">
-            <div className="pl-months" role="group" aria-label="Report month">
-              {allowedMonths.map((value) => {
-                const date = new Date(`${value}-01T00:00:00`);
-                return (
-                  <button
-                    className={month === value ? "is-active" : undefined}
-                    key={value}
-                    type="button"
-                    aria-pressed={month === value}
-                    onClick={() => setMonth(value)}
-                  >
-                    {date.toLocaleDateString("en-IN", { month: "short" })}
-                  </button>
-                );
-              })}
-            </div>
-            <DownloadButton
-              run={() => accountingApi.downloadProfitLoss(month)}
-            />
-          </div>
+          <DownloadButton
+            run={() => accountingApi.downloadProfitLoss(month, filterCompanyId)}
+          />
         }
       />
+      <Card className="report-filters compare-filters">
+        {multi && (
+          <CompanyFilterSelect
+            allowAll
+            companies={companies}
+            selectedId={filterCompanyId}
+            onChange={setFilterCompanyId}
+          />
+        )}
+        <div className="pl-months" role="group" aria-label="Report month">
+          {allowedMonths.map((value) => {
+            const date = new Date(`${value}-01T00:00:00`);
+            return (
+              <button
+                className={month === value ? "is-active" : undefined}
+                key={value}
+                type="button"
+                aria-pressed={month === value}
+                onClick={() => setMonth(value)}
+              >
+                {date.toLocaleDateString("en-IN", { month: "short" })}
+              </button>
+            );
+          })}
+        </div>
+      </Card>
       {query.isLoading ? (
         <LoadingState />
       ) : query.isError ? (
         <QueryError error={query.error} retry={() => void query.refetch()} />
       ) : query.data ? (
-        <ProfitLossView key={month} report={query.data} />
+        <ProfitLossView
+          key={`${month}-${filterCompanyId ?? "all"}`}
+          report={query.data}
+        />
       ) : null}
     </div>
   );
@@ -2873,6 +3125,10 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
                 <span>Other income</span>
                 <strong>{money(report.directEntryTotals.incomeAmount)}</strong>
               </div>
+              <div className="pl-chip">
+                <span>Service revenue</span>
+                <strong>{money(report.serviceRevenue ?? 0)}</strong>
+              </div>
               {report.returnDeductionIncome !== 0 && (
                 <div className="pl-chip">
                   <span>Return deduction</span>
@@ -2917,6 +3173,13 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
                 <strong>
                   {report.expenseTotals.amount ? "−" : ""}
                   {money(report.expenseTotals.amount)}
+                </strong>
+              </div>
+              <div className="pl-chip">
+                <span>Payroll</span>
+                <strong>
+                  {report.payrollExpense ? "−" : ""}
+                  {money(report.payrollExpense ?? 0)}
                 </strong>
               </div>
             </div>
@@ -2975,7 +3238,9 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
                       </span>
                     </div>
                     <div className="pl-item__end">
-                      <span className={`pl-item__side ${positive(sale.profit)}`}>
+                      <span
+                        className={`pl-item__side ${positive(sale.profit)}`}
+                      >
                         {money(sale.profit)}
                       </span>
                       <strong className="pl-item__amount">
@@ -3087,7 +3352,9 @@ const ProfitLossView = ({ report }: { report: ProfitLoss }) => {
                       >
                         <div className="pl-item__main">
                           <strong>{entry.name}</strong>
-                          <span className="pl-item__meta">{entry.category}</span>
+                          <span className="pl-item__meta">
+                            {entry.category}
+                          </span>
                         </div>
                         <strong
                           className={`pl-item__amount${
@@ -3325,17 +3592,29 @@ const accountTypeOptions = (
 
 export const ChartOfAccountsPage = () => {
   const client = useQueryClient();
+  const { companies, multi } = useCompanyScope();
   const query = useQuery({
     queryKey: ["accounting", "coa", "all"],
     queryFn: () => accountingApi.accounts(false),
   });
+  const [filterCompanyId, setFilterCompanyId] = useState<number | undefined>();
   const [creating, setCreating] = useState(false);
+  const [companyId, setCompanyId] = useState<number | "">("");
   const [type, setType] = useState<CoaAccountType>("ASSET");
   const [label, setLabel] = useState("");
   const [description, setDescription] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const rows = useMemo(
+    () =>
+      (query.data ?? []).filter(
+        (account) =>
+          filterCompanyId == null || account.companyId === filterCompanyId,
+      ),
+    [filterCompanyId, query.data],
+  );
   const open = () => {
     setCreating(true);
+    setCompanyId(companies.length === 1 ? companies[0].id : "");
     setType("ASSET");
     setLabel("");
     setDescription("");
@@ -3344,6 +3623,7 @@ export const ChartOfAccountsPage = () => {
   const mutation = useMutation({
     mutationFn: () =>
       accountingApi.createAccount({
+        companyId: Number(companyId),
         type,
         label,
         description,
@@ -3365,6 +3645,12 @@ export const ChartOfAccountsPage = () => {
   });
   const save = () => {
     const next: Record<string, string> = {};
+    if (!companyId)
+      next.companyId = validationMessage(
+        "chartOfAccount",
+        "companyId",
+        "REQUIRED",
+      );
     if (!required(label))
       next.label = validationMessage("chartOfAccount", "label", "REQUIRED");
     if (!required(description))
@@ -3387,6 +3673,16 @@ export const ChartOfAccountsPage = () => {
           </Button>
         }
       />
+      {multi && (
+        <Card className="report-filters">
+          <CompanyFilterSelect
+            allowAll
+            companies={companies}
+            selectedId={filterCompanyId}
+            onChange={setFilterCompanyId}
+          />
+        </Card>
+      )}
       {query.isLoading ? (
         <LoadingState />
       ) : query.isError ? (
@@ -3395,7 +3691,7 @@ export const ChartOfAccountsPage = () => {
         <Card>
           <DataTable
             caption="Chart of accounts"
-            rows={(query.data ?? []).slice().sort((a, b) => {
+            rows={rows.slice().sort((a, b) => {
               const codeA = Number(a.code);
               const codeB = Number(b.code);
               return !Number.isNaN(codeA) &&
@@ -3424,6 +3720,14 @@ export const ChartOfAccountsPage = () => {
                     </small>
                   </>
                 ),
+              },
+              {
+                key: "company",
+                header: "Company",
+                cell: (account) =>
+                  account.companyId
+                    ? companyName(companies, account.companyId)
+                    : "—",
               },
               {
                 key: "type",
@@ -3460,6 +3764,27 @@ export const ChartOfAccountsPage = () => {
         }
       >
         <div className="accounting-form">
+          <FormField label="Company" required error={errors.companyId}>
+            <Select
+              value={companyId}
+              onChange={(event) => {
+                const id = Number(event.target.value);
+                setCompanyId(Number.isInteger(id) && id > 0 ? id : "");
+                setErrors((current) => {
+                  const next = { ...current };
+                  delete next.companyId;
+                  return next;
+                });
+              }}
+            >
+              <option value="">Select company</option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {companyLabel(company)}
+                </option>
+              ))}
+            </Select>
+          </FormField>
           <FormField label="Type" required error={errors.type}>
             <Select
               value={type}

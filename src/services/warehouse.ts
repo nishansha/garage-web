@@ -1,8 +1,22 @@
 import { api } from "../lib/api";
 
+export type BusinessLine = "VEHICLE_SALES" | "SERVICES";
+
+export const BUSINESS_LINES: readonly BusinessLine[] = [
+  "VEHICLE_SALES",
+  "SERVICES",
+];
+
+export const BUSINESS_LINE_LABELS: Record<BusinessLine, string> = {
+  VEHICLE_SALES: "Vehicle sales",
+  SERVICES: "Services",
+};
+
 export interface Warehouse {
   id: number;
   version: number;
+  companyId: number;
+  businessLines: BusinessLine[];
   code: string;
   name: string;
   address?: string | null;
@@ -11,6 +25,8 @@ export interface Warehouse {
 
 export interface WarehouseInput {
   version?: number;
+  companyId: number;
+  businessLines: BusinessLine[];
   code: string;
   name: string;
   address?: string;
@@ -27,12 +43,15 @@ export interface WarehousePerformance {
   salesRevenue: number;
   grossProfit: number;
   grossMarginPct: number;
+  serviceSalesCount: number;
+  serviceRevenue: number;
   purchaseCount: number;
   purchaseCost: number;
   landedCost: number;
   purchaseExpenses: number;
   payablesCount: number;
   totalPayables: number;
+  generalExpenses: number;
 }
 
 export interface WarehouseComparison {
@@ -40,6 +59,19 @@ export interface WarehouseComparison {
   warehouses: WarehousePerformance[];
   unallocatedGeneralExpenses: number;
 }
+
+export const warehouseSupports = (warehouse: Warehouse, line: BusinessLine) =>
+  (warehouse.businessLines ?? []).includes(line);
+
+export const warehousesFor = (
+  warehouses: Warehouse[] | undefined,
+  line: BusinessLine,
+) => (warehouses ?? []).filter((item) => warehouseSupports(item, line));
+
+export const companyIdForWarehouse = (
+  warehouses: Warehouse[] | undefined,
+  warehouseId?: number | null,
+) => warehouses?.find((item) => item.id === warehouseId)?.companyId;
 
 const query = (
   values: Record<string, string | number | boolean | undefined>,

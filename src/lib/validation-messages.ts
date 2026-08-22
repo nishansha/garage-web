@@ -42,8 +42,7 @@ export const validationMessageConfig: Record<string, string> = {
   "purchase.purchaseRate.MUST_BE_POSITIVE":
     "Purchase rate must be greater than zero",
   "purchase.rcDueAmount.NON_NEGATIVE": "RCD amount cannot be negative",
-  "purchase.rcDueAmount.MAXIMUM":
-    "RCD amount cannot exceed the purchase rate",
+  "purchase.rcDueAmount.MAXIMUM": "RCD amount cannot exceed the purchase rate",
   "purchase.ownerShipSerialNo.REQUIRED": "Ownership serial number is required",
   "purchase.ownerName.REQUIRED": "Owner/vendor name is required",
   "purchase.ownerMobileNo.REQUIRED": "Owner mobile is required",
@@ -91,8 +90,7 @@ export const validationMessageConfig: Record<string, string> = {
   "sale.exchange.modelId.REQUIRED": "Exchange vehicle model is required",
   "sale.exchange.variantId.REQUIRED": "Exchange vehicle variant is required",
   "sale.exchange.colorId.REQUIRED": "Exchange vehicle color is required",
-  "sale.exchange.fuelTypeId.REQUIRED":
-    "Exchange vehicle fuel type is required",
+  "sale.exchange.fuelTypeId.REQUIRED": "Exchange vehicle fuel type is required",
   "sale.exchange.transmissionTypeId.REQUIRED":
     "Exchange vehicle transmission type is required",
   "sale.exchange.segmentId.REQUIRED": "Exchange vehicle segment is required",
@@ -157,6 +155,7 @@ export const validationMessageConfig: Record<string, string> = {
   "expense.amount.MUST_BE_POSITIVE": "Amount must be greater than zero",
   "expense.amount.MAXIMUM": "Amount exceeds the available balance",
 
+  "paymentAccount.companyId.REQUIRED": "Company is required",
   "paymentAccount.name.REQUIRED": "Account name is required",
   "paymentAccount.openingBalance.REQUIRED": "Opening balance is required",
   "paymentAccount.openingBalance.NON_NEGATIVE":
@@ -207,6 +206,7 @@ export const validationMessageConfig: Record<string, string> = {
     "Enter either a debit or credit, not both",
   "journal.lines.BALANCE_MISMATCH": "Total debits and credits must balance",
 
+  "chartOfAccount.companyId.REQUIRED": "Company is required",
   "chartOfAccount.label.REQUIRED": "Label is required",
   "chartOfAccount.description.REQUIRED": "Description is required",
 
@@ -224,6 +224,17 @@ export const validationMessageConfig: Record<string, string> = {
   "masterData.categoryId.REQUIRED": "Category is required",
   "masterData.brandId.REQUIRED": "Brand is required",
   "masterData.modelId.REQUIRED": "Model is required",
+
+  "serviceSale.warehouseId.REQUIRED": "Warehouse is required",
+  "serviceSale.saleDate.REQUIRED": "Sale date is required",
+  "serviceSale.customerId.REQUIRED": "Customer is required",
+  "serviceSale.walkInCustomerName.REQUIRED": "Walk-in name is required",
+  "serviceSale.items.REQUIRED": "Add at least one line item",
+  "serviceSale.items.description.REQUIRED": "Description is required",
+  "serviceSale.items.qty.REQUIRED": "Qty is required",
+  "serviceSale.items.qty.MUST_BE_POSITIVE": "Qty must be greater than zero",
+  "serviceSale.items.rate.REQUIRED": "Rate is required",
+  "serviceSale.items.rate.MUST_BE_POSITIVE": "Rate must be greater than zero",
 };
 
 export type ValidationModule =
@@ -240,4 +251,5 @@ export type ValidationModule =
   | "journal"
   | "chartOfAccount"
   | "staff"
-  | "masterData";
+  | "masterData"
+  | "serviceSale";

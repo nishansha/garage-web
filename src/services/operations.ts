@@ -34,6 +34,7 @@ export interface PaymentAccount {
   active: boolean;
   openingBalance?: number | null;
   currentBalance?: number | null;
+  companyId: number;
 }
 export interface Payment {
   id: number;
@@ -95,6 +96,7 @@ export interface Purchase {
   id: number;
   inventoryId?: number;
   version: number;
+  companyId?: number;
   date: string;
   deliveredDate?: string | null;
   vehicleNo: string;
@@ -107,7 +109,7 @@ export interface Purchase {
   fuelTypeId?: number | null;
   transmissionTypeId?: number | null;
   segmentId?: number | null;
-  warehouseId?: number | null;
+  warehouseId: number;
   brandName: string;
   modelName: string;
   variantName: string;
@@ -153,7 +155,7 @@ export interface PurchaseInput {
   fuelTypeId: number;
   transmissionTypeId: number;
   segmentId: number;
-  warehouseId?: number | null;
+  warehouseId: number;
   makeYear: string;
   odometer: string;
   purchaseRate: number;
@@ -226,6 +228,8 @@ export interface SaleExchangeVehicleDetails {
 export interface Sale {
   id: number;
   version: number;
+  companyId?: number;
+  warehouseId?: number | null;
   date: string;
   deliveredDate?: string;
   stockId?: number | null;
@@ -305,6 +309,8 @@ export interface Stock {
 export interface Expense {
   id: number;
   version: number;
+  companyId?: number;
+  warehouseId?: number | null;
   date: string;
   title: string;
   description: string;
@@ -322,6 +328,7 @@ export interface ExpenseInput {
   typeId: number;
   paymentAccountId: number;
   purchaseId?: number;
+  warehouseId?: number | null;
   version?: number;
 }
 export interface PurchaseExpenseSummary {
@@ -340,6 +347,8 @@ export interface PurchaseExpenseSummary {
 export interface PurchaseReturn {
   id: number;
   version: number;
+  companyId?: number;
+  warehouseId?: number | null;
   purchaseId: number;
   purchaseReferenceNo?: string | null;
   inventoryId: number;
@@ -387,6 +396,8 @@ export interface Deduction {
 export interface SaleReturn {
   id: number;
   version: number;
+  companyId?: number;
+  warehouseId?: number | null;
   saleId: number;
   productNo?: string | null;
   brandName?: string | null;
@@ -615,9 +626,11 @@ export const operationsApi = {
             value.name ?? value.description ?? value.label ?? value.code ?? "",
         })),
       ),
-  paymentAccounts: () =>
+  paymentAccounts: (companyId?: number) =>
     api
-      .get<{ accounts: PaymentAccount[] }>("v1/payment-accounts/balance")
+      .get<{ accounts: PaymentAccount[] }>(
+        `v1/payment-accounts/balance${query({ companyId })}`,
+      )
       .then((result) => result.accounts.filter((account) => account.active)),
   catalog: {
     brands: () =>
@@ -734,7 +747,8 @@ export const operationsApi = {
         `v1/purchase/${id}/payments/${paymentId}`,
         cleanPayment(value),
       ),
-    payables: () => api.get<Outstandings>("v1/purchase/payables"),
+    payables: (companyId?: number) =>
+      api.get<Outstandings>(`v1/purchase/payables${query({ companyId })}`),
     rcDueReceipt: (id: number, value: RcDueReceiptInput) =>
       api.post<RcDueReceiptResponse>(
         `v1/purchase/${id}/rc-due-receipts`,
@@ -751,7 +765,10 @@ export const operationsApi = {
       ),
     deleteRcDueReceipt: (id: number, receiptId: number) =>
       api.delete<void>(`v1/purchase/${id}/rc-due-receipts/${receiptId}`),
-    rcDueSummary: () => api.get<RcDueSummary>("v1/purchase/rc-due-summary"),
+    rcDueSummary: (companyId?: number) =>
+      api.get<RcDueSummary>(
+        `v1/purchase/rc-due-summary${query({ companyId })}`,
+      ),
   },
   purchaseReturns: {
     list: (page = 0, size = 20, filters?: SearchInput) =>
@@ -814,9 +831,12 @@ export const operationsApi = {
         `v1/sales/${id}/payments/${paymentId}`,
         cleanPayment(value),
       ),
-    receivables: () => api.get<SalesReceivables>("v1/sales/receivables"),
-    financeReceivables: () =>
-      api.get<FinanceReceivables>("v1/reports/finance-receivables"),
+    receivables: (companyId?: number) =>
+      api.get<SalesReceivables>(`v1/sales/receivables${query({ companyId })}`),
+    financeReceivables: (companyId?: number) =>
+      api.get<FinanceReceivables>(
+        `v1/reports/finance-receivables${query({ companyId })}`,
+      ),
   },
   saleReturns: {
     list: (page = 0, size = 20, filters?: SearchInput) =>

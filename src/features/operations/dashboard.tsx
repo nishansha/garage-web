@@ -174,6 +174,14 @@ export const DashboardRoute = () => {
                 <Plus size={16} aria-hidden="true" /> Sale
               </Link>
             </Can>
+            <Can resource="SERVICE_SALE" privilege="CREATE">
+              <Link
+                className="button button--secondary"
+                to="/sales/service-sales/new"
+              >
+                <Plus size={16} aria-hidden="true" /> Service
+              </Link>
+            </Can>
           </div>
         }
       />

@@ -9,6 +9,7 @@ export type CoaAccountType =
 export interface PaymentAccount {
   id: number;
   version: number;
+  companyId: number;
   name: string;
   bankName: string | null;
   accountNo: string | null;
@@ -23,6 +24,7 @@ export interface PaymentAccount {
 export interface PaymentAccountInput {
   name: string;
   accountType: PaymentAccountType;
+  companyId: number;
   openingBalance: number;
   openingDate?: string;
   bankName?: string;
@@ -59,6 +61,7 @@ export interface PageResult<T> {
 export interface Account {
   id: number;
   version: number;
+  companyId?: number;
   type: CoaAccountType;
   name: string;
   code: string;
@@ -241,6 +244,8 @@ export interface ProfitLoss {
   exchangeGain: number;
   exchangeReturnLoss: number;
   purchaseReturnLoss: number;
+  serviceRevenue: number;
+  payrollExpense: number;
   totalOperatingExpenses: number;
   netProfit: number;
   netMarginPct: number;
@@ -393,9 +398,12 @@ const download = async (
 };
 
 export const accountingApi = {
-  async paymentAccounts(balance = true): Promise<PaymentAccount[]> {
+  async paymentAccounts(
+    balance = true,
+    companyId?: number,
+  ): Promise<PaymentAccount[]> {
     const data = await api.get<{ accounts: PaymentAccount[] }>(
-      balance ? "v1/payment-accounts/balance" : "v1/payment-accounts",
+      `${balance ? "v1/payment-accounts/balance" : "v1/payment-accounts"}${query({ companyId })}`,
     );
     return data.accounts ?? [];
   },
@@ -450,6 +458,7 @@ export const accountingApi = {
   },
   account: (id: number) => api.get<Account>(`v1/account/${id}`),
   async createAccount(input: {
+    companyId: number;
     type: CoaAccountType;
     label: string;
     description: string;
@@ -527,8 +536,7 @@ export const accountingApi = {
     }>(`v1/other-incomes${query(filters)}`);
     return { ...data, items: data.entries ?? [] };
   },
-  otherIncome: (id: number) =>
-    api.get<OtherIncome>(`v1/other-incomes/${id}`),
+  otherIncome: (id: number) => api.get<OtherIncome>(`v1/other-incomes/${id}`),
   createOtherIncome: (input: OtherIncomeInput) =>
     api.post<void>("v1/other-incomes", {
       ...input,
@@ -549,8 +557,7 @@ export const accountingApi = {
       notes: clean(input.notes),
       version: input.version,
     }),
-  deleteOtherIncome: (id: number) =>
-    api.delete<void>(`v1/other-incomes/${id}`),
+  deleteOtherIncome: (id: number) => api.delete<void>(`v1/other-incomes/${id}`),
 
   async journals(filters: {
     page: number;
@@ -584,16 +591,16 @@ export const accountingApi = {
     api.get<JournalProfitLoss>(
       `v1/reports/pl-from-journal${query({ fromDate, toDate })}`,
     ),
-  profitLoss: (month?: string) =>
-    api.get<ProfitLoss>(`v1/reports/pl${query({ month })}`),
+  profitLoss: (month?: string, companyId?: number) =>
+    api.get<ProfitLoss>(`v1/reports/pl${query({ month, companyId })}`),
   trend: (months = 6) =>
     api.get<TrendReport>(`v1/reports/trend${query({ months })}`),
   monthlyOverview: (months = 6) =>
     api.get<MonthlyOverview>(`v1/home/overview${query({ months })}`),
 
-  downloadProfitLoss: (month: string) =>
+  downloadProfitLoss: (month: string, companyId?: number) =>
     download(
-      `v1/reports/pl/csv${query({ month })}`,
+      `v1/reports/pl/csv${query({ month, companyId })}`,
       `profit-loss-${month}.csv`,
     ),
   downloadLedger: (id: number, fromDate: string, toDate: string) =>

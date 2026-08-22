@@ -85,6 +85,22 @@ const rules: AccessRule[] = [
     access: { resource: "SALE", privilege: "VIEW" },
   },
   {
+    pattern: /^\/sales\/service-sales\/new$/,
+    access: { resource: "SERVICE_SALE", privilege: "CREATE" },
+  },
+  {
+    pattern: /^\/sales\/service-sales\/\d+\/edit$/,
+    access: { resource: "SERVICE_SALE", privilege: "UPDATE" },
+  },
+  {
+    pattern: /^\/sales\/service-sales\/\d+\/payment/,
+    access: { resource: "SERVICE_SALE", privilege: "CREATE" },
+  },
+  {
+    pattern: /^\/sales\/service-sales/,
+    access: { resource: "SERVICE_SALE", privilege: "VIEW" },
+  },
+  {
     pattern: /^\/sales\/returns\/\d+\/refund/,
     access: { resource: "SALE_RETURN", privilege: "CREATE" },
   },
@@ -95,6 +111,10 @@ const rules: AccessRule[] = [
   {
     pattern: /^\/sales\/customers/,
     access: { resource: "CUSTOMER", privilege: "VIEW" },
+  },
+  {
+    pattern: /^\/sales\/outstandings\/service-receivables/,
+    access: { resource: "SERVICE_SALE", privilege: "VIEW" },
   },
   {
     pattern: /^\/sales\/outstandings\/receivables/,
@@ -209,6 +229,10 @@ const rules: AccessRule[] = [
     access: { resource: "MONTHLY_REPORT", privilege: "VIEW" },
   },
   {
+    pattern: /^\/accounting\/company-comparison/,
+    access: { resource: "COMPANY", privilege: "VIEW" },
+  },
+  {
     pattern: /^\/accounting\/monthly-overview/,
     access: { resource: "MONTHLY_REPORT", privilege: "VIEW" },
   },
@@ -243,6 +267,22 @@ const rules: AccessRule[] = [
   {
     pattern: /^\/more\/warehouses/,
     access: { resource: "WAREHOUSE", privilege: "VIEW" },
+  },
+  {
+    pattern: /^\/more\/companies/,
+    access: { resource: "COMPANY", privilege: "VIEW" },
+  },
+  {
+    pattern: /^\/more\/services/,
+    access: { resource: "SERVICE_OFFERING", privilege: "VIEW" },
+  },
+  {
+    pattern: /^\/payroll\/employees/,
+    access: { resource: "EMPLOYEE", privilege: "VIEW" },
+  },
+  {
+    pattern: /^\/payroll\/salary-payments/,
+    access: { resource: "SALARY_PAYMENT", privilege: "VIEW" },
   },
   {
     pattern: /^\/more\/clear-data/,

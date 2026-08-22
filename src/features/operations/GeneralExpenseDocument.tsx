@@ -22,8 +22,8 @@ const paymentAccountLabel = (account: PaymentAccount) =>
 
 export const GeneralExpenseDocument = ({ expense }: { expense: Expense }) => {
   const accounts = useQuery({
-    queryKey: ["operations", "payment-accounts"],
-    queryFn: operationsApi.paymentAccounts,
+    queryKey: ["operations", "payment-accounts", expense.companyId],
+    queryFn: () => operationsApi.paymentAccounts(expense.companyId),
     enabled: expense.paymentAccountId != null,
   });
   const typeLabel = expenseType(expense);

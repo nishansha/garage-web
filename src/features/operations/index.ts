@@ -32,6 +32,7 @@ import {
   PurchaseReturnReceivablesRoute,
   SaleReturnPayablesRoute,
   SalesReceivablesRoute,
+  ServiceReceivablesRoute,
 } from "./outstandings";
 import {
   SaleCreateRoute,
@@ -44,6 +45,13 @@ import {
   SaleReturnsListRoute,
   SalesListRoute,
 } from "./sales";
+import {
+  ServiceSaleCreateRoute,
+  ServiceSaleDetailRoute,
+  ServiceSaleEditRoute,
+  ServiceSalePaymentRoute,
+  ServiceSalesListRoute,
+} from "./serviceSales";
 
 export * from "./dashboard";
 export * from "./expenses";
@@ -51,6 +59,7 @@ export * from "./inventory";
 export * from "./outstandings";
 export * from "./purchases";
 export * from "./sales";
+export * from "./serviceSales";
 
 export const operationsRoutes = {
   "/": DashboardRoute,
@@ -81,11 +90,17 @@ export const operationsRoutes = {
   "/sales/sales/:saleId/payment": SalePaymentRoute,
   "/sales/sales/:saleId/payments/:paymentId/edit": SalePaymentRoute,
   "/sales/sales/:saleId/return": SaleReturnCreateRoute,
+  "/sales/service-sales": ServiceSalesListRoute,
+  "/sales/service-sales/new": ServiceSaleCreateRoute,
+  "/sales/service-sales/:serviceSaleId": ServiceSaleDetailRoute,
+  "/sales/service-sales/:serviceSaleId/edit": ServiceSaleEditRoute,
+  "/sales/service-sales/:serviceSaleId/payment": ServiceSalePaymentRoute,
   "/sales/returns": SaleReturnsListRoute,
   "/sales/returns/:returnId": SaleReturnDetailRoute,
   "/sales/returns/:returnId/refund": SaleReturnRefundRoute,
   "/sales/returns/:returnId/refunds/:refundId/edit": SaleReturnRefundRoute,
   "/sales/outstandings/receivables": SalesReceivablesRoute,
+  "/sales/outstandings/service-receivables": ServiceReceivablesRoute,
   "/sales/outstandings/return-payables": SaleReturnPayablesRoute,
   "/inventory/stock": InventoryStockRoute,
   "/inventory/stock/:inventoryId": InventoryDetailRoute,
