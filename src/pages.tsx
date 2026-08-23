@@ -24,6 +24,7 @@ import { usePermission } from "./hooks/usePermission";
 import {
   appRoutes,
   getRouteByPath,
+  groupIcons,
   routeGroups,
   type AppRoute,
 } from "./routes/config";
@@ -260,39 +261,64 @@ const SidebarNav = ({
   visibleRoutes,
   collapsed,
   onNavigate,
+  pathname,
 }: {
   dashboard?: AppRoute;
   visibleRoutes: AppRoute[];
   collapsed: boolean;
   onNavigate: () => void;
-}) => (
-  <nav className="sidebar__nav" aria-label="Primary navigation">
-    {dashboard && (
-      <SidebarLink
-        route={dashboard}
-        collapsed={collapsed}
-        onNavigate={onNavigate}
-      />
-    )}
-    {routeGroups.map((group) => {
-      const routes = visibleRoutes.filter((route) => route.group === group);
-      if (!routes.length) return null;
-      return (
-        <section className="nav-group" key={group}>
-          <h2>{group}</h2>
-          {routes.map((route) => (
-            <SidebarLink
-              key={route.path}
-              route={route}
-              collapsed={collapsed}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </section>
-      );
-    })}
-  </nav>
-);
+  pathname: string;
+}) => {
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+  return (
+    <nav className="sidebar__nav" aria-label="Primary navigation">
+      {dashboard && (
+        <SidebarLink
+          route={dashboard}
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+        />
+      )}
+      {routeGroups.map((group) => {
+        const routes = visibleRoutes.filter((route) => route.group === group);
+        if (!routes.length) return null;
+        const isOpen = collapsed
+          ? true
+          : (openGroups[group] ?? isGroupActive(pathname, routes));
+        const GroupIcon = groupIcons[group];
+        return (
+          <details
+            className="nav-group"
+            key={group}
+            open={isOpen}
+            onToggle={(event) => {
+              if (collapsed) return;
+              const nextOpen = event.currentTarget.open;
+              setOpenGroups((prev) => ({ ...prev, [group]: nextOpen }));
+            }}
+          >
+            <summary>
+              <GroupIcon aria-hidden="true" />
+              <span>{group}</span>
+              <ChevronRight aria-hidden="true" className="nav-group__chevron" />
+            </summary>
+            <div className="nav-group__links">
+              {routes.map((route) => (
+                <SidebarLink
+                  key={route.path}
+                  route={route}
+                  collapsed={collapsed}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </div>
+          </details>
+        );
+      })}
+    </nav>
+  );
+};
 
 const getGroupRoutes = (visibleRoutes: AppRoute[], group: string) =>
   visibleRoutes.filter((route) => route.group === group);
@@ -444,6 +470,7 @@ export const AppShell = () => {
                 const routes = getGroupRoutes(visibleRoutes, group);
                 if (!routes.length) return null;
                 const active = activeGroup === group;
+                const GroupIcon = groupIcons[group];
                 return (
                   <button
                     key={group}
@@ -452,6 +479,7 @@ export const AppShell = () => {
                     aria-current={active ? "true" : undefined}
                     onClick={() => openGroup(routes)}
                   >
+                    <GroupIcon aria-hidden="true" className="nav-group__icon" />
                     <span>{group}</span>
                   </button>
                 );
@@ -485,6 +513,7 @@ export const AppShell = () => {
             visibleRoutes={visibleRoutes}
             collapsed={false}
             onNavigate={() => setDrawerOpen(false)}
+            pathname={location.pathname}
           />
         </aside>
         <div className="app-main">
@@ -521,6 +550,7 @@ export const AppShell = () => {
           visibleRoutes={visibleRoutes}
           collapsed={collapsed}
           onNavigate={() => setDrawerOpen(false)}
+          pathname={location.pathname}
         />
         <button className="sidebar__collapse" onClick={toggleSidebar}>
           {collapsed ? <ChevronRight /> : <ChevronLeft />}

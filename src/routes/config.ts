@@ -15,8 +15,10 @@ import {
   FileInput,
   HandCoins,
   IdCard,
+  Landmark,
   LayoutDashboard,
   ListChecks,
+  MoreHorizontal,
   PackageCheck,
   PackageOpen,
   ReceiptText,
@@ -382,6 +384,18 @@ export const routeGroups = [
   "Reports",
   "More",
 ] as const;
+
+export const groupIcons: Record<(typeof routeGroups)[number], LucideIcon> = {
+  Purchase: ShoppingCart,
+  Sales: BadgeDollarSign,
+  Services: Sparkles,
+  Inventory: Boxes,
+  Expenses: ReceiptText,
+  Payroll: Banknote,
+  Accounting: Landmark,
+  Reports: FileChartColumn,
+  More: MoreHorizontal,
+};
 
 export const getRouteByPath = (pathname: string): AppRoute | undefined =>
   appRoutes.find((route) => route.path === pathname);

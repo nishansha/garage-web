@@ -761,15 +761,50 @@ select.control option:disabled {
   scrollbar-width: thin;
 }
 .nav-group {
-  margin-top: 21px;
+  margin-top: 6px;
 }
-.nav-group h2 {
-  margin: 0 11px 7px;
-  color: #748195;
-  font-size: 0.68rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.nav-group summary {
+  height: 38px;
+  margin: 2px 0;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 700;
   white-space: nowrap;
+  cursor: pointer;
+  list-style: none;
+}
+.nav-group summary::-webkit-details-marker {
+  display: none;
+}
+.nav-group summary:hover {
+  background: var(--surface-hover);
+}
+.nav-group summary svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  color: var(--primary);
+}
+.nav-group summary svg.nav-group__chevron {
+  width: 14px;
+  height: 14px;
+  margin-left: auto;
+  color: var(--text-subtle);
+  transition:
+    transform 0.15s ease,
+    color 0.15s ease;
+}
+.nav-group[open] summary svg.nav-group__chevron {
+  transform: rotate(90deg);
+  color: var(--primary);
+}
+.nav-group__links {
+  padding-left: 2px;
 }
 .nav-link {
   height: 38px;
@@ -821,7 +856,7 @@ select.control option:disabled {
 }
 .app-shell--collapsed .brand-link > span:last-child,
 .app-shell--collapsed .nav-link span,
-.app-shell--collapsed .nav-group h2,
+.app-shell--collapsed .nav-group summary,
 .app-shell--collapsed .sidebar__collapse span {
   opacity: 0;
   pointer-events: none;
@@ -955,6 +990,9 @@ select.control option:disabled {
   width: 16px;
   height: 16px;
   flex: 0 0 auto;
+}
+.top-nav__link svg.nav-group__icon {
+  color: var(--primary);
 }
 .top-nav__link:hover {
   color: var(--text);
@@ -1281,12 +1319,12 @@ select.control option:disabled {
   }
   .app-shell--collapsed .brand-link > span:last-child,
   .app-shell--collapsed .nav-link span,
-  .app-shell--collapsed .nav-group h2 {
+  .app-shell--collapsed .nav-group summary {
     opacity: 1;
     pointer-events: auto;
   }
   .app-shell--collapsed .nav-group {
-    margin-top: 21px;
+    margin-top: 6px;
   }
   .app-shell--collapsed .nav-link {
     justify-content: flex-start;
