@@ -534,6 +534,13 @@ select.control option:disabled {
 }
 .modal {
   width: min(520px, 100%);
+  max-height: calc(100dvh - 48px);
+  height: fit-content;
+  align-self: center;
+  justify-self: center;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
   background: var(--surface-raised);
@@ -542,14 +549,10 @@ select.control option:disabled {
 .modal--wide {
   width: min(760px, 100%);
   max-height: min(90vh, 820px);
-  display: flex;
-  flex-direction: column;
-}
-.modal--wide .modal__body {
-  overflow: auto;
 }
 .modal > header,
 .modal > footer {
+  flex: 0 0 auto;
   padding: 17px 20px;
   display: flex;
   align-items: center;
@@ -564,6 +567,10 @@ select.control option:disabled {
   font-size: 1.05rem;
 }
 .modal__body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 22px 20px;
   color: var(--text-muted);
 }
@@ -843,10 +850,26 @@ select.control option:disabled {
   display: flex;
   align-items: center;
   gap: 16px;
+  overflow: visible;
   border-bottom: 1px solid var(--border);
   background: rgba(8, 11, 16, 0.88);
+  /* backdrop-filter: blur(16px); */
+}
+/* .topbar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
   backdrop-filter: blur(16px);
 }
+.topbar > * {
+  position: relative;
+  z-index: 1;
+}
+.topbar .user-menu {
+  z-index: 3;
+} */
 .topbar__menu {
   display: none;
 }
@@ -855,20 +878,30 @@ select.control option:disabled {
   position: sticky;
   z-index: 40;
   top: 0;
+  overflow: visible;
   background: linear-gradient(
     180deg,
     rgba(14, 19, 27, 0.98) 0%,
     rgba(11, 16, 23, 0.96) 100%
   );
+}
+.top-chrome::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
   backdrop-filter: blur(18px);
 }
 .top-navbar {
   height: 64px;
   padding: 0 clamp(18px, 2.4vw, 28px);
   position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 18px;
+  overflow: visible;
   border-bottom: 1px solid var(--border);
 }
 .top-navbar .brand-link,
@@ -882,7 +915,7 @@ select.control option:disabled {
 }
 .top-navbar .user-menu {
   position: relative;
-  z-index: 1;
+  z-index: 3;
   margin-left: auto;
   flex: 0 0 auto;
 }
@@ -932,6 +965,8 @@ select.control option:disabled {
   background: var(--primary-soft);
 }
 .top-subnav {
+  position: relative;
+  z-index: 1;
   background: rgba(8, 11, 16, 0.55);
 }
 .top-subnav__inner {
@@ -1000,6 +1035,7 @@ select.control option:disabled {
 .user-menu {
   margin-left: auto;
   position: relative;
+  z-index: 3;
 }
 .user-menu summary {
   padding: 6px 7px;
@@ -1051,6 +1087,7 @@ select.control option:disabled {
   width: 230px;
   padding: 8px;
   position: absolute;
+  z-index: 50;
   top: calc(100% + 10px);
   right: 0;
   border: 1px solid var(--border-strong);
@@ -1339,6 +1376,9 @@ select.control option:disabled {
   }
   .modal-backdrop {
     padding: 12px;
+  }
+  .modal {
+    max-height: calc(100dvh - 24px);
   }
   .login-page {
     padding: 17px;

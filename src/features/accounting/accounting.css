@@ -147,7 +147,10 @@
 
 .report-filters--ledger {
   display: grid;
-  grid-template-columns: minmax(280px, 2fr) repeat(2, minmax(180px, 1fr));
+  grid-template-columns: minmax(180px, 1fr) minmax(280px, 2fr) repeat(
+      2,
+      minmax(180px, 1fr)
+    );
   align-items: end;
 }
 
@@ -163,10 +166,24 @@
   min-height: 42px;
 }
 
+.report-filters--balance-sheet {
+  align-items: start;
+}
+
+.report-filters--balance-sheet .form-field {
+  flex: 0 1 16rem;
+  max-width: 16rem;
+  min-width: 12rem;
+}
+
 .report-filters--journal-pl {
   display: grid;
   grid-template-columns: repeat(2, minmax(180px, 1fr)) auto;
   align-items: end;
+}
+
+.report-filters--journal-pl:has(.form-field:nth-child(3)) {
+  grid-template-columns: repeat(3, minmax(180px, 1fr)) auto;
 }
 
 .report-filters--journal-pl > * {
@@ -1020,6 +1037,15 @@
   justify-content: space-between;
 }
 
+.compare-filters__selects {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .compare-filters .control {
   flex: 0 1 16rem;
   max-width: 16rem;
@@ -1198,6 +1224,11 @@
     width: 100%;
   }
 
+  .report-filters--balance-sheet .form-field {
+    max-width: none;
+  }
+
+  .compare-filters__selects,
   .compare-filters .control,
   .compare-filters .pl-months {
     max-width: none;

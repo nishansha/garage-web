@@ -331,6 +331,7 @@ export const EmployeesPage = () => {
       <Modal
         open={editing !== undefined}
         title={editing ? "Edit employee" : "New employee"}
+        className="modal--wide"
         onClose={() => setEditing(undefined)}
         footer={
           <>
@@ -343,7 +344,7 @@ export const EmployeesPage = () => {
           </>
         }
       >
-        <div className="admin-form">
+        <div className="admin-form admin-form--two-col">
           {fieldErrors.form && (
             <div className="form-validation-summary" role="alert">
               {fieldErrors.form}

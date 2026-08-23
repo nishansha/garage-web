@@ -226,7 +226,7 @@ const rules: AccessRule[] = [
   },
   {
     pattern: /^\/accounting\/warehouse-comparison/,
-    access: { resource: "MONTHLY_REPORT", privilege: "VIEW" },
+    access: { resource: "WAREHOUSE", privilege: "VIEW" },
   },
   {
     pattern: /^\/accounting\/company-comparison/,

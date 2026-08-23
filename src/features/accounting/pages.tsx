@@ -78,6 +78,7 @@ import {
   type ReportAccountLine,
 } from "../../services/accounting";
 import { companyApi, type Company } from "../../services/company";
+import { warehouseApi } from "../../services/warehouse";
 import { companyLabel, useCompanyScope } from "../../hooks/useCompanyScope";
 import "./accounting.css";
 
@@ -183,26 +184,37 @@ const AccountOptions = ({
   onChange,
   all = false,
   type,
+  companyId,
+  waitForCompany = false,
   ...accessibility
 }: {
   value: string;
   onChange: (value: string) => void;
   all?: boolean;
   type?: CoaAccountType;
+  companyId?: number;
+  waitForCompany?: boolean;
   "aria-describedby"?: string;
   "aria-invalid"?: boolean;
 }) => {
+  const companyReady = companyId != null && companyId > 0;
   const query = useQuery({
-    queryKey: ["accounting", "coa", all, type ?? "all"],
-    queryFn: () => accountingApi.accounts(all ? false : true, type),
+    queryKey: ["accounting", "coa", all, type ?? "all", companyId],
+    queryFn: () =>
+      accountingApi.accounts(all ? false : true, type, companyId),
+    enabled: !waitForCompany || companyReady,
   });
   return (
     <Select
       {...accessibility}
       value={value}
-      disabled={query.isLoading}
+      disabled={query.isLoading || (waitForCompany && !companyReady)}
       onChange={(event) => onChange(event.target.value)}
-      placeholder="Select account"
+      placeholder={
+        waitForCompany && !companyReady
+          ? "Select a company first"
+          : "Select account"
+      }
       options={(query.data ?? [])
         .slice()
         .sort((a, b) => a.code.localeCompare(b.code))
@@ -1220,6 +1232,7 @@ export const DirectEntryFormPage = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirm, setConfirm] = useState(false);
   const [companyId, setCompanyId] = useState<number | "">("");
+  const [warehouseId, setWarehouseId] = useState<number | "">("");
   const companiesQuery = useQuery({
     queryKey: ["companies"],
     queryFn: companyApi.list,
@@ -1228,6 +1241,17 @@ export const DirectEntryFormPage = () => {
     () => (companiesQuery.data ?? []).filter((item) => item.active !== false),
     [companiesQuery.data],
   );
+  const warehousesQuery = useQuery({
+    queryKey: ["warehouses"],
+    queryFn: warehouseApi.list,
+    enabled: id === null,
+  });
+  const companyWarehouses = useMemo(() => {
+    if (typeof companyId !== "number") return [];
+    return (warehousesQuery.data ?? []).filter(
+      (item) => item.companyId === companyId,
+    );
+  }, [companyId, warehousesQuery.data]);
   const detail = useQuery({
     queryKey: ["accounting", "direct-entry", id],
     queryFn: () => accountingApi.directEntry(id as number),
@@ -1276,7 +1300,10 @@ export const DirectEntryFormPage = () => {
     mutationFn: () =>
       id
         ? accountingApi.updateDirectEntry(id, form)
-        : accountingApi.createDirectEntry(form),
+        : accountingApi.createDirectEntry({
+            ...form,
+            ...(typeof warehouseId === "number" ? { warehouseId } : {}),
+          }),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["accounting"] });
       toast.success(`Direct entry ${id ? "updated" : "created"}.`);
@@ -1377,25 +1404,49 @@ export const DirectEntryFormPage = () => {
             </div>
           )}
           {!id && (
-            <FormField label="Company" required error={errors.companyId}>
-              <Select
-                value={companyId}
-                onChange={(event) => {
-                  const value = Number(event.target.value);
-                  setCompanyId(
-                    Number.isInteger(value) && value > 0 ? value : "",
-                  );
-                  setForm({ ...form, paymentAccountId: 0 });
-                }}
-              >
-                <option value="">Select company</option>
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {companyLabel(company)}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
+            <>
+              <FormField label="Company" required error={errors.companyId}>
+                <Select
+                  value={companyId}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    setCompanyId(
+                      Number.isInteger(value) && value > 0 ? value : "",
+                    );
+                    setWarehouseId("");
+                    setForm({ ...form, paymentAccountId: 0, coaId: 0 });
+                  }}
+                >
+                  <option value="">Select company</option>
+                  {companies.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {companyLabel(company)}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              {typeof companyId === "number" && (
+                <FormField label="Warehouse">
+                  <Select
+                    value={warehouseId}
+                    disabled={warehousesQuery.isLoading}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      setWarehouseId(
+                        Number.isInteger(value) && value > 0 ? value : "",
+                      );
+                    }}
+                  >
+                    <option value="">Select warehouse</option>
+                    {companyWarehouses.map((warehouse) => (
+                      <option key={warehouse.id} value={warehouse.id}>
+                        {warehouse.name}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+              )}
+            </>
           )}
           <FormField label="Direction" required error={errors.direction}>
             <Select
@@ -1414,6 +1465,8 @@ export const DirectEntryFormPage = () => {
           </FormField>
           <FormField label="Chart account" required error={errors.coaId}>
             <AccountOptions
+              waitForCompany
+              companyId={resolvedCompanyId}
               value={String(form.coaId || "")}
               onChange={(value) => setForm({ ...form, coaId: Number(value) })}
             />
@@ -1659,6 +1712,7 @@ export const OtherIncomeFormPage = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirm, setConfirm] = useState(false);
   const [companyId, setCompanyId] = useState<number | "">("");
+  const [warehouseId, setWarehouseId] = useState<number | "">("");
   const companiesQuery = useQuery({
     queryKey: ["companies"],
     queryFn: companyApi.list,
@@ -1667,6 +1721,17 @@ export const OtherIncomeFormPage = () => {
     () => (companiesQuery.data ?? []).filter((item) => item.active !== false),
     [companiesQuery.data],
   );
+  const warehousesQuery = useQuery({
+    queryKey: ["warehouses"],
+    queryFn: warehouseApi.list,
+    enabled: id === null,
+  });
+  const companyWarehouses = useMemo(() => {
+    if (typeof companyId !== "number") return [];
+    return (warehousesQuery.data ?? []).filter(
+      (item) => item.companyId === companyId,
+    );
+  }, [companyId, warehousesQuery.data]);
   const detail = useQuery({
     queryKey: ["accounting", "other-income", id],
     queryFn: () => accountingApi.otherIncome(id as number),
@@ -1715,7 +1780,10 @@ export const OtherIncomeFormPage = () => {
     mutationFn: () =>
       id
         ? accountingApi.updateOtherIncome(id, form)
-        : accountingApi.createOtherIncome(form),
+        : accountingApi.createOtherIncome({
+            ...form,
+            ...(typeof warehouseId === "number" ? { warehouseId } : {}),
+          }),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["accounting"] });
       toast.success(`Other income ${id ? "updated" : "created"}.`);
@@ -1816,25 +1884,49 @@ export const OtherIncomeFormPage = () => {
             </div>
           )}
           {!id && (
-            <FormField label="Company" required error={errors.companyId}>
-              <Select
-                value={companyId}
-                onChange={(event) => {
-                  const value = Number(event.target.value);
-                  setCompanyId(
-                    Number.isInteger(value) && value > 0 ? value : "",
-                  );
-                  setForm({ ...form, paymentAccountId: 0 });
-                }}
-              >
-                <option value="">Select company</option>
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {companyLabel(company)}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
+            <>
+              <FormField label="Company" required error={errors.companyId}>
+                <Select
+                  value={companyId}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    setCompanyId(
+                      Number.isInteger(value) && value > 0 ? value : "",
+                    );
+                    setWarehouseId("");
+                    setForm({ ...form, paymentAccountId: 0, coaId: 0 });
+                  }}
+                >
+                  <option value="">Select company</option>
+                  {companies.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {companyLabel(company)}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              {typeof companyId === "number" && (
+                <FormField label="Warehouse">
+                  <Select
+                    value={warehouseId}
+                    disabled={warehousesQuery.isLoading}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      setWarehouseId(
+                        Number.isInteger(value) && value > 0 ? value : "",
+                      );
+                    }}
+                  >
+                    <option value="">Select warehouse</option>
+                    {companyWarehouses.map((warehouse) => (
+                      <option key={warehouse.id} value={warehouse.id}>
+                        {warehouse.name}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+              )}
+            </>
           )}
           <FormField label="Direction" required error={errors.direction}>
             <Select
@@ -1854,6 +1946,8 @@ export const OtherIncomeFormPage = () => {
           <FormField label="Chart account" required error={errors.coaId}>
             <AccountOptions
               type="REVENUE"
+              waitForCompany
+              companyId={resolvedCompanyId}
               value={String(form.coaId || "")}
               onChange={(value) => setForm({ ...form, coaId: Number(value) })}
             />
@@ -2506,6 +2600,21 @@ export const GeneralLedgerPage = () => {
   const [accountId, setAccountId] = useState("");
   const [fromDate, setFromDate] = useState(`${today().slice(0, 4)}-01-01`);
   const [toDate, setToDate] = useState(today());
+  const { companies, ready } = useCompanyScope();
+  const [filterCompanyId, setFilterCompanyId] = useState<number | undefined>();
+  useEffect(() => {
+    if (companies.length === 1) {
+      setFilterCompanyId(companies[0].id);
+      return;
+    }
+    if (
+      filterCompanyId != null &&
+      !companies.some((item) => item.id === filterCompanyId)
+    ) {
+      setFilterCompanyId(undefined);
+      setAccountId("");
+    }
+  }, [companies, filterCompanyId]);
   const query = useQuery({
     queryKey: ["accounting", "ledger", accountId, fromDate, toDate],
     queryFn: () => accountingApi.ledger(Number(accountId), fromDate, toDate),
@@ -2526,8 +2635,34 @@ export const GeneralLedgerPage = () => {
         }
       />
       <Card className="report-filters report-filters--ledger">
+        <FormField label="Company">
+          <Select
+            value={filterCompanyId ?? ""}
+            disabled={!ready}
+            onChange={(event) => {
+              const id = Number(event.target.value);
+              setFilterCompanyId(
+                Number.isInteger(id) && id > 0 ? id : undefined,
+              );
+              setAccountId("");
+            }}
+            placeholder="Select company"
+          >
+            {companies.map((company) => (
+              <option key={company.id} value={company.id}>
+                {companyLabel(company)}
+              </option>
+            ))}
+          </Select>
+        </FormField>
         <FormField label="Account">
-          <AccountOptions all value={accountId} onChange={setAccountId} />
+          <AccountOptions
+            all
+            waitForCompany
+            companyId={filterCompanyId}
+            value={accountId}
+            onChange={setAccountId}
+          />
         </FormField>
         <FormField label="From date">
           <DateInput
@@ -2542,7 +2677,12 @@ export const GeneralLedgerPage = () => {
           />
         </FormField>
       </Card>
-      {!accountId ? (
+      {!filterCompanyId ? (
+        <EmptyState
+          title="Select a company"
+          description="Choose a company to load its accounts."
+        />
+      ) : !accountId ? (
         <EmptyState
           title="Select an account"
           description="Choose an account to load its ledger."
@@ -2629,9 +2769,27 @@ export const GeneralLedgerPage = () => {
 export const TrialBalancePage = () => {
   const [date, setDate] = useState(today());
   const [includeZero, setIncludeZero] = useState(false);
+  const { companies, multi, ready } = useCompanyScope();
+  const [filterCompanyId, setFilterCompanyId] = useState<number | undefined>();
+  useEffect(() => {
+    if (
+      filterCompanyId != null &&
+      !companies.some((item) => item.id === filterCompanyId)
+    ) {
+      setFilterCompanyId(undefined);
+    }
+  }, [companies, filterCompanyId]);
   const query = useQuery({
-    queryKey: ["accounting", "trial-balance", date, includeZero],
-    queryFn: () => accountingApi.trialBalance(date, includeZero),
+    queryKey: [
+      "accounting",
+      "trial-balance",
+      date,
+      includeZero,
+      filterCompanyId,
+    ],
+    queryFn: () =>
+      accountingApi.trialBalance(date, includeZero, filterCompanyId),
+    enabled: ready,
   });
   return (
     <>
@@ -2640,11 +2798,27 @@ export const TrialBalancePage = () => {
         description="Debit and credit balances by account."
         actions={
           <DownloadButton
-            run={() => accountingApi.downloadTrialBalance(date, includeZero)}
+            run={() =>
+              accountingApi.downloadTrialBalance(
+                date,
+                includeZero,
+                filterCompanyId,
+              )
+            }
           />
         }
       />
       <Card className="report-filters report-filters--trial">
+        {multi && (
+          <FormField label="Company">
+            <CompanyFilterSelect
+              allowAll
+              companies={companies}
+              selectedId={filterCompanyId}
+              onChange={setFilterCompanyId}
+            />
+          </FormField>
+        )}
         <FormField label="As of date">
           <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
         </FormField>
@@ -2761,9 +2935,20 @@ const ReportSection = ({
 
 export const JournalBalanceSheetPage = () => {
   const [date, setDate] = useState(today());
+  const { companies, multi, ready } = useCompanyScope();
+  const [filterCompanyId, setFilterCompanyId] = useState<number | undefined>();
+  useEffect(() => {
+    if (
+      filterCompanyId != null &&
+      !companies.some((item) => item.id === filterCompanyId)
+    ) {
+      setFilterCompanyId(undefined);
+    }
+  }, [companies, filterCompanyId]);
   const query = useQuery({
-    queryKey: ["accounting", "balance-sheet", date],
-    queryFn: () => accountingApi.balanceSheet(date),
+    queryKey: ["accounting", "balance-sheet", date, filterCompanyId],
+    queryFn: () => accountingApi.balanceSheet(date, filterCompanyId),
+    enabled: ready,
   });
   return (
     <>
@@ -2772,33 +2957,47 @@ export const JournalBalanceSheetPage = () => {
         description="Assets, liabilities and equity from posted journals."
         actions={
           <DownloadButton
-            run={() => accountingApi.downloadBalanceSheet(date)}
+            run={() =>
+              accountingApi.downloadBalanceSheet(date, filterCompanyId)
+            }
           />
         }
       />
-      <Card className="report-filters">
-        <div className="report-date-filter">
+      <Card className="report-filters report-filters--balance-sheet">
+        {multi && (
+          <FormField label="Company">
+            <CompanyFilterSelect
+              allowAll
+              companies={companies}
+              selectedId={filterCompanyId}
+              onChange={setFilterCompanyId}
+            />
+          </FormField>
+        )}
+        <FormField
+          label="As of date"
+          hint={
+            date
+              ? `Showing balances as of ${new Intl.DateTimeFormat("en-IN", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                }).format(new Date(`${date}T00:00:00`))}`
+              : "Showing balances as of the selected date"
+          }
+        >
           <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
-          <small>
-            Showing balances as of{" "}
-            <strong>
-              {date
-                ? new Intl.DateTimeFormat("en-IN", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  }).format(new Date(`${date}T00:00:00`))
-                : "the selected date"}
-            </strong>
-          </small>
-        </div>
+        </FormField>
       </Card>
       {query.isLoading ? (
         <LoadingState />
       ) : query.isError ? (
         <QueryError error={query.error} retry={() => void query.refetch()} />
       ) : query.data ? (
-        <BalanceSheetView report={query.data} />
+        <BalanceSheetView
+          key={`${date}-${filterCompanyId ?? "all"}`}
+          report={query.data}
+        />
       ) : null}
     </>
   );
@@ -2846,9 +3045,21 @@ const BalanceSheetView = ({ report }: { report: BalanceSheet }) => (
 export const JournalProfitLossPage = () => {
   const [fromDate, setFromDate] = useState(`${today().slice(0, 7)}-01`);
   const [toDate, setToDate] = useState(today());
+  const { companies, multi, ready } = useCompanyScope();
+  const [filterCompanyId, setFilterCompanyId] = useState<number | undefined>();
+  useEffect(() => {
+    if (
+      filterCompanyId != null &&
+      !companies.some((item) => item.id === filterCompanyId)
+    ) {
+      setFilterCompanyId(undefined);
+    }
+  }, [companies, filterCompanyId]);
   const query = useQuery({
-    queryKey: ["accounting", "journal-pl", fromDate, toDate],
-    queryFn: () => accountingApi.journalProfitLoss(fromDate, toDate),
+    queryKey: ["accounting", "journal-pl", fromDate, toDate, filterCompanyId],
+    queryFn: () =>
+      accountingApi.journalProfitLoss(fromDate, toDate, filterCompanyId),
+    enabled: ready,
   });
   return (
     <>
@@ -2859,12 +3070,26 @@ export const JournalProfitLossPage = () => {
           <DownloadButton
             disabled={query.isLoading}
             run={() =>
-              accountingApi.downloadJournalProfitLoss(fromDate, toDate)
+              accountingApi.downloadJournalProfitLoss(
+                fromDate,
+                toDate,
+                filterCompanyId,
+              )
             }
           />
         }
       />
       <Card className="report-filters report-filters--journal-pl">
+        {multi && (
+          <FormField label="Company">
+            <CompanyFilterSelect
+              allowAll
+              companies={companies}
+              selectedId={filterCompanyId}
+              onChange={setFilterCompanyId}
+            />
+          </FormField>
+        )}
         <FormField label="From">
           <DateInput
             required
@@ -2894,7 +3119,10 @@ export const JournalProfitLossPage = () => {
       ) : query.isError ? (
         <QueryError error={query.error} retry={() => void query.refetch()} />
       ) : query.data ? (
-        <JournalProfitLossView report={query.data} />
+        <JournalProfitLossView
+          key={`${fromDate}-${toDate}-${filterCompanyId ?? "all"}`}
+          report={query.data}
+        />
       ) : null}
     </>
   );
@@ -2932,6 +3160,18 @@ export const ProfitLossReportPage = () => {
   const [month, setMonth] = useState(thisMonth());
   const { companies, multi, ready } = useCompanyScope();
   const [filterCompanyId, setFilterCompanyId] = useState<number | undefined>();
+  const [filterWarehouseId, setFilterWarehouseId] = useState<
+    number | undefined
+  >();
+  const warehousesQuery = useQuery({
+    queryKey: ["warehouses"],
+    queryFn: warehouseApi.list,
+  });
+  const companyWarehouses = useMemo(() => {
+    const warehouses = warehousesQuery.data ?? [];
+    if (filterCompanyId == null) return warehouses;
+    return warehouses.filter((item) => item.companyId === filterCompanyId);
+  }, [filterCompanyId, warehousesQuery.data]);
   const allowedMonths = useMemo(() => {
     const current = new Date();
     return Array.from(
@@ -2948,11 +3188,27 @@ export const ProfitLossReportPage = () => {
       setFilterCompanyId(undefined);
     }
   }, [companies, filterCompanyId]);
+  useEffect(() => {
+    if (
+      filterWarehouseId != null &&
+      !companyWarehouses.some((item) => item.id === filterWarehouseId)
+    ) {
+      setFilterWarehouseId(undefined);
+    }
+  }, [companyWarehouses, filterWarehouseId]);
   const query = useQuery({
-    queryKey: ["accounting", "pl", month, filterCompanyId],
-    queryFn: () => accountingApi.profitLoss(month, filterCompanyId),
+    queryKey: ["accounting", "pl", month, filterCompanyId, filterWarehouseId],
+    queryFn: () =>
+      accountingApi.profitLoss(month, filterCompanyId, filterWarehouseId),
     enabled: ready,
   });
+  const warehouseLabel = (warehouseId: number, name: string) => {
+    if (filterCompanyId != null || !multi) return name;
+    const warehouse = companyWarehouses.find((item) => item.id === warehouseId);
+    if (!warehouse) return name;
+    const company = companies.find((item) => item.id === warehouse.companyId);
+    return company ? `${name} · ${companyLabel(company)}` : name;
+  };
   return (
     <div className="pl-page">
       <PageHeader
@@ -2964,19 +3220,48 @@ export const ProfitLossReportPage = () => {
         }
         actions={
           <DownloadButton
-            run={() => accountingApi.downloadProfitLoss(month, filterCompanyId)}
+            run={() =>
+              accountingApi.downloadProfitLoss(
+                month,
+                filterCompanyId,
+                filterWarehouseId,
+              )
+            }
           />
         }
       />
       <Card className="report-filters compare-filters">
-        {multi && (
-          <CompanyFilterSelect
-            allowAll
-            companies={companies}
-            selectedId={filterCompanyId}
-            onChange={setFilterCompanyId}
-          />
-        )}
+        <div className="compare-filters__selects">
+          {multi && (
+            <CompanyFilterSelect
+              allowAll
+              companies={companies}
+              selectedId={filterCompanyId}
+              onChange={(id) => {
+                setFilterCompanyId(id);
+                setFilterWarehouseId(undefined);
+              }}
+            />
+          )}
+          <Select
+            aria-label="Warehouse"
+            value={filterWarehouseId ?? ""}
+            disabled={warehousesQuery.isLoading}
+            onChange={(event) => {
+              const id = Number(event.target.value);
+              setFilterWarehouseId(
+                Number.isInteger(id) && id > 0 ? id : undefined,
+              );
+            }}
+          >
+            <option value="">All warehouses</option>
+            {companyWarehouses.map((warehouse) => (
+              <option key={warehouse.id} value={warehouse.id}>
+                {warehouseLabel(warehouse.id, warehouse.name)}
+              </option>
+            ))}
+          </Select>
+        </div>
         <div className="pl-months" role="group" aria-label="Report month">
           {allowedMonths.map((value) => {
             const date = new Date(`${value}-01T00:00:00`);
@@ -3000,7 +3285,7 @@ export const ProfitLossReportPage = () => {
         <QueryError error={query.error} retry={() => void query.refetch()} />
       ) : query.data ? (
         <ProfitLossView
-          key={`${month}-${filterCompanyId ?? "all"}`}
+          key={`${month}-${filterCompanyId ?? "all"}-${filterWarehouseId ?? "all"}`}
           report={query.data}
         />
       ) : null}

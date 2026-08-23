@@ -3,6 +3,19 @@
   gap: 18px;
 }
 
+.admin-form--two-col {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.admin-form--two-col > .form-validation-summary {
+  grid-column: 1 / -1;
+}
+
+.admin-form--two-col > .check-label {
+  align-self: end;
+  min-height: 40px;
+}
+
 .admin-role-checkboxes {
   display: grid;
   gap: 0.5rem;
@@ -246,6 +259,10 @@
 }
 
 @media (max-width: 620px) {
+  .admin-form--two-col {
+    grid-template-columns: 1fr;
+  }
+
   .admin-danger-card {
     display: block;
   }

@@ -99,6 +99,7 @@ export interface DirectEntryInput {
   partyName: string;
   referenceNo?: string;
   description: string;
+  warehouseId?: number;
   version?: number;
 }
 
@@ -113,6 +114,7 @@ export interface OtherIncomeInput {
   partyName?: string;
   description?: string;
   notes?: string;
+  warehouseId?: number;
   version?: number;
 }
 
@@ -450,9 +452,13 @@ export const accountingApi = {
       skipped: number;
     }>(`v1/payment-accounts/${id}/reconcile`, { transactionIds }),
 
-  async accounts(directPostable?: boolean, type?: string): Promise<Account[]> {
+  async accounts(
+    directPostable?: boolean,
+    type?: string,
+    companyId?: number,
+  ): Promise<Account[]> {
     const data = await api.get<{ accounts: Account[] }>(
-      `v1/account${query({ directPostable, type })}`,
+      `v1/account${query({ directPostable, type, companyId })}`,
     );
     return data.accounts ?? [];
   },
@@ -581,26 +587,42 @@ export const accountingApi = {
     api.get<GeneralLedger>(
       `v1/journals/ledger/${accountId}${query({ fromDate, toDate })}`,
     ),
-  trialBalance: (asOfDate?: string, includeZeroBalance = false) =>
+  trialBalance: (
+    asOfDate?: string,
+    includeZeroBalance = false,
+    companyId?: number,
+  ) =>
     api.get<TrialBalance>(
-      `v1/reports/trial-balance${query({ asOfDate, includeZeroBalance: includeZeroBalance || undefined })}`,
+      `v1/reports/trial-balance${query({ asOfDate, includeZeroBalance: includeZeroBalance || undefined, companyId })}`,
     ),
-  balanceSheet: (asOfDate?: string) =>
-    api.get<BalanceSheet>(`v1/reports/balance-sheet${query({ asOfDate })}`),
-  journalProfitLoss: (fromDate?: string, toDate?: string) =>
+  balanceSheet: (asOfDate?: string, companyId?: number) =>
+    api.get<BalanceSheet>(
+      `v1/reports/balance-sheet${query({ asOfDate, companyId })}`,
+    ),
+  journalProfitLoss: (
+    fromDate?: string,
+    toDate?: string,
+    companyId?: number,
+  ) =>
     api.get<JournalProfitLoss>(
-      `v1/reports/pl-from-journal${query({ fromDate, toDate })}`,
+      `v1/reports/pl-from-journal${query({ fromDate, toDate, companyId })}`,
     ),
-  profitLoss: (month?: string, companyId?: number) =>
-    api.get<ProfitLoss>(`v1/reports/pl${query({ month, companyId })}`),
+  profitLoss: (month?: string, companyId?: number, warehouseId?: number) =>
+    api.get<ProfitLoss>(
+      `v1/reports/pl${query({ month, companyId, warehouseId })}`,
+    ),
   trend: (months = 6) =>
     api.get<TrendReport>(`v1/reports/trend${query({ months })}`),
   monthlyOverview: (months = 6) =>
     api.get<MonthlyOverview>(`v1/home/overview${query({ months })}`),
 
-  downloadProfitLoss: (month: string, companyId?: number) =>
+  downloadProfitLoss: (
+    month: string,
+    companyId?: number,
+    warehouseId?: number,
+  ) =>
     download(
-      `v1/reports/pl/csv${query({ month, companyId })}`,
+      `v1/reports/pl/csv${query({ month, companyId, warehouseId })}`,
       `profit-loss-${month}.csv`,
     ),
   downloadLedger: (id: number, fromDate: string, toDate: string) =>
@@ -608,19 +630,27 @@ export const accountingApi = {
       `v1/journals/ledger/${id}/csv${query({ fromDate, toDate })}`,
       `general-ledger-${fromDate}-${toDate}.csv`,
     ),
-  downloadTrialBalance: (asOfDate: string, includeZeroBalance: boolean) =>
+  downloadTrialBalance: (
+    asOfDate: string,
+    includeZeroBalance: boolean,
+    companyId?: number,
+  ) =>
     download(
-      `v1/reports/trial-balance/csv${query({ asOfDate, includeZeroBalance: includeZeroBalance || undefined })}`,
+      `v1/reports/trial-balance/csv${query({ asOfDate, includeZeroBalance: includeZeroBalance || undefined, companyId })}`,
       `trial-balance-${asOfDate}.csv`,
     ),
-  downloadJournalProfitLoss: (fromDate: string, toDate: string) =>
+  downloadJournalProfitLoss: (
+    fromDate: string,
+    toDate: string,
+    companyId?: number,
+  ) =>
     download(
-      `v1/reports/pl-from-journal/csv${query({ fromDate, toDate })}`,
+      `v1/reports/pl-from-journal/csv${query({ fromDate, toDate, companyId })}`,
       `journal-profit-loss-${fromDate}-${toDate}.csv`,
     ),
-  downloadBalanceSheet: (asOfDate: string) =>
+  downloadBalanceSheet: (asOfDate: string, companyId?: number) =>
     download(
-      `v1/reports/balance-sheet/csv${query({ asOfDate })}`,
+      `v1/reports/balance-sheet/csv${query({ asOfDate, companyId })}`,
       `balance-sheet-${asOfDate}.csv`,
     ),
 };
