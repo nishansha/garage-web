@@ -1,4 +1,5 @@
-.dashboard {
+.dashboard,
+.operations-activities {
   --dashboard-sales: var(--primary);
   --dashboard-purchases: #a78bfa;
   --dashboard-expenses: #ff8a92;
@@ -269,9 +270,68 @@
   gap: 1rem;
 }
 
+.app-shell--top .dashboard-lower-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.app-shell--top .dashboard-lower-grid .operations-activities {
+  display: none;
+}
+
 .operations-activities {
   min-width: 0;
   padding: 1.1rem;
+}
+
+.operations-activities--panel {
+  padding: 0;
+}
+
+.operations-activities--panel ol {
+  margin: 0;
+  padding: 0;
+}
+
+.operations-activities--panel li {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.55rem 0.65rem;
+  padding: 0.7rem 0;
+}
+
+.operations-activities--panel .dashboard-activity-icon {
+  width: 1.85rem;
+  height: 1.85rem;
+  margin-top: 0.1rem;
+  border-radius: 0.55rem;
+}
+
+.operations-activities--panel .dashboard-activity-title > strong {
+  font-size: 0.78rem;
+}
+
+.operations-activities--panel .dashboard-activity-title .badge,
+.operations-activities--panel .dashboard-activity-meta .badge {
+  font-size: 0.64rem;
+  padding: 2px 6px;
+}
+
+.operations-activities--panel .dashboard-activity-amount {
+  text-align: right;
+  padding-top: 0.12rem;
+}
+
+.operations-activities--panel .dashboard-activity-amount strong {
+  font-size: 0.78rem;
+}
+
+.panel-activity-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px 2px;
+  color: var(--text-subtle);
+  font-size: 0.78rem;
 }
 
 .operations-activities ol {
@@ -309,6 +369,10 @@
   background: color-mix(in srgb, currentColor 9%, transparent);
 }
 
+.dashboard-activity-icon--sale {
+  color: var(--dashboard-sales);
+}
+
 .dashboard-activity-icon--purchase {
   color: var(--dashboard-purchases);
 }
@@ -343,6 +407,20 @@
   flex: 0 0 auto;
   padding-block: 2px;
   font-size: 0.7rem;
+}
+
+.dashboard-activity-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+}
+
+.dashboard-activity-time {
+  color: var(--text-subtle);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
 }
 
 .dashboard-activity-amount {

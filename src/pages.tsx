@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   ChevronLeft,
@@ -6,6 +13,9 @@ import {
   ChevronsUpDown,
   LogOut,
   Menu,
+  Pin,
+  PinOff,
+  Search,
   Settings,
   X,
 } from "lucide-react";
@@ -40,6 +50,7 @@ import {
 } from "./components/ui";
 import { PreferencesModal } from "./components/PreferencesModal";
 import { cx } from "./lib/utils";
+import { DashboardRecentActivity } from "./features/operations/DashboardRecentActivity";
 
 export const AuthGate = () => {
   const session = useAppSelector((state) => state.auth.session);
@@ -146,6 +157,59 @@ const isRouteActive = (pathname: string, route: AppRoute) =>
 
 const isGroupActive = (pathname: string, routes: readonly AppRoute[]) =>
   routes.some((route) => isRouteActive(pathname, route));
+
+const RECENT_STORAGE_KEY = "garage.web.nav.recent";
+const PINNED_STORAGE_KEY = "garage.web.nav.pinned";
+const MAX_RECENT = 5;
+
+const readStoredPaths = (key: string): string[] => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((p) => typeof p === "string") : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeStoredPaths = (key: string, paths: string[]) => {
+  localStorage.setItem(key, JSON.stringify(paths));
+};
+
+const useNavHistory = (currentPath: string) => {
+  const [recentPaths, setRecentPaths] = useState<string[]>(() =>
+    readStoredPaths(RECENT_STORAGE_KEY),
+  );
+  const [pinnedPaths, setPinnedPaths] = useState<string[]>(() =>
+    readStoredPaths(PINNED_STORAGE_KEY),
+  );
+
+  useEffect(() => {
+    if (currentPath === "/") return;
+    setRecentPaths((prev) => {
+      if (prev[0] === currentPath) return prev;
+      const next = [currentPath, ...prev.filter((path) => path !== currentPath)].slice(
+        0,
+        MAX_RECENT,
+      );
+      writeStoredPaths(RECENT_STORAGE_KEY, next);
+      return next;
+    });
+  }, [currentPath]);
+
+  const togglePinned = (path: string) => {
+    setPinnedPaths((prev) => {
+      const next = prev.includes(path)
+        ? prev.filter((p) => p !== path)
+        : [path, ...prev];
+      writeStoredPaths(PINNED_STORAGE_KEY, next);
+      return next;
+    });
+  };
+
+  return { recentPaths, pinnedPaths, togglePinned };
+};
 
 const SidebarLink = ({
   route,
@@ -328,27 +392,245 @@ const findActiveGroup = (pathname: string, visibleRoutes: AppRoute[]) =>
     isGroupActive(pathname, getGroupRoutes(visibleRoutes, group)),
   );
 
-const TopSubnav = ({ routes }: { routes: AppRoute[] }) => (
-  <nav className="top-subnav" aria-label="Section navigation">
-    <div className="top-subnav__inner">
-      {routes.map((route) => {
-        const Icon = route.icon;
-        return (
-          <NavLink
-            key={route.path}
-            to={route.path}
-            className={({ isActive }) =>
-              cx("top-subnav__link", isActive && "is-active")
-            }
-          >
-            <Icon aria-hidden="true" />
-            <span>{route.title}</span>
-          </NavLink>
-        );
-      })}
-    </div>
-  </nav>
+const RightPanel = ({
+  activeGroup,
+  activeGroupRoutes,
+  currentRoute,
+  recentPaths,
+  pinnedPaths,
+  togglePinned,
+}: {
+  activeGroup?: string;
+  activeGroupRoutes: AppRoute[];
+  currentRoute?: AppRoute;
+  recentPaths: string[];
+  pinnedPaths: string[];
+  togglePinned: (path: string) => void;
+}) => {
+  const pinnedRoutes = pinnedPaths
+    .map((path) => getRouteByPath(path))
+    .filter((route): route is AppRoute => Boolean(route));
+  const recentRoutes = recentPaths
+    .map((path) => getRouteByPath(path))
+    .filter(
+      (route): route is AppRoute =>
+        Boolean(route) && route?.path !== currentRoute?.path,
+    )
+    .slice(0, 4);
+  const isPinned = Boolean(currentRoute && pinnedPaths.includes(currentRoute.path));
+
+  return (
+    <aside className="right-panel" aria-label="Section navigation">
+      {activeGroup && activeGroupRoutes.length > 0 && (
+        <div className="right-panel__section">
+          <h3>{activeGroup}</h3>
+          <div className="right-panel__list">
+            {activeGroupRoutes.map((route) => (
+              <NavLink
+                key={route.path}
+                to={route.path}
+                className={({ isActive }) =>
+                  cx("right-panel__link", isActive && "is-active")
+                }
+              >
+                <route.icon aria-hidden="true" />
+                <span>{route.title}</span>
+              </NavLink>
+            ))}
+          </div>
+          {currentRoute && currentRoute.path !== "/" && (
+            <button
+              type="button"
+              className="right-panel__pin-toggle"
+              onClick={() => togglePinned(currentRoute.path)}
+            >
+              {isPinned ? (
+                <PinOff aria-hidden="true" />
+              ) : (
+                <Pin aria-hidden="true" />
+              )}
+              <span>{isPinned ? "Unpin this page" : "Pin this page"}</span>
+            </button>
+          )}
+        </div>
+      )}
+      {pinnedRoutes.length > 0 && (
+        <div className="right-panel__section">
+          <h3>Pinned</h3>
+          <div className="right-panel__list">
+            {pinnedRoutes.map((route) => (
+              <div key={route.path} className="right-panel__row">
+                <NavLink
+                  to={route.path}
+                  className={({ isActive }) =>
+                    cx("right-panel__link", isActive && "is-active")
+                  }
+                >
+                  <route.icon aria-hidden="true" />
+                  <span>{route.title}</span>
+                </NavLink>
+                <button
+                  type="button"
+                  className="right-panel__remove"
+                  aria-label={`Unpin ${route.title}`}
+                  onClick={() => togglePinned(route.path)}
+                >
+                  <X aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {recentRoutes.length > 0 && (
+        <div className="right-panel__section">
+          <h3>Recent</h3>
+          <div className="right-panel__list">
+            {recentRoutes.map((route) => (
+              <NavLink key={route.path} to={route.path} className="right-panel__link">
+                <route.icon aria-hidden="true" />
+                <span>{route.title}</span>
+              </NavLink>
+            ))}
+          </div>
+        </div>
+      )}
+    </aside>
+  );
+};
+
+const SearchTrigger = ({ onOpen }: { onOpen: () => void }) => (
+  <button type="button" className="search-trigger" onClick={onOpen}>
+    <Search aria-hidden="true" />
+    <span>Search pages</span>
+    <kbd>⌘K</kbd>
+  </button>
 );
+
+const CommandPalette = ({
+  open,
+  onClose,
+  visibleRoutes,
+  activeGroup,
+  recentPaths,
+}: {
+  open: boolean;
+  onClose: () => void;
+  visibleRoutes: AppRoute[];
+  activeGroup?: string;
+  recentPaths: string[];
+}) => {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const [highlighted, setHighlighted] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setQuery("");
+    setHighlighted(0);
+    const frame = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      const currentSectionRoutes = activeGroup
+        ? visibleRoutes.filter((route) => route.group === activeGroup)
+        : [];
+      const recentRoutes = recentPaths
+        .map((path) => visibleRoutes.find((route) => route.path === path))
+        .filter((route): route is AppRoute => Boolean(route));
+      const seen = new Set<string>();
+      const ordered: AppRoute[] = [];
+      for (const route of [...currentSectionRoutes, ...recentRoutes, ...visibleRoutes]) {
+        if (seen.has(route.path)) continue;
+        seen.add(route.path);
+        ordered.push(route);
+      }
+      return ordered;
+    }
+    return visibleRoutes.filter(
+      (route) =>
+        route.title.toLowerCase().includes(q) ||
+        route.group?.toLowerCase().includes(q) ||
+        route.description.toLowerCase().includes(q),
+    );
+  }, [query, visibleRoutes, activeGroup, recentPaths]);
+
+  useEffect(() => {
+    setHighlighted(0);
+  }, [query]);
+
+  if (!open) return null;
+
+  const go = (route: AppRoute) => {
+    navigate(route.path);
+    onClose();
+  };
+
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setHighlighted((index) => Math.min(index + 1, results.length - 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setHighlighted((index) => Math.max(index - 1, 0));
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      const route = results[highlighted];
+      if (route) go(route);
+    } else if (event.key === "Escape") {
+      onClose();
+    }
+  };
+
+  return (
+    <div className="command-palette-scrim" onClick={onClose}>
+      <div
+        className="command-palette"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="command-palette__input">
+          <Search aria-hidden="true" />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder="Search pages..."
+            aria-label="Search pages"
+          />
+          <kbd>Esc</kbd>
+        </div>
+        <div className="command-palette__results">
+          {results.length === 0 && (
+            <div className="command-palette__empty">No pages found</div>
+          )}
+          {results.map((route, index) => (
+            <button
+              key={route.path}
+              type="button"
+              className={cx(
+                "command-palette__item",
+                index === highlighted && "is-active",
+              )}
+              onMouseEnter={() => setHighlighted(index)}
+              onClick={() => go(route)}
+            >
+              <route.icon aria-hidden="true" />
+              <span className="command-palette__item-title">{route.title}</span>
+              {route.group && (
+                <span className="command-palette__item-group">{route.group}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const useShellNavigation = () => {
   const session = useAppSelector((state) => state.auth.session);
@@ -370,6 +652,9 @@ const useShellNavigation = () => {
     return can(route.access.resource, route.access.privilege);
   });
   const dashboard = visibleRoutes.find((route) => route.path === "/");
+  const { recentPaths, pinnedPaths, togglePinned } = useNavHistory(
+    location.pathname,
+  );
 
   const logout = async () => {
     await authApi.logout().catch(() => undefined);
@@ -386,6 +671,9 @@ const useShellNavigation = () => {
     visibleRoutes,
     dashboard,
     logout,
+    recentPaths,
+    pinnedPaths,
+    togglePinned,
   };
 };
 
@@ -399,11 +687,15 @@ export const AppShell = () => {
     visibleRoutes,
     dashboard,
     logout,
+    recentPaths,
+    pinnedPaths,
+    togglePinned,
   } = useShellNavigation();
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem("garage.web.sidebar") === "collapsed",
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const topNav = preferences.navbarPosition === "TOP";
   const activeGroup = findActiveGroup(location.pathname, visibleRoutes);
   const activeGroupRoutes = activeGroup
@@ -413,6 +705,17 @@ export const AppShell = () => {
   useEffect(() => {
     setDrawerOpen(false);
   }, [location.pathname, topNav]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((value) => !value);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const toggleSidebar = () => {
     setCollapsed((value) => {
@@ -445,51 +748,53 @@ export const AppShell = () => {
         )}
         <div className="top-chrome">
           <header className="top-navbar">
-            <button
-              className="icon-button topbar__menu"
-              aria-label="Open navigation"
-              onClick={() => setDrawerOpen(true)}
-            >
-              <Menu aria-hidden="true" />
-            </button>
-            <BrandLink />
-            <nav className="top-nav" aria-label="Primary navigation">
-              {dashboard && (
-                <NavLink
-                  to={dashboard.path}
-                  end
-                  className={({ isActive }) =>
-                    cx("top-nav__link", isActive && "is-active")
-                  }
-                >
-                  <dashboard.icon aria-hidden="true" />
-                  <span>{dashboard.title}</span>
-                </NavLink>
-              )}
-              {routeGroups.map((group) => {
-                const routes = getGroupRoutes(visibleRoutes, group);
-                if (!routes.length) return null;
-                const active = activeGroup === group;
-                const GroupIcon = groupIcons[group];
-                return (
-                  <button
-                    key={group}
-                    type="button"
-                    className={cx("top-nav__link", active && "is-active")}
-                    aria-current={active ? "true" : undefined}
-                    onClick={() => openGroup(routes)}
+            <div className="top-navbar__inner">
+              <button
+                className="icon-button topbar__menu"
+                aria-label="Open navigation"
+                onClick={() => setDrawerOpen(true)}
+              >
+                <Menu aria-hidden="true" />
+              </button>
+              <BrandLink />
+              <nav className="top-nav" aria-label="Primary navigation">
+                {dashboard && (
+                  <NavLink
+                    to={dashboard.path}
+                    end
+                    className={({ isActive }) =>
+                      cx("top-nav__link", isActive && "is-active")
+                    }
                   >
-                    <GroupIcon aria-hidden="true" className="nav-group__icon" />
-                    <span>{group}</span>
-                  </button>
-                );
-              })}
-            </nav>
-            <UserMenu roleLabel={roleLabel} onLogout={() => void logout()} />
+                    <dashboard.icon aria-hidden="true" />
+                    <span>{dashboard.title}</span>
+                  </NavLink>
+                )}
+                {routeGroups.map((group) => {
+                  const routes = getGroupRoutes(visibleRoutes, group);
+                  if (!routes.length) return null;
+                  const active = activeGroup === group;
+                  const GroupIcon = groupIcons[group];
+                  return (
+                    <button
+                      key={group}
+                      type="button"
+                      className={cx("top-nav__link", active && "is-active")}
+                      aria-current={active ? "true" : undefined}
+                      onClick={() => openGroup(routes)}
+                    >
+                      <GroupIcon aria-hidden="true" className="nav-group__icon" />
+                      <span>{group}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+              <div className="top-navbar__actions">
+                <SearchTrigger onOpen={() => setPaletteOpen(true)} />
+                <UserMenu roleLabel={roleLabel} onLogout={() => void logout()} />
+              </div>
+            </div>
           </header>
-          {activeGroupRoutes.length > 0 && (
-            <TopSubnav routes={activeGroupRoutes} />
-          )}
         </div>
         <aside
           className={cx(
@@ -516,11 +821,31 @@ export const AppShell = () => {
             pathname={location.pathname}
           />
         </aside>
-        <div className="app-main">
+        <div className="app-main app-main--with-panel">
+          <div className="side-stack">
+            <RightPanel
+              activeGroup={activeGroup}
+              activeGroupRoutes={activeGroupRoutes}
+              currentRoute={currentRoute}
+              recentPaths={recentPaths}
+              pinnedPaths={pinnedPaths}
+              togglePinned={togglePinned}
+            />
+            {location.pathname === "/" && (
+              <DashboardRecentActivity variant="panel" />
+            )}
+          </div>
           <main className="page-content">
             <Outlet />
           </main>
         </div>
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          visibleRoutes={visibleRoutes}
+          activeGroup={activeGroup}
+          recentPaths={recentPaths}
+        />
       </div>
     );
   }
@@ -567,12 +892,20 @@ export const AppShell = () => {
             <Menu aria-hidden="true" />
           </button>
           <Breadcrumbs currentRoute={currentRoute} />
+          <SearchTrigger onOpen={() => setPaletteOpen(true)} />
           <UserMenu roleLabel={roleLabel} onLogout={() => void logout()} />
         </header>
         <main className="page-content">
           <Outlet />
         </main>
       </div>
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        visibleRoutes={visibleRoutes}
+        activeGroup={activeGroup}
+        recentPaths={recentPaths}
+      />
     </div>
   );
 };

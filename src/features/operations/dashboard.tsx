@@ -25,11 +25,9 @@ import { Link } from "react-router-dom";
 import { Badge, Card, PageHeader, Select } from "../../components/ui";
 import { Can } from "../../components/Can";
 import { formatCurrency, formatDate } from "../../lib/utils";
-import {
-  operationsApi,
-  type DashboardActivity,
-} from "../../services/operations";
+import { operationsApi } from "../../services/operations";
 import { QueryBoundary } from "./common";
+import { DashboardRecentActivity } from "./DashboardRecentActivity";
 
 const number = (value: string | number | null | undefined) =>
   Number(value ?? 0);
@@ -98,19 +96,6 @@ const tooltipStyle = {
   borderRadius: "var(--radius)",
 };
 
-const activityPresentation: Record<
-  DashboardActivity["activityType"],
-  {
-    label: string;
-    icon: LucideIcon;
-    tone: "success" | "info" | "warning";
-  }
-> = {
-  SALE: { label: "Sale", icon: CircleDollarSign, tone: "success" },
-  PURCHASE: { label: "Purchase", icon: ShoppingCart, tone: "info" },
-  EXPENSE: { label: "Expense", icon: Receipt, tone: "warning" },
-};
-
 export const DashboardRoute = () => {
   const [months, setMonths] = useState(6);
   const [chartType, setChartType] = useState<"SALE" | "PROFIT">("SALE");
@@ -125,10 +110,6 @@ export const DashboardRoute = () => {
   const chart = useQuery({
     queryKey: ["operations", "dashboard", "chart", chartType],
     queryFn: () => operationsApi.dashboard.charts(chartType),
-  });
-  const activities = useQuery({
-    queryKey: ["operations", "dashboard", "activities"],
-    queryFn: operationsApi.dashboard.activities,
   });
   const topProducts = useMemo(
     () =>
@@ -442,70 +423,7 @@ export const DashboardRoute = () => {
           </QueryBoundary>
         </Card>
 
-        <Card className="operations-activities">
-          <header>
-            <div>
-              <h2>Recent activity</h2>
-              <p>Latest business transactions</p>
-            </div>
-            <Badge>
-              {activities.data?.activities.length ?? 0}{" "}
-              {activities.data?.activities.length === 1 ? "entry" : "entries"}
-            </Badge>
-          </header>
-          <QueryBoundary
-            pending={activities.isPending}
-            error={activities.error}
-            retry={() => void activities.refetch()}
-          >
-            {!activities.data?.activities.length ? (
-              <p className="dashboard-empty">No recent activity.</p>
-            ) : (
-              <ol>
-                {activities.data.activities.map((activity, index) => {
-                  const presentation =
-                    activityPresentation[activity.activityType];
-                  const ActivityIcon = presentation.icon;
-                  return (
-                    <li key={`${activity.dateTime}-${index}`}>
-                      <span
-                        className={`dashboard-activity-icon dashboard-activity-icon--${activity.activityType.toLowerCase()}`}
-                      >
-                        <ActivityIcon size={17} aria-hidden="true" />
-                      </span>
-                      <div className="dashboard-activity-content">
-                        <div className="dashboard-activity-title">
-                          <strong>{activity.description}</strong>
-                          <Badge tone={presentation.tone}>
-                            {presentation.label}
-                          </Badge>
-                        </div>
-                        <small>
-                          <time dateTime={activity.dateTime}>
-                            {formatDate(
-                              activity.dateTime,
-                              "dd MMM yyyy, HH:mm",
-                            )}
-                          </time>
-                        </small>
-                      </div>
-                      <div
-                        className={`dashboard-activity-amount ${
-                          activity.txnType === "C" ? "amount-in" : "amount-out"
-                        }`}
-                      >
-                        <strong>{formatCurrency(activity.txnAmount)}</strong>
-                        <small>
-                          {activity.txnType === "C" ? "Credit" : "Debit"}
-                        </small>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
-          </QueryBoundary>
-        </Card>
+        <DashboardRecentActivity />
       </div>
     </div>
   );

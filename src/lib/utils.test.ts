@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCurrency, formatDate, toCsv } from "./utils";
+import { formatCurrency, formatDate, formatDateLabel, toCsv } from "./utils";
 import { friendlyHttpMessage, sanitizeErrorMessage, unwrap } from "./api";
 
 describe("formatters", () => {
@@ -9,6 +9,8 @@ describe("formatters", () => {
     expect(formatCurrency("invalid")).toBe("—");
     expect(formatDate("2026-07-15")).toBe("15 Jul 2026");
     expect(formatDate("not-a-date")).toBe("—");
+    expect(formatDateLabel("2026-07-15")).toBe("15 Jul 2026");
+    expect(formatDateLabel("08-2026, 12:00 AM")).toBe("Aug 2026, 12:00 AM");
   });
 
   it("escapes CSV cells", () => {
