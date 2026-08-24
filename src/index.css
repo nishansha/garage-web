@@ -1348,13 +1348,14 @@ select.control option:disabled {
   gap: 2px;
 }
 .right-panel__row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
 }
 .right-panel__row .right-panel__link {
   flex: 1;
   min-width: 0;
+  padding-right: 32px;
 }
 .right-panel__link {
   height: 36px;
@@ -1378,7 +1379,8 @@ select.control option:disabled {
   height: 16px;
   flex: 0 0 auto;
 }
-.right-panel__link:hover {
+.right-panel__link:hover,
+.right-panel__row:hover .right-panel__link:not(.is-active) {
   color: var(--text);
   background: var(--surface-hover);
 }
@@ -1386,11 +1388,13 @@ select.control option:disabled {
   color: var(--primary-ink);
   background: var(--nav-active-bg);
 }
+.right-panel__pin,
 .right-panel__remove {
+  position: absolute;
+  right: 4px;
   width: 26px;
   height: 26px;
-  flex: 0 0 auto;
-  display: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 0;
@@ -1398,42 +1402,35 @@ select.control option:disabled {
   color: var(--text-subtle);
   background: transparent;
   cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.12s ease,
+    color 0.12s ease,
+    background-color 0.12s ease;
 }
-.right-panel__row:hover .right-panel__remove {
-  display: inline-flex;
+.right-panel__row:hover .right-panel__pin,
+.right-panel__row:hover .right-panel__remove,
+.right-panel__row:focus-within .right-panel__pin,
+.right-panel__row:focus-within .right-panel__remove,
+.right-panel__pin.is-pinned,
+.right-panel__pin:focus-visible,
+.right-panel__remove:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
 }
+.right-panel__pin:hover,
 .right-panel__remove:hover {
   color: var(--text);
   background: var(--surface-hover);
 }
+.right-panel__pin.is-pinned {
+  color: var(--primary-ink);
+}
+.right-panel__pin svg,
 .right-panel__remove svg {
   width: 14px;
   height: 14px;
-}
-.right-panel__pin-toggle {
-  width: 100%;
-  height: 34px;
-  margin-top: 6px;
-  padding: 0 8px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-subtle);
-  background: transparent;
-  font-size: 0.78rem;
-  cursor: pointer;
-}
-.right-panel__pin-toggle:hover {
-  color: var(--text);
-  border-color: var(--border-strong);
-  background: var(--surface-hover);
-}
-.right-panel__pin-toggle svg {
-  width: 15px;
-  height: 15px;
-  flex: 0 0 auto;
 }
 
 .command-palette-scrim {

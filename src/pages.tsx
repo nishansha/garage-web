@@ -15,7 +15,6 @@ import {
   LogOut,
   Menu,
   Pin,
-  PinOff,
   Search,
   Settings,
   X,
@@ -457,6 +456,39 @@ const TopNavGroup = ({
   );
 };
 
+const RightPanelLink = ({
+  route,
+  pinned,
+  onTogglePinned,
+}: {
+  route: AppRoute;
+  pinned: boolean;
+  onTogglePinned: (path: string) => void;
+}) => (
+  <div className="right-panel__row">
+    <NavLink
+      to={route.path}
+      className={({ isActive }) =>
+        cx("right-panel__link", isActive && "is-active")
+      }
+    >
+      <route.icon aria-hidden="true" />
+      <span>{route.title}</span>
+    </NavLink>
+    {route.path !== "/" && (
+      <button
+        type="button"
+        className={cx("right-panel__pin", pinned && "is-pinned")}
+        aria-label={pinned ? `Unpin ${route.title}` : `Pin ${route.title}`}
+        title={pinned ? "Unpin" : "Pin"}
+        onClick={() => onTogglePinned(route.path)}
+      >
+        <Pin aria-hidden="true" fill={pinned ? "currentColor" : "none"} />
+      </button>
+    )}
+  </div>
+);
+
 const RightPanel = ({
   activeGroup,
   activeGroupRoutes,
@@ -482,7 +514,6 @@ const RightPanel = ({
         Boolean(route) && route?.path !== currentRoute?.path,
     )
     .slice(0, 4);
-  const isPinned = Boolean(currentRoute && pinnedPaths.includes(currentRoute.path));
 
   return (
     <aside className="right-panel" aria-label="Section navigation">
@@ -491,32 +522,14 @@ const RightPanel = ({
           <h3>{activeGroup}</h3>
           <div className="right-panel__list">
             {activeGroupRoutes.map((route) => (
-              <NavLink
+              <RightPanelLink
                 key={route.path}
-                to={route.path}
-                className={({ isActive }) =>
-                  cx("right-panel__link", isActive && "is-active")
-                }
-              >
-                <route.icon aria-hidden="true" />
-                <span>{route.title}</span>
-              </NavLink>
+                route={route}
+                pinned={pinnedPaths.includes(route.path)}
+                onTogglePinned={togglePinned}
+              />
             ))}
           </div>
-          {currentRoute && currentRoute.path !== "/" && (
-            <button
-              type="button"
-              className="right-panel__pin-toggle"
-              onClick={() => togglePinned(currentRoute.path)}
-            >
-              {isPinned ? (
-                <PinOff aria-hidden="true" />
-              ) : (
-                <Pin aria-hidden="true" />
-              )}
-              <span>{isPinned ? "Unpin this page" : "Pin this page"}</span>
-            </button>
-          )}
         </div>
       )}
       {pinnedRoutes.length > 0 && (
@@ -552,10 +565,12 @@ const RightPanel = ({
           <h3>Recent</h3>
           <div className="right-panel__list">
             {recentRoutes.map((route) => (
-              <NavLink key={route.path} to={route.path} className="right-panel__link">
-                <route.icon aria-hidden="true" />
-                <span>{route.title}</span>
-              </NavLink>
+              <RightPanelLink
+                key={route.path}
+                route={route}
+                pinned={pinnedPaths.includes(route.path)}
+                onTogglePinned={togglePinned}
+              />
             ))}
           </div>
         </div>
