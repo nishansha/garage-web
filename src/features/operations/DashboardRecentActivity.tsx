@@ -41,36 +41,28 @@ const ActivityList = ({
       const ActivityIcon = presentation.icon;
       return (
         <li key={`${activity.dateTime}-${index}`}>
-          <span
-            className={`dashboard-activity-icon dashboard-activity-icon--${activity.activityType.toLowerCase()}`}
-          >
-            <ActivityIcon size={compact ? 15 : 17} aria-hidden="true" />
-          </span>
-          <div className="dashboard-activity-content">
-            <div className="dashboard-activity-title">
-              <strong>{activity.description}</strong>
-              {!compact && (
-                <Badge tone={presentation.tone}>{presentation.label}</Badge>
-              )}
-            </div>
-            <div className="dashboard-activity-meta">
-              {compact && (
-                <Badge tone={presentation.tone}>{presentation.label}</Badge>
-              )}
-              <time className="dashboard-activity-time">
-                {formatDateLabel(activity.dateTime, "dd MMM yyyy, h:mm a")}
-              </time>
+          <div className="dashboard-activity-row">
+            <span
+              className={`dashboard-activity-icon dashboard-activity-icon--${activity.activityType.toLowerCase()}`}
+            >
+              <ActivityIcon size={compact ? 15 : 17} aria-hidden="true" />
+            </span>
+            <strong className="dashboard-activity-title">
+              {activity.description}
+            </strong>
+            <div
+              className={`dashboard-activity-amount ${
+                activity.txnType === "C" ? "amount-in" : "amount-out"
+              }`}
+            >
+              <strong>{formatCurrency(activity.txnAmount)}</strong>
             </div>
           </div>
-          <div
-            className={`dashboard-activity-amount ${
-              activity.txnType === "C" ? "amount-in" : "amount-out"
-            }`}
-          >
-            <strong>{formatCurrency(activity.txnAmount)}</strong>
-            {!compact && (
-              <small>{activity.txnType === "C" ? "Credit" : "Debit"}</small>
-            )}
+          <div className="dashboard-activity-meta">
+            <time className="dashboard-activity-time">
+              {formatDateLabel(activity.dateTime, "dd MMM yyyy, h:mm a")}
+            </time>
+            <Badge tone={presentation.tone}>{presentation.label}</Badge>
           </div>
         </li>
       );

@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
@@ -392,6 +393,70 @@ const findActiveGroup = (pathname: string, visibleRoutes: AppRoute[]) =>
     isGroupActive(pathname, getGroupRoutes(visibleRoutes, group)),
   );
 
+const TopNavGroup = ({
+  group,
+  routes,
+  active,
+  onOpenGroup,
+}: {
+  group: string;
+  routes: AppRoute[];
+  active: boolean;
+  onOpenGroup: () => void;
+}) => {
+  const GroupIcon = groupIcons[group as keyof typeof groupIcons];
+  const [dismissed, setDismissed] = useState(false);
+
+  const closeMenu = () => {
+    setDismissed(true);
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
+  return (
+    <div
+      className={cx("top-nav__item", dismissed && "is-dismissed")}
+      onMouseLeave={() => setDismissed(false)}
+    >
+      <button
+        type="button"
+        className={cx("top-nav__link", active && "is-active")}
+        aria-current={active ? "true" : undefined}
+        aria-haspopup="menu"
+        aria-label={group}
+        onClick={() => {
+          closeMenu();
+          onOpenGroup();
+        }}
+      >
+        <GroupIcon aria-hidden="true" className="nav-group__icon" />
+        <span>{group}</span>
+        <ChevronDown aria-hidden="true" className="top-nav__caret" />
+      </button>
+      <div className="top-nav__menu" role="menu" aria-label={`${group} pages`}>
+        {routes.map((route) => (
+          <NavLink
+            key={route.path}
+            to={route.path}
+            role="menuitem"
+            className={({ isActive }) =>
+              cx("top-nav__menu-link", isActive && "is-active")
+            }
+            onClick={closeMenu}
+          >
+            <route.icon aria-hidden="true" />
+            <span>
+              <strong>{route.title}</strong>
+              <small>{route.description}</small>
+            </span>
+          </NavLink>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const RightPanel = ({
   activeGroup,
   activeGroupRoutes,
@@ -773,19 +838,14 @@ export const AppShell = () => {
                 {routeGroups.map((group) => {
                   const routes = getGroupRoutes(visibleRoutes, group);
                   if (!routes.length) return null;
-                  const active = activeGroup === group;
-                  const GroupIcon = groupIcons[group];
                   return (
-                    <button
+                    <TopNavGroup
                       key={group}
-                      type="button"
-                      className={cx("top-nav__link", active && "is-active")}
-                      aria-current={active ? "true" : undefined}
-                      onClick={() => openGroup(routes)}
-                    >
-                      <GroupIcon aria-hidden="true" className="nav-group__icon" />
-                      <span>{group}</span>
-                    </button>
+                      group={group}
+                      routes={routes}
+                      active={activeGroup === group}
+                      onOpenGroup={() => openGroup(routes)}
+                    />
                   );
                 })}
               </nav>
@@ -892,8 +952,10 @@ export const AppShell = () => {
             <Menu aria-hidden="true" />
           </button>
           <Breadcrumbs currentRoute={currentRoute} />
-          <SearchTrigger onOpen={() => setPaletteOpen(true)} />
-          <UserMenu roleLabel={roleLabel} onLogout={() => void logout()} />
+          <div className="topbar__actions">
+            <SearchTrigger onOpen={() => setPaletteOpen(true)} />
+            <UserMenu roleLabel={roleLabel} onLogout={() => void logout()} />
+          </div>
         </header>
         <main className="page-content">
           <Outlet />
