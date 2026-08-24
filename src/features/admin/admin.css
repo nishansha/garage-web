@@ -69,7 +69,7 @@
   flex: 0 0 auto;
   padding: 9px;
   border-radius: 10px;
-  color: var(--primary);
+  color: var(--primary-ink);
   background: var(--primary-soft);
 }
 
@@ -217,7 +217,7 @@
   display: flex;
   align-items: flex-start;
   gap: 18px;
-  border-color: rgba(255, 107, 117, 0.35);
+  border-color: var(--danger-border);
 }
 
 .admin-danger-card > svg {
@@ -227,7 +227,7 @@
   padding: 10px;
   border-radius: 11px;
   color: var(--danger);
-  background: rgba(255, 107, 117, 0.1);
+  background: var(--danger-soft);
 }
 
 .admin-danger-card > div {
@@ -254,7 +254,7 @@
 
 .admin-reset-result {
   margin-top: 18px;
-  color: var(--primary);
+  color: var(--primary-ink);
   font-size: 0.88rem;
 }
 

@@ -1,9 +1,9 @@
 .dashboard,
 .operations-activities {
-  --dashboard-sales: var(--primary);
-  --dashboard-purchases: #a78bfa;
-  --dashboard-expenses: #ff8a92;
-  --dashboard-profit: var(--info);
+  --dashboard-sales: var(--primary-ink);
+  --dashboard-purchases: var(--accent-purchase);
+  --dashboard-expenses: var(--accent-expense);
+  --dashboard-profit: var(--info-ink);
 }
 
 .dashboard-quick-actions {
@@ -83,7 +83,7 @@
 }
 
 .dashboard-kpi__delta.is-positive {
-  color: var(--primary);
+  color: var(--primary-ink);
 }
 
 .dashboard-kpi__delta.is-negative {
@@ -259,7 +259,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  color: var(--primary);
+  color: var(--primary-ink);
   font-size: 0.82rem;
   font-weight: 650;
 }
@@ -746,7 +746,7 @@
 
 .operations-expand-row > td {
   padding: 0;
-  background: color-mix(in srgb, var(--surface) 88%, #fff 12%);
+  background: var(--surface-sunken);
 }
 
 .operations-expand-row .table-wrap {
@@ -934,7 +934,7 @@
 
 .order-document__kicker {
   margin: 0 0 0.35rem;
-  color: var(--primary);
+  color: var(--primary-ink);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.16em;
@@ -1002,7 +1002,7 @@
 }
 
 .order-document a {
-  color: var(--primary);
+  color: var(--primary-ink);
 }
 
 .order-document__tabs {
@@ -1033,7 +1033,7 @@
   min-width: 1.35rem;
   padding: 0.05rem 0.4rem;
   border-radius: 999px;
-  color: var(--primary);
+  color: var(--primary-ink);
   background: var(--primary-soft);
   font-size: 0.75rem;
   font-weight: 700;
@@ -1356,7 +1356,7 @@
 
 .product-profile__kicker {
   margin: 0;
-  color: var(--primary);
+  color: var(--primary-ink);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.16em;
@@ -1443,7 +1443,7 @@
 }
 
 .product-profile__metrics .is-positive strong {
-  color: var(--primary);
+  color: var(--primary-ink);
 }
 
 .product-profile__metrics .is-negative strong {

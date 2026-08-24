@@ -1,13 +1,22 @@
 import { api } from "../lib/api";
+import {
+  isThemePreference,
+  toColorTheme,
+  toThemePreference,
+  type ColorTheme,
+  type ThemePreference,
+} from "../lib/theme";
 
 export type NavbarPosition = "LEFT" | "TOP";
 
 export interface UserPreferences {
   navbarPosition: NavbarPosition;
+  theme: ThemePreference;
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
   navbarPosition: "LEFT",
+  theme: "DARK",
 };
 
 export const NAVBAR_POSITION_OPTIONS: readonly {
@@ -36,7 +45,14 @@ export const normalizePreferences = (
   navbarPosition: isNavbarPosition(value?.navbarPosition)
     ? value.navbarPosition
     : DEFAULT_PREFERENCES.navbarPosition,
+  theme: isThemePreference(value?.theme)
+    ? value.theme
+    : toThemePreference(toColorTheme(value?.theme)),
 });
+
+export const colorThemeFromPreferences = (
+  preferences: UserPreferences | null | undefined,
+): ColorTheme => toColorTheme(preferences?.theme);
 
 export const preferencesApi = {
   get: () =>

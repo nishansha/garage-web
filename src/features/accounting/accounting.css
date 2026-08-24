@@ -119,11 +119,11 @@
 }
 
 .amount-in {
-  color: var(--success, #059669);
+  color: var(--success);
 }
 
 .amount-out {
-  color: var(--danger, #dc2626);
+  color: var(--danger-ink);
 }
 
 .segmented {
@@ -268,7 +268,7 @@
   overflow: hidden;
   border-color: var(--border-strong);
   background:
-    linear-gradient(145deg, rgba(94, 224, 181, 0.035), transparent 42%),
+    linear-gradient(145deg, color-mix(in srgb, var(--primary) 8%, transparent), transparent 42%),
     var(--surface);
   transition:
     border-color 150ms ease,
@@ -309,7 +309,7 @@
 }
 
 .report-row:hover {
-  background: rgba(255, 255, 255, 0.018);
+  background: var(--row-hover);
 }
 
 .report-row > span {
@@ -363,16 +363,16 @@
 }
 
 .journal-pl-total.is-positive {
-  color: var(--primary);
+  color: var(--primary-ink);
   background:
-    linear-gradient(135deg, rgba(94, 224, 181, 0.1), transparent 60%),
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 12%, transparent), transparent 60%),
     var(--surface);
 }
 
 .journal-pl-total.is-negative {
   color: var(--danger);
   background:
-    linear-gradient(135deg, rgba(255, 107, 117, 0.1), transparent 60%),
+    linear-gradient(135deg, color-mix(in srgb, var(--danger) 12%, transparent), transparent 60%),
     var(--surface);
 }
 
@@ -420,11 +420,11 @@
 .month-chip.is-active {
   border-color: var(--primary);
   background: var(--primary);
-  color: #06110d;
+  color: var(--on-primary);
 }
 
 .month-chip.is-active small {
-  color: #183d31;
+  color: var(--on-primary-muted);
 }
 
 .pl-page .page-header {
@@ -471,7 +471,7 @@
 
 .pl-months button.is-active {
   background: var(--primary);
-  color: #06110d;
+  color: var(--on-primary);
 }
 
 .pl-report {
@@ -501,12 +501,12 @@
 
 .pl-hero.is-positive {
   --pl-accent: var(--primary);
-  --pl-soft: rgba(94, 224, 181, 0.12);
+  --pl-soft: var(--primary-soft);
 }
 
 .pl-hero.is-negative {
   --pl-accent: var(--danger);
-  --pl-soft: rgba(255, 107, 117, 0.12);
+  --pl-soft: var(--danger-soft);
 }
 
 .pl-hero__layout {
@@ -622,7 +622,7 @@
 }
 
 .pl-mix__fill.is-out {
-  background: #ff8a92;
+  background: var(--accent-expense);
 }
 
 .pl-fold > summary {
@@ -751,7 +751,7 @@
 }
 
 .pl-panel--expenses {
-  --pl-accent: #ff8a92;
+  --pl-accent: var(--accent-expense);
 }
 
 .pl-panel--income {
@@ -759,7 +759,7 @@
 }
 
 .pl-panel--purchases {
-  --pl-accent: #a78bfa;
+  --pl-accent: var(--accent-purchase);
 }
 
 .pl-panel--outstanding {
@@ -868,7 +868,7 @@
 }
 
 .pl-item:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--row-hover);
 }
 
 .pl-item.is-muted {
