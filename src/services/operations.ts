@@ -160,8 +160,8 @@ export interface PurchaseInput {
   odometer: string;
   purchaseRate: number;
   rcDueAmount?: number | null;
-  pickupStaffId?: number;
-  pickupLocation: string;
+  pickupStaffId?: number | null;
+  pickupLocation?: string | null;
   ownerName: string;
   ownerMobileNo: string;
   ownerAddress: string;
@@ -683,7 +683,7 @@ export const operationsApi = {
             code: item.code,
           })),
         ),
-    expenseAccounts: () =>
+    expenseAccounts: (companyId?: number) =>
       api
         .get<{
           accounts: Array<{
@@ -692,7 +692,13 @@ export const operationsApi = {
             label: string;
             description: string;
           }>;
-        }>("v1/account?type=EXPENSE&directPostable=true")
+        }>(
+          `v1/account${query({
+            type: "EXPENSE",
+            directPostable: "true",
+            companyId,
+          })}`,
+        )
         .then((result) =>
           result.accounts.map((item) => ({
             id: item.id,

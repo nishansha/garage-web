@@ -337,10 +337,6 @@ const ExpenseEditor = ({
   const [pickerWarehouseId, setPickerWarehouseId] = useState<number | "">(
     expense?.warehouseId ?? "",
   );
-  const types = useQuery({
-    queryKey: ["operations", "catalog", "expense-accounts"],
-    queryFn: operationsApi.catalog.expenseAccounts,
-  });
   const companiesQuery = useQuery({
     queryKey: ["companies"],
     queryFn: companyApi.list,
@@ -389,6 +385,11 @@ const ExpenseEditor = ({
   const accounts = useQuery({
     queryKey: ["operations", "payment-accounts", resolvedCompanyId],
     queryFn: () => operationsApi.paymentAccounts(resolvedCompanyId),
+    enabled: resolvedCompanyId != null || expense != null,
+  });
+  const types = useQuery({
+    queryKey: ["operations", "catalog", "expense-accounts", resolvedCompanyId],
+    queryFn: () => operationsApi.catalog.expenseAccounts(resolvedCompanyId),
     enabled: resolvedCompanyId != null || expense != null,
   });
   const returnTo = purchaseId ? `${PURCHASE}/${purchaseId}` : GENERAL;
@@ -520,6 +521,7 @@ const ExpenseEditor = ({
                     );
                     setPickerWarehouseId("");
                     setValue("paymentAccountId", 0);
+                    setValue("typeId", 0);
                   }}
                 >
                   <option value="">Select company</option>
@@ -561,7 +563,11 @@ const ExpenseEditor = ({
             required
             error={errors.typeId?.message}
           >
-            <Select required {...register("typeId", { valueAsNumber: true })}>
+            <Select
+              required
+              disabled={resolvedCompanyId == null}
+              {...register("typeId", { valueAsNumber: true })}
+            >
               <option value="">Select type</option>
               {types.data?.map((item) => (
                 <option key={item.id} value={item.id}>

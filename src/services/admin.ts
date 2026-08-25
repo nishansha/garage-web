@@ -67,7 +67,6 @@ interface MasterDataListResponse {
     label?: string;
     description?: string;
   }>;
-  accounts?: MasterDataItem[];
   categories?: MasterDataItem[];
   brands?: MasterDataItem[];
   models?: MasterDataItem[];
@@ -84,8 +83,7 @@ export type MasterDataType =
   | "SEGMENT"
   | "COLOR"
   | "FUEL_TYPE"
-  | "TRANSMISSION_TYPE"
-  | "EXPENSE_TYPE";
+  | "TRANSMISSION_TYPE";
 
 export interface MasterDataContext {
   categoryId?: number;
@@ -147,8 +145,6 @@ const listEndpoint = (
     case "FUEL_TYPE":
     case "TRANSMISSION_TYPE":
       return `v1/lookup?type=${encodeURIComponent(type)}`;
-    case "EXPENSE_TYPE":
-      return "v1/account?type=EXPENSE";
   }
 };
 
@@ -167,8 +163,6 @@ const extractItems = (
       return response.varients ?? response.variants ?? [];
     case "SEGMENT":
       return response.segments ?? [];
-    case "EXPENSE_TYPE":
-      return response.accounts ?? [];
     case "COLOR":
     case "FUEL_TYPE":
     case "TRANSMISSION_TYPE":

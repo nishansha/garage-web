@@ -635,7 +635,8 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
         vehicleNo: value.vehicleNo.trim(),
         deliveredDate: optionalText(value.deliveredDate ?? null),
         notes: optionalText(value.notes ?? null),
-        pickupStaffId: value.pickupStaffId || undefined,
+        pickupStaffId: value.pickupStaffId || null,
+        pickupLocation: optionalText(value.pickupLocation ?? null) ?? null,
         rcDueAmount:
           value.rcDueAmount === undefined ||
           value.rcDueAmount === null ||
@@ -1013,17 +1014,9 @@ const PurchaseEditor = ({ purchase }: { purchase?: Purchase }) => {
           </FormField>
           <FormField
             label="Pickup location"
-            required
             error={fieldError(errors.pickupLocation)}
           >
-            <Input
-              {...register("pickupLocation", {
-                required: purchaseValidationMessage(
-                  "pickupLocation",
-                  "REQUIRED",
-                ),
-              })}
-            />
+            <Input {...register("pickupLocation")} />
           </FormField>
         </div>
       </Section>

@@ -1,5 +1,6 @@
 import {
   BadgeDollarSign,
+  BookOpen,
   Boxes,
   Banknote,
   Building,
@@ -30,7 +31,6 @@ import {
   Store,
   Trash2,
   TrendingUp,
-  UserCog,
   UsersRound,
   WalletCards,
   Warehouse,
@@ -173,7 +173,7 @@ export const appRoutes: readonly AppRoute[] = [
   },
   {
     path: "/inventory/stock",
-    title: "Stock",
+    title: "Current Stock",
     description: "Review current inventory.",
     group: "Inventory",
     icon: Boxes,
@@ -221,11 +221,19 @@ export const appRoutes: readonly AppRoute[] = [
   },
   {
     path: "/accounting/accounts",
-    title: "Accounts",
-    description: "Manage the chart of accounts.",
+    title: "Payment Accounts",
+    description: "Manage cash and bank payment accounts.",
     group: "Accounting",
     icon: Store,
     access: access("/accounting/accounts"),
+  },
+  {
+    path: "/accounting/chart-of-accounts",
+    title: "Chart of Accounts",
+    description: "View and create general-ledger accounts.",
+    group: "Accounting",
+    icon: BookOpen,
+    access: access("/accounting/chart-of-accounts"),
   },
   {
     path: "/accounting/direct-entry",
@@ -330,14 +338,6 @@ export const appRoutes: readonly AppRoute[] = [
     group: "More",
     icon: Shield,
     access: access("/more/roles"),
-  },
-  {
-    path: "/more/accounts",
-    title: "Account Management",
-    description: "Manage application accounts.",
-    group: "More",
-    icon: UserCog,
-    access: access("/more/accounts"),
   },
   {
     path: "/more/products",

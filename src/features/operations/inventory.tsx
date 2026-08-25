@@ -241,7 +241,7 @@ const InventoryList = ({ sold }: { sold: boolean }) => {
   return (
     <>
       <PageHeader
-        title={sold ? "Sold inventory" : "Stock"}
+        title={sold ? "Sold Inventory" : "Current Stock"}
         description={
           sold
             ? "Review sold vehicles and realized profit."
@@ -258,7 +258,7 @@ const InventoryList = ({ sold }: { sold: boolean }) => {
       />
       <QueryBoundary pending={query.isPending} error={query.error}>
         <DataTable<Stock>
-          caption={sold ? "Sold inventory" : "Stock inventory"}
+          caption={sold ? "Sold Inventory" : "Current Stock"}
           rows={rows}
           emptyMessage={sold ? "No sold inventory" : "No stock yet"}
           emptyDescription={
