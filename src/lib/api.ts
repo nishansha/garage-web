@@ -50,9 +50,16 @@ export class ApiError extends Error {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+export const ATTACHMENT_MISSING_CODE = "BUS_237";
+export const ATTACHMENT_MISSING_MESSAGE = "This file is no longer available.";
+export const ATTACHMENT_REJECTED_MESSAGE =
+  "The file was rejected. Each file must be under 1 MB.";
+
 export const friendlyHttpMessage = (status: number, code?: string): string => {
+  if (code === ATTACHMENT_MISSING_CODE) return ATTACHMENT_MISSING_MESSAGE;
   if (code === "SEC_106" || status === 403) return FORBIDDEN_MESSAGE;
   if (status === 401) return "Your session has expired. Please sign in again.";
+  if (status === 413) return ATTACHMENT_REJECTED_MESSAGE;
   if (status === 404) return "The requested resource was not found.";
   if (status >= 500)
     return "The server is temporarily unavailable. Please try again later.";
@@ -91,6 +98,9 @@ const parseResponse = async (response: Response): Promise<unknown> => {
 const toApiError = (data: unknown, status: number): ApiError => {
   if (isRecord(data)) {
     const code = typeof data.code === "string" ? data.code : undefined;
+    if (code === ATTACHMENT_MISSING_CODE) {
+      return new ApiError(ATTACHMENT_MISSING_MESSAGE, status, code, data);
+    }
     const message =
       typeof data.message === "string"
         ? sanitizeErrorMessage(data.message, status)
@@ -163,38 +173,39 @@ const authEndpoints = new Set([
   "v1/auth/logout",
 ]);
 
-const request = async <T>(
+const authorizedFetch = async (
   endpoint: string,
   options: RequestInit = {},
   retried = false,
-): Promise<T> => {
+): Promise<Response> => {
   const normalizedEndpoint = endpoint.replace(/^\//, "");
   const token = store.getState().auth.session?.token;
+  const isFormData = options.body instanceof FormData;
   try {
     const response = await fetch(`${API_URL}/${normalizedEndpoint}`, {
       ...options,
       headers: {
-        Accept: "application/json",
         "X-Client-Type": "WEB",
-        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...(options.body && !isFormData
+          ? { "Content-Type": "application/json" }
+          : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
     });
-    const data = await parseResponse(response);
 
     if (!response.ok) {
-      const error = toApiError(data, response.status);
+      const error = toApiError(await parseResponse(response), response.status);
       if (response.status === 401 && !authEndpoints.has(normalizedEndpoint)) {
         if (!retried && error.code === "SEC_103") {
           await refreshAccessToken();
-          return request<T>(endpoint, options, true);
+          return authorizedFetch(endpoint, options, true);
         }
         store.dispatch(clearSession());
       }
       throw error;
     }
-    return unwrap<T>(data, response.status);
+    return response;
   } catch (error) {
     if (error instanceof ApiError) throw error;
     throw new ApiError(
@@ -205,6 +216,34 @@ const request = async <T>(
   }
 };
 
+const request = async <T>(
+  endpoint: string,
+  options: RequestInit = {},
+): Promise<T> => {
+  const response = await authorizedFetch(endpoint, {
+    ...options,
+    headers: {
+      Accept: "application/json",
+      ...options.headers,
+    },
+  });
+  return unwrap<T>(await parseResponse(response), response.status);
+};
+
+const requestBlob = async (
+  endpoint: string,
+  options: RequestInit = {},
+): Promise<Blob> => {
+  const response = await authorizedFetch(endpoint, {
+    ...options,
+    headers: {
+      Accept: "*/*",
+      ...options.headers,
+    },
+  });
+  return response.blob();
+};
+
 export const api = {
   get: <T>(endpoint: string, options?: RequestInit) =>
     request<T>(endpoint, { ...options, method: "GET" }),
@@ -213,6 +252,12 @@ export const api = {
       ...options,
       method: "POST",
       body: body === undefined ? undefined : JSON.stringify(body),
+    }),
+  postForm: <T>(endpoint: string, body: FormData, options?: RequestInit) =>
+    request<T>(endpoint, {
+      ...options,
+      method: "POST",
+      body,
     }),
   put: <T>(endpoint: string, body?: unknown, options?: RequestInit) =>
     request<T>(endpoint, {
@@ -228,6 +273,8 @@ export const api = {
     }),
   delete: <T>(endpoint: string, options?: RequestInit) =>
     request<T>(endpoint, { ...options, method: "DELETE" }),
+  getBlob: (endpoint: string, options?: RequestInit) =>
+    requestBlob(endpoint, { ...options, method: "GET" }),
 };
 
 let publicKeyPromise: Promise<string> | null = null;

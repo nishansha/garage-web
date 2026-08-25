@@ -1,7 +1,8 @@
-import { Image } from "lucide-react";
 import { Badge } from "../../components/ui";
+import { AttachmentGallery } from "../../components/attachments";
 import { formatCurrency, formatDate } from "../../lib/utils";
 import type { Stock } from "../../services/operations";
+import type { AttachmentScope } from "../../services/upload";
 import { Money } from "./common";
 
 const joinMeta = (values: Array<string | number | null | undefined>) =>
@@ -18,7 +19,13 @@ const statusTone = (
   return "warning";
 };
 
-export const InventoryProductView = ({ item }: { item: Stock }) => {
+export const InventoryProductView = ({
+  item,
+  photos,
+}: {
+  item: Stock;
+  photos?: AttachmentScope & { onUpload?: () => void };
+}) => {
   const sold =
     Boolean(item.soldDate) ||
     item.saleRate != null ||
@@ -34,10 +41,20 @@ export const InventoryProductView = ({ item }: { item: Stock }) => {
     <article className="product-profile">
       <div className="product-profile__hero">
         <figure className="product-profile__media">
-          <div className="product-profile__media-empty">
-            <Image aria-hidden="true" />
-            <span>Photos</span>
-          </div>
+          {photos ? (
+            <AttachmentGallery
+              entityType={photos.entityType}
+              entityId={photos.entityId}
+              category={photos.category}
+              emptyLabel="Photos"
+              uploadLabel="Upload photos"
+              onUpload={photos.onUpload}
+            />
+          ) : (
+            <div className="attachment-gallery attachment-gallery--empty">
+              <span>Photos</span>
+            </div>
+          )}
         </figure>
         <div className="product-profile__identity">
           <div className="product-profile__identity-top">

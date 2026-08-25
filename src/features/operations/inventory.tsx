@@ -12,18 +12,19 @@ import {
   Select,
 } from "../../components/ui";
 import { Can } from "../../components/Can";
+import {
+  AttachmentUploadButton,
+  AttachmentUploadModal,
+} from "../../components/attachments";
 import { formatCurrency, formatDate } from "../../lib/utils";
 import {
   operationsApi,
   type SearchInput,
   type Stock,
 } from "../../services/operations";
+import { INVENTORY_PHOTO } from "../../services/upload";
 import { warehouseApi } from "../../services/warehouse";
-import {
-  InvalidRoute,
-  QueryBoundary,
-  useNumericParam,
-} from "./common";
+import { InvalidRoute, QueryBoundary, useNumericParam } from "./common";
 import { InventoryProductView } from "./InventoryProductView";
 
 const optionalFilterId = (raw: string): number | undefined => {
@@ -346,6 +347,7 @@ export const InventorySoldRoute = () => <InventoryList sold />;
 
 export const InventoryDetailRoute = () => {
   const id = useNumericParam("inventoryId");
+  const [uploadOpen, setUploadOpen] = useState(false);
   const query = useQuery({
     queryKey: ["operations", "stock-detail", id],
     queryFn: () => operationsApi.stock.detail(id!),
@@ -355,6 +357,12 @@ export const InventoryDetailRoute = () => {
   const item = query.data;
   const returnable =
     item?.status === "AVAILABLE" || item?.status === "PENDING_DELIVERY";
+  const photos = {
+    entityType: INVENTORY_PHOTO.entityType,
+    entityId: id,
+    category: INVENTORY_PHOTO.category,
+  };
+  const openUpload = () => setUploadOpen(true);
   return (
     <>
       <PageHeader
@@ -365,21 +373,47 @@ export const InventoryDetailRoute = () => {
             : undefined
         }
         actions={
-          returnable && (
-            <Can resource="PURCHASE_RETURN" privilege="CREATE">
-              <Link
-                className="button button--danger"
-                to={`/purchase/returns/new/${id}`}
-              >
-                Return to vendor
-              </Link>
-            </Can>
-          )
+          <>
+            {item && (
+              <AttachmentUploadButton
+                label="Upload photos"
+                onClick={openUpload}
+              />
+            )}
+            {returnable && (
+              <Can resource="PURCHASE_RETURN" privilege="CREATE">
+                <Link
+                  className="button button--danger"
+                  to={`/purchase/returns/new/${id}`}
+                >
+                  Return to vendor
+                </Link>
+              </Can>
+            )}
+          </>
         }
       />
       <QueryBoundary pending={query.isPending} error={query.error}>
-        {item && <InventoryProductView item={item} />}
+        {item && (
+          <InventoryProductView
+            item={item}
+            photos={{ ...photos, onUpload: openUpload }}
+          />
+        )}
       </QueryBoundary>
+      <AttachmentUploadModal
+        entityType={photos.entityType}
+        entityId={photos.entityId}
+        category={photos.category}
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        title="Upload photos"
+        accept="image/*"
+        hint="Click or drop JPEG, PNG, or WebP files. Each file must be under 1 MB."
+        successLabel={(count) =>
+          count === 1 ? "Photo uploaded" : "Photos uploaded"
+        }
+      />
     </>
   );
 };

@@ -1324,27 +1324,8 @@
   object-fit: cover;
 }
 
-.product-profile__media-empty {
-  height: 100%;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 0.65rem;
-  color: var(--text-subtle);
-}
-
-.product-profile__media-empty svg {
-  width: 2.25rem;
-  height: 2.25rem;
-  opacity: 0.7;
-}
-
-.product-profile__media-empty span {
-  margin: 0;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.product-profile__media:has(.attachment-gallery--filled) {
+  border-style: solid;
 }
 
 .product-profile__identity-top {
